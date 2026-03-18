@@ -11,14 +11,13 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden">
-      <div className="absolute inset-0 z-0">
+    <section className="relative pt-32 pb-20 overflow-hidden bg-hero-red-gradient">
+      <div className="absolute inset-0 z-0 opacity-20">
         <img 
           src="https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=2000" 
           alt="Catering Background" 
-          className="w-full h-full object-cover opacity-10"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-orange-50/50 to-white"></div>
       </div>
 
       <div className="container mx-auto px-4 relative z-10">

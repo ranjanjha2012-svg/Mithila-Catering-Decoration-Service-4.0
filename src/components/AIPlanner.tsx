@@ -76,7 +76,7 @@ export default function AIPlanner() {
 
   return (
     <section id="ai-planner" className="py-20 bg-black/40 backdrop-blur-md">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-2xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Mithila AI Planner</h2>
           <p className="text-orange-100/80">Chat with our AI to plan your perfect menu and event details.</p>
@@ -150,7 +150,7 @@ export default function AIPlanner() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Type your event requirements here..."
-                className="flex-1 border border-orange-200 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base shadow-inner"
+                className="flex-1 border border-orange-200 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base shadow-inner text-black"
               />
               <button
                 onClick={handleSend}

@@ -1,12 +1,14 @@
-import React from 'react';
-import { Camera, Play, Image as ImageIcon, ChevronRight } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { Camera, Play, Image as ImageIcon, ChevronRight, X, ChevronLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface GalleryProps {
   isFullPage?: boolean;
 }
 
 export default function Gallery({ isFullPage = false }: GalleryProps) {
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+
   const images = [
     { url: 'https://i.ibb.co/4g3QbFJ7/Whats-App-Image-2026-03-15-at-15-56-19-1.jpg', title: 'Banner' },
     { url: 'https://i.ibb.co/Swmz6y4B/Whats-App-Image-2026-03-15-at-15-56-27.jpg', title: 'Buffet' },
@@ -28,6 +30,20 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
   ];
 
   const displayedImages = isFullPage ? images : images.slice(0, 2);
+
+  const nextImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (selectedImage !== null) {
+      setSelectedImage((selectedImage + 1) % images.length);
+    }
+  };
+
+  const prevImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (selectedImage !== null) {
+      setSelectedImage((selectedImage - 1 + images.length) % images.length);
+    }
+  };
 
   return (
     <section id="gallery" className={`py-20 ${isFullPage ? 'bg-golden-shiny min-h-screen' : 'bg-black/10 backdrop-blur-sm'}`}>
@@ -56,7 +72,8 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="group relative overflow-hidden rounded-3xl aspect-[4/3] shadow-2xl border-4 border-white/20"
+              onClick={() => setSelectedImage(i)}
+              className="group relative overflow-hidden rounded-3xl aspect-[4/3] shadow-2xl border-4 border-white/20 cursor-pointer"
             >
               <img 
                 src={img.url} 
@@ -81,10 +98,71 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
         
         {isFullPage && (
           <div className="mt-12 text-center">
-            <p className="text-orange-950/60 font-bold animate-pulse">Swipe to view more photos</p>
+            <p className="text-orange-950/60 font-bold animate-pulse">Click image to view in HD | Swipe to view more photos</p>
           </div>
         )}
       </div>
+
+      {/* Lightbox / HD View */}
+      <AnimatePresence>
+        {selectedImage !== null && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-10"
+          >
+            <button 
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-6 right-6 text-white/70 hover:text-white p-2 bg-white/10 rounded-full transition-colors z-[110]"
+            >
+              <X size={32} />
+            </button>
+
+            <button 
+              onClick={prevImage}
+              className="absolute left-4 md:left-10 text-white/70 hover:text-white p-3 bg-white/10 rounded-full transition-colors z-[110]"
+            >
+              <ChevronLeft size={40} />
+            </button>
+
+            <button 
+              onClick={nextImage}
+              className="absolute right-4 md:right-10 text-white/70 hover:text-white p-3 bg-white/10 rounded-full transition-colors z-[110]"
+            >
+              <ChevronRight size={40} />
+            </button>
+
+            <motion.div 
+              key={selectedImage}
+              initial={{ opacity: 0, scale: 0.9, x: 100 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, x: -100 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              onDragEnd={(e, { offset, velocity }) => {
+                const swipe = offset.x;
+                if (swipe < -50) nextImage();
+                else if (swipe > 50) prevImage();
+              }}
+              className="relative max-w-6xl w-full h-full flex flex-col items-center justify-center gap-6"
+            >
+              <img 
+                src={images[selectedImage].url} 
+                alt={images[selectedImage].title} 
+                className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl border-4 border-white/10"
+              />
+              <div className="text-center">
+                <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2">
+                  {images[selectedImage].title}
+                </h3>
+                <p className="text-orange-400 font-bold">Mithila Catering & Decoration Service</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
