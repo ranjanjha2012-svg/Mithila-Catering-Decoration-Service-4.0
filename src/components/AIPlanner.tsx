@@ -85,10 +85,16 @@ export default function AIPlanner() {
         <div className="bg-white rounded-3xl shadow-2xl border border-orange-100 flex flex-col h-[600px] overflow-hidden">
           <div className="bg-orange-600 p-6 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Bot size={24} />
+              <div className="relative">
+                <Bot size={24} />
+                <span className="absolute -bottom-1 -right-1 live-indicator border-2 border-orange-600"></span>
+              </div>
               <div>
-                <h3 className="font-bold text-lg">Event Planning Assistant</h3>
-                <p className="text-xs text-orange-100">Online | Ready to help</p>
+                <h3 className="font-bold text-lg">Mithila AI Planner</h3>
+                <p className="text-xs text-orange-100 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  Live | Ready to help
+                </p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -115,7 +121,7 @@ export default function AIPlanner() {
                 <div className={`max-w-[85%] p-4 rounded-2xl ${
                   msg.role === 'user' 
                     ? 'bg-orange-600 text-white rounded-tr-none' 
-                    : 'bg-white text-gray-800 shadow-sm border border-orange-100 rounded-tl-none'
+                    : 'bg-[#5D4037] text-white shadow-sm border border-orange-100 rounded-tl-none'
                 }`}>
                   <p className="text-sm md:text-base leading-relaxed">{msg.text}</p>
                 </div>
@@ -123,8 +129,10 @@ export default function AIPlanner() {
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-orange-100 rounded-tl-none">
-                  <Loader2 size={24} className="animate-spin text-orange-600" />
+                <div className="bg-[#5D4037] p-4 rounded-2xl shadow-sm border border-orange-100 rounded-tl-none flex items-center gap-1">
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
+                  <div className="typing-dot"></div>
                 </div>
               </div>
             )}
