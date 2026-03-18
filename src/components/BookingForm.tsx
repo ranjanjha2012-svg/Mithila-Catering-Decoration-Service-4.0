@@ -232,7 +232,7 @@ export default function BookingForm() {
                 <h4 className="text-xl font-black text-white mb-2 uppercase tracking-tighter">Need Immediate Help?</h4>
                 <p className="text-orange-100 text-sm mb-6 font-bold">Call us directly for urgent bookings and customized packages.</p>
                 <a 
-                  href="tel:+919876543210" 
+                  href="tel:+919650254164" 
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-black rounded-xl hover:bg-orange-50 transition-all uppercase text-xs tracking-widest"
                 >
                   Call Now
