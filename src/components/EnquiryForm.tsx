@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function EnquiryForm() {
+  const [guestOption, setGuestOption] = useState('');
+  const [customGuests, setCustomGuests] = useState('');
+
   return (
     <section id="enquiry" className="py-20 bg-black/20 backdrop-blur-sm">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -39,13 +42,35 @@ export default function EnquiryForm() {
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-white">Approximate Guests</label>
-              <input 
-                type="number" 
-                name="guests" 
-                required 
-                placeholder="Number of guests"
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/50"
-              />
+              <select 
+                name="guests_range" 
+                required
+                value={guestOption}
+                onChange={(e) => setGuestOption(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white appearance-none cursor-pointer"
+              >
+                <option value="" className="bg-green-900 text-white">Select Quantity</option>
+                <option value="50-100" className="bg-green-900 text-white">50 - 100</option>
+                <option value="100-250" className="bg-green-900 text-white">100 - 250</option>
+                <option value="250-500" className="bg-green-900 text-white">250 - 500</option>
+                <option value="500-1000" className="bg-green-900 text-white">500 - 1000</option>
+                <option value="1000+" className="bg-green-900 text-white">1000+</option>
+                <option value="Other" className="bg-green-900 text-white">Other (Custom)</option>
+              </select>
+              {guestOption === 'Other' && (
+                <div className="mt-2">
+                  <input 
+                    type="number" 
+                    name="guests_custom" 
+                    required 
+                    value={customGuests}
+                    onChange={(e) => setCustomGuests(e.target.value)}
+                    placeholder="Enter specific number"
+                    className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/50"
+                  />
+                </div>
+              )}
+              <input type="hidden" name="guests" value={guestOption === 'Other' ? customGuests : guestOption} />
             </div>
 
             <div className="space-y-2">

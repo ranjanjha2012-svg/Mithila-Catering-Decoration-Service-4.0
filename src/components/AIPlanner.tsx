@@ -79,7 +79,7 @@ export default function AIPlanner({ isCompact = false }: AIPlannerProps) {
   };
 
   const chatContent = (
-    <div className={`bg-white rounded-3xl shadow-2xl border border-orange-100 flex flex-col ${isCompact ? 'h-full' : 'h-[600px]'} overflow-hidden`}>
+    <div className={`bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-3xl shadow-2xl border border-yellow-300 flex flex-col ${isCompact ? 'h-full' : 'h-[600px]'} overflow-hidden`}>
       <div className="bg-[#064e3b] p-4 md:p-6 text-white flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -139,7 +139,7 @@ export default function AIPlanner({ isCompact = false }: AIPlannerProps) {
         )}
       </div>
 
-      <div className="p-4 md:p-6 border-t border-orange-100 bg-white">
+      <div className="p-4 md:p-6 border-t border-yellow-300 bg-yellow-500/10">
         <div className="flex gap-2 md:gap-3">
           <input
             type="text"

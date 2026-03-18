@@ -5,6 +5,8 @@ import AIPlanner from './AIPlanner';
 
 export default function BookingForm() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [guestOption, setGuestOption] = useState('');
+  const [customGuests, setCustomGuests] = useState('');
   
   const services = [
     'Tent', 'Catering (Food Only)', 'Water', 'DJ Music', 'Buffet', 'Waiter', 'Decoration', 'Photography'
@@ -173,8 +175,10 @@ export default function BookingForm() {
                       <Users size={14} /> Guest Quantity
                     </label>
                     <select 
-                      name="guests" 
+                      name="guests_range" 
                       required
+                      value={guestOption}
+                      onChange={(e) => setGuestOption(e.target.value)}
                       className="w-full px-5 py-4 rounded-2xl border border-white/10 bg-white/5 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white font-bold appearance-none cursor-pointer"
                     >
                       <option value="" className="bg-stone-900 text-white">Select Quantity</option>
@@ -183,7 +187,26 @@ export default function BookingForm() {
                       <option value="250-500" className="bg-stone-900 text-white">250 - 500</option>
                       <option value="500-1000" className="bg-stone-900 text-white">500 - 1000</option>
                       <option value="1000+" className="bg-stone-900 text-white">1000+</option>
+                      <option value="Other" className="bg-stone-900 text-white">Other (Custom)</option>
                     </select>
+                    {guestOption === 'Other' && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-3"
+                      >
+                        <input 
+                          type="number" 
+                          name="guests_custom" 
+                          required 
+                          value={customGuests}
+                          onChange={(e) => setCustomGuests(e.target.value)}
+                          placeholder="Enter specific number"
+                          className="w-full px-5 py-4 rounded-2xl border border-white/10 bg-white/5 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/40 font-bold"
+                        />
+                      </motion.div>
+                    )}
+                    <input type="hidden" name="guests" value={guestOption === 'Other' ? customGuests : guestOption} />
                   </div>
 
                   <div className="space-y-2">
