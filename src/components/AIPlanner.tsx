@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, Loader2 } from 'lucide-react';
+import { Send, Bot, Loader2, Trash2, Download } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
 interface Message {
@@ -21,6 +21,25 @@ export default function AIPlanner() {
     }
   }, [messages]);
 
+  const clearChat = () => {
+    if (window.confirm('Are you sure you want to clear the chat history?')) {
+      setMessages([{ role: 'model', text: 'Namaste! I am Mithila AI Planner. How can I help you plan your special event today?' }]);
+    }
+  };
+
+  const saveChat = () => {
+    const chatText = messages.map(m => `${m.role === 'user' ? 'You' : 'AI'}: ${m.text}`).join('\n\n');
+    const blob = new Blob([chatText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mithila-event-plan-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -35,7 +54,7 @@ export default function AIPlanner() {
       const chat = ai.chats.create({
         model: "gemini-3-flash-preview",
         config: {
-          systemInstruction: "You are Mithila AI Planner, a helpful assistant for Mithila Catering & Decoration Service. You help users plan their events, suggest menus, and provide information about catering services. Mithila Catering serves birthday parties, kitty parties, corporate events, Bhandara, weddings, anniversaries, and bulk orders across India. They also provide Tent & DJ Music services. Be polite, professional, and helpful. Keep responses concise and focused on event planning."
+          systemInstruction: "You are Mithila AI Planner, a helpful and friendly assistant for Mithila Catering & Decoration Service. You help users plan their events, suggest menus, and provide information about catering services. Mithila Catering serves birthday parties, kitty parties, corporate events, Bhandara, weddings, anniversaries, and bulk orders across India. They also provide Tent & DJ Music services. Be polite, professional, and helpful. Keep responses concise and focused on event planning."
         },
         history: messages.map(m => ({
           role: m.role,
@@ -56,19 +75,37 @@ export default function AIPlanner() {
   };
 
   return (
-    <section id="ai-planner" className="py-20 bg-white/20 backdrop-blur-md">
+    <section id="ai-planner" className="py-20 bg-black/40 backdrop-blur-md">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Mithila AI Planner</h2>
-          <p className="text-gray-600">Chat with our AI to plan your perfect menu and event details.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Mithila AI Planner</h2>
+          <p className="text-orange-100/80">Chat with our AI to plan your perfect menu and event details.</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl border border-orange-100 flex flex-col h-[600px] overflow-hidden">
-          <div className="bg-orange-600 p-6 text-white flex items-center gap-3">
-            <Bot size={24} />
-            <div>
-              <h3 className="font-bold text-lg">Event Planning Assistant</h3>
-              <p className="text-xs text-orange-100">Online | Ready to help</p>
+          <div className="bg-orange-600 p-6 text-white flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bot size={24} />
+              <div>
+                <h3 className="font-bold text-lg">Event Planning Assistant</h3>
+                <p className="text-xs text-orange-100">Online | Ready to help</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={saveChat}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                title="Save Chat"
+              >
+                <Download size={20} />
+              </button>
+              <button 
+                onClick={clearChat}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                title="Clear Chat"
+              >
+                <Trash2 size={20} />
+              </button>
             </div>
           </div>
 

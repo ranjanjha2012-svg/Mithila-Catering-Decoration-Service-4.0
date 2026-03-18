@@ -72,7 +72,7 @@ export default function Hero() {
               className="relative"
             >
               <img 
-                src="https://images.unsplash.com/photo-1530103043960-ef38714abb15?auto=format&fit=crop&q=80&w=1000" 
+                src="https://i.ibb.co/4g3QbFJ7/Whats-App-Image-2026-03-15-at-15-56-19-1.jpg" 
                 alt="Event Celebration" 
                 className="rounded-3xl shadow-2xl border-4 border-white"
               />

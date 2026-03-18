@@ -11,7 +11,7 @@
   
   body {
     @apply text-white antialiased overflow-x-hidden;
-    background: linear-gradient(-45deg, #4a0404, #722f37, #8b0000, #b22222);
+    background: linear-gradient(-45deg, #000000, #1a1a1a, #4d3d00, #8a6d3b, #d4af37);
     background-size: 400% 400%;
     animation: gradient 15s ease-in-out infinite;
   }

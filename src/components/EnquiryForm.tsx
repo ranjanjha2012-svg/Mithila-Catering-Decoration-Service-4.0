@@ -2,17 +2,17 @@ import React from 'react';
 
 export default function EnquiryForm() {
   return (
-    <section id="enquiry" className="py-20 bg-white">
+    <section id="enquiry" className="py-20 bg-black/20 backdrop-blur-sm">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Quick Enquiry</h2>
-          <p className="text-gray-600">Tell us about your event and we'll get back to you with a customized quote.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Quick Enquiry</h2>
+          <p className="text-orange-100/80">Tell us about your event and we'll get back to you with a customized quote.</p>
         </div>
 
         <form 
           action="https://formspree.io/f/mqeybnnv" 
           method="POST"
-          className="bg-orange-50 p-8 rounded-3xl shadow-lg border border-orange-100"
+          className="bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-lg border border-orange-100"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
