@@ -22,7 +22,7 @@ export default function EnquiryForm() {
                 name="name" 
                 required 
                 placeholder="Enter your name"
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-black placeholder:text-white/50"
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/50"
               />
             </div>
 
@@ -33,7 +33,7 @@ export default function EnquiryForm() {
                 name="place" 
                 required 
                 placeholder="Event location"
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-black placeholder:text-white/50"
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/50"
               />
             </div>
 
@@ -44,7 +44,7 @@ export default function EnquiryForm() {
                 name="guests" 
                 required 
                 placeholder="Number of guests"
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-black placeholder:text-white/50"
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/50"
               />
             </div>
 
@@ -53,7 +53,7 @@ export default function EnquiryForm() {
               <select 
                 name="catering_type" 
                 required
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-black appearance-none"
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white appearance-none"
               >
                 <option value="" className="bg-green-900 text-white">Select Type</option>
                 <option value="Birthday Party" className="bg-green-900 text-white">Birthday Party</option>
@@ -74,7 +74,7 @@ export default function EnquiryForm() {
                 type="date" 
                 name="date" 
                 required 
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-black"
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white"
               />
             </div>
 
@@ -85,7 +85,7 @@ export default function EnquiryForm() {
                 name="phone" 
                 required 
                 placeholder="Your contact number"
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-black placeholder:text-white/50"
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/50"
               />
             </div>
           </div>
@@ -96,7 +96,7 @@ export default function EnquiryForm() {
                 name="message" 
                 rows={4}
                 placeholder="Any special requirements?"
-                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-black placeholder:text-white/50"
+                className="w-full px-4 py-3 rounded-xl border border-green-700 bg-green-900/50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-white placeholder:text-white/50"
               ></textarea>
           </div>
 

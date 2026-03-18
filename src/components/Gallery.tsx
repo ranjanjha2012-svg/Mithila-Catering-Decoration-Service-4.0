@@ -29,7 +29,7 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
     { url: 'https://i.ibb.co/LXW20NxN/Whats-App-Image-2026-03-15-at-16-00-2534rfd34.jpg', title: 'Mehndi' },
   ];
 
-  const displayedImages = isFullPage ? images : images.slice(0, 4);
+  const displayedImages = isFullPage ? images : images.slice(0, 2);
 
   const nextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -46,14 +46,14 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
   };
 
   return (
-    <section id="gallery" className={`py-20 ${isFullPage ? 'bg-hero-red-gradient min-h-screen' : 'bg-black/10 backdrop-blur-sm'}`}>
+    <section id="gallery" className={`py-20 ${isFullPage ? 'bg-blood min-h-screen' : 'bg-black/10 backdrop-blur-sm'}`}>
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
           <div>
-            <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${isFullPage ? 'text-orange-950' : 'text-white'}`}>
+            <h2 className={`text-3xl md:text-4xl font-bold mb-4 text-white`}>
               {isFullPage ? 'Mithila Event Gallery' : 'Event Gallery'}
             </h2>
-            <p className={`${isFullPage ? 'text-orange-900/80' : 'text-orange-100/80'}`}>
+            <p className={`text-white/80`}>
               Glimpses of our successful events and beautiful decorations.
             </p>
           </div>
@@ -64,41 +64,36 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
           )}
         </div>
 
-        <div className={`grid gap-6 ${isFullPage ? 'grid-cols-2 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
+        <div className={`grid gap-6 ${isFullPage ? 'grid-cols-2 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
           {displayedImages.map((img, i) => (
-            <motion.div 
-              key={i} 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              onClick={() => setSelectedImage(i)}
-              className="group relative overflow-hidden rounded-3xl aspect-[4/3] shadow-2xl border-4 border-white/20 cursor-pointer"
-            >
-              <img 
-                src={img.url} 
-                alt={img.title} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-                <div className="text-white">
-                  <p className="font-black text-xl md:text-2xl uppercase tracking-wider">{img.title}</p>
-                  <p className="text-sm text-orange-400 font-bold">Mithila Catering & Decoration</p>
-                </div>
+            <div key={i} className="flex flex-col gap-3">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                onClick={() => setSelectedImage(i)}
+                className="group relative overflow-hidden rounded-3xl aspect-[4/3] shadow-2xl border-4 border-white/20 cursor-pointer"
+              >
+                <img 
+                  src={img.url} 
+                  alt={img.title} 
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+              </motion.div>
+              <div className="text-center md:text-left px-2">
+                <p className="font-bold text-lg text-white uppercase tracking-wider">{img.title}</p>
+                <p className="text-xs text-orange-400 font-bold">Mithila Catering & Decoration</p>
               </div>
-              <div className="absolute bottom-4 left-4 right-4 md:hidden">
-                 <p className="bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-xl text-sm font-bold inline-block">
-                   {img.title}
-                 </p>
-              </div>
-            </motion.div>
+            </div>
           ))}
         </div>
         
         {isFullPage && (
           <div className="mt-12 text-center">
-            <p className="text-orange-950/60 font-bold animate-pulse">Click image to view in HD | Swipe to view more photos</p>
+            <p className="text-white font-bold animate-pulse">Click image to view in HD | Swipe to view more photos</p>
           </div>
         )}
       </div>
