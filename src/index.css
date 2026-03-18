@@ -11,16 +11,33 @@
   
   body {
     @apply text-white antialiased overflow-x-hidden;
-    background: linear-gradient(-45deg, #000000, #1a1a1a, #4d3d00, #8a6d3b, #d4af37);
+    background: linear-gradient(-45deg, #2d0000, #4a0000, #660000, #800000);
     background-size: 400% 400%;
     animation: gradient 15s ease-in-out infinite;
   }
 }
 
-@keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes blink-red {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.red-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #ff0000;
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 8px #ff0000;
+  animation: blink-red 1s infinite;
+}
+
+.bg-golden-shiny {
+  background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+  background-size: 400% 400%;
+  animation: gradient 10s ease infinite;
 }
 
 @keyframes bounce {

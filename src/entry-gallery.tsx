@@ -8,7 +8,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Layout>
       <div className="pt-20">
-        <Gallery />
+        <Gallery isFullPage={true} />
       </div>
     </Layout>
   </React.StrictMode>

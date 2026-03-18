@@ -22,7 +22,7 @@ export default function EnquiryForm() {
                 name="name" 
                 required 
                 placeholder="Enter your name"
-                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-gray-900"
               />
             </div>
 
@@ -33,7 +33,7 @@ export default function EnquiryForm() {
                 name="place" 
                 required 
                 placeholder="Event location"
-                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-gray-900"
               />
             </div>
 
@@ -44,7 +44,7 @@ export default function EnquiryForm() {
                 name="guests" 
                 required 
                 placeholder="Number of guests"
-                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-gray-900"
               />
             </div>
 
@@ -53,7 +53,7 @@ export default function EnquiryForm() {
               <select 
                 name="catering_type" 
                 required
-                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all bg-white text-gray-900"
               >
                 <option value="">Select Type</option>
                 <option value="Birthday Party">Birthday Party</option>
@@ -74,7 +74,7 @@ export default function EnquiryForm() {
                 type="date" 
                 name="date" 
                 required 
-                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-gray-900"
               />
             </div>
 
@@ -85,7 +85,7 @@ export default function EnquiryForm() {
                 name="phone" 
                 required 
                 placeholder="Your contact number"
-                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-gray-900"
               />
             </div>
           </div>
@@ -96,7 +96,7 @@ export default function EnquiryForm() {
               name="message" 
               rows={4}
               placeholder="Any special requirements?"
-              className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-gray-900"
             ></textarea>
           </div>
 

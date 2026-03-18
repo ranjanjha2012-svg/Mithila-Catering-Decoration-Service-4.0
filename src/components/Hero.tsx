@@ -29,7 +29,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               className="inline-flex items-center px-4 py-1.5 bg-white/10 backdrop-blur-md text-white rounded-full text-sm font-bold mb-6 border border-white/20"
             >
-              <span className="blinking-dot"></span>
+              <span className="red-dot"></span>
               Serving Excellence Since 2021
             </motion.div>
             <motion.h1 
