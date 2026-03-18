@@ -125,6 +125,41 @@ export default function Hero() {
             </motion.div>
           ))}
         </div>
+
+        {/* Veg Tiffin Ad */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-16"
+        >
+          <a 
+            href="/tiffin"
+            className="block group relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-green-600 to-green-800 p-8 md:p-12 shadow-2xl border-4 border-white/20 hover:scale-[1.02] transition-transform duration-500"
+          >
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="text-center md:text-left">
+                <div className="inline-flex items-center px-4 py-1 bg-white/20 backdrop-blur-md text-white rounded-full text-xs font-black uppercase tracking-widest mb-4">
+                  🔥 Limited Time Offer
+                </div>
+                <h2 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight">
+                  Pure Veg Tiffin <br />
+                  <span className="text-yellow-400">Special Offer!</span>
+                </h2>
+                <p className="text-green-100/80 font-bold text-lg mb-0">
+                  Book 30 days tiffin for just <span className="text-white text-2xl">₹2700/-</span>
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-4">
+                <div className="bg-white text-green-700 px-8 py-4 rounded-2xl font-black text-xl shadow-xl group-hover:bg-yellow-400 group-hover:text-green-900 transition-colors">
+                  Book Now
+                </div>
+                <p className="text-green-200 text-xs font-bold uppercase tracking-widest">Click to Redirect</p>
+              </div>
+            </div>
+          </a>
+        </motion.div>
       </div>
     </section>
   );

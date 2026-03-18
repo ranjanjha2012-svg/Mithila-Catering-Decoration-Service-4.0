@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import EnquiryForm from './components/EnquiryForm';
+import BookingForm from './components/BookingForm';
 import WhatsAppButton from './components/WhatsAppButton';
 import './index.css';
 
@@ -11,7 +11,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <div className="min-h-screen">
       <Header />
       <main className="pt-20">
-        <EnquiryForm />
+        <BookingForm />
       </main>
       <Footer />
       <WhatsAppButton />

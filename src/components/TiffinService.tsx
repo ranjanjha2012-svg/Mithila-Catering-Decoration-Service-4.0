@@ -49,19 +49,18 @@ export default function TiffinService() {
   const [selectedTimings, setSelectedTimings] = useState<string[]>([]);
   const [showBooking, setShowBooking] = useState(false);
 
-  const calculateTotal = () => {
-    if (!selectedPlan) return 0;
-    const basePrice = selectedPlan.price;
+  const getDiscountRate = () => {
     const count = selectedTimings.length;
-    let discount = 0;
-    if (count === 1) discount = 0.02;
-    else if (count === 2) discount = 0.06;
-    else if (count === 3) discount = 0.10;
-
-    const total = basePrice * count;
-    const discountedTotal = total * (1 - discount);
-    return Math.round(discountedTotal);
+    if (count === 1) return 0.02;
+    if (count === 2) return 0.06;
+    if (count === 3) return 0.10;
+    return 0;
   };
+
+  const subtotal = (selectedPlan?.price || 0) * selectedTimings.length;
+  const discountRate = getDiscountRate();
+  const discountAmount = Math.round(subtotal * discountRate);
+  const totalAmount = subtotal - discountAmount;
 
   const handleTimingToggle = (timing: string) => {
     if (selectedTimings.includes(timing)) {
@@ -74,7 +73,6 @@ export default function TiffinService() {
   };
 
   const upiId = "9650254164@kotak";
-  const totalAmount = calculateTotal();
   const upiLink = `upi://pay?pa=${upiId}&pn=Mithila%20Catering&am=${totalAmount}&cu=INR`;
 
   return (
@@ -112,16 +110,30 @@ export default function TiffinService() {
                   <span className="text-4xl font-black text-green-700">₹{plan.price}</span>
                   <span className="text-gray-400 text-sm ml-2">/ month</span>
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedPlan(plan);
-                    setShowBooking(true);
-                    setStep(1);
-                  }}
-                  className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest"
-                >
-                  Book Now
-                </button>
+                {plan.id !== 'veg' ? (
+                  <div className="space-y-3">
+                    <button
+                      disabled
+                      className="w-full py-4 bg-gray-200 text-gray-400 font-black rounded-2xl cursor-not-allowed uppercase tracking-widest flex items-center justify-center gap-2"
+                    >
+                      Locked
+                    </button>
+                    <p className="text-center text-red-600 text-xs font-bold animate-pulse">
+                      Blocked due to Navratri events
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSelectedPlan(plan);
+                      setShowBooking(true);
+                      setStep(1);
+                    }}
+                    className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest"
+                  >
+                    Book Now
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}
@@ -212,22 +224,20 @@ export default function TiffinService() {
                           <span className="font-bold text-gray-900">{location}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
-                          <span>Timings:</span>
-                          <span className="font-bold text-gray-900">{selectedTimings.join(', ')}</span>
+                          <span>Plan Price:</span>
+                          <span className="font-bold text-gray-900">₹{selectedPlan?.price} / month</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Subtotal:</span>
+                          <span className="font-bold text-gray-900">₹{subtotal}</span>
+                        </div>
+                        <div className="flex justify-between text-green-600 font-bold">
+                          <span>Discount ({Math.round(discountRate * 100)}%):</span>
+                          <span>- ₹{discountAmount}</span>
                         </div>
                         <div className="pt-3 border-t border-gray-200">
-                          <div className="flex justify-between text-gray-600">
-                            <span>Base Price:</span>
-                            <span>₹{selectedPlan?.price} x {selectedTimings.length}</span>
-                          </div>
-                          <div className="flex justify-between text-green-600 font-bold">
-                            <span>Discount:</span>
-                            <span>
-                              {selectedTimings.length === 1 ? '2%' : selectedTimings.length === 2 ? '6%' : '10%'}
-                            </span>
-                          </div>
                           <div className="flex justify-between text-xl font-black text-gray-900 mt-2">
-                            <span>Total Amount:</span>
+                            <span>Total Payable:</span>
                             <span>₹{totalAmount}</span>
                           </div>
                         </div>
@@ -245,14 +255,35 @@ export default function TiffinService() {
                     </div>
 
                     <div className="space-y-4">
+                      <p className="text-center text-xs font-black text-gray-400 uppercase tracking-widest">Pay with UPI Apps</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <a 
+                          href={upiLink}
+                          className="flex flex-col items-center gap-3 p-4 bg-gray-50 rounded-2xl border-2 border-transparent hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="Google Pay" className="h-8 w-16 object-contain" />
+                          <span className="text-[10px] font-black text-gray-900 uppercase tracking-tighter">Google Pay</span>
+                        </a>
+                        <a 
+                          href={upiLink}
+                          className="flex flex-col items-center gap-3 p-4 bg-gray-50 rounded-2xl border-2 border-transparent hover:border-sky-500 hover:bg-sky-50 transition-all group"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo.svg" alt="Paytm" className="h-8 w-16 object-contain" />
+                          <span className="text-[10px] font-black text-gray-900 uppercase tracking-tighter">Paytm</span>
+                        </a>
+                        <a 
+                          href={upiLink}
+                          className="flex flex-col items-center gap-3 p-4 bg-gray-50 rounded-2xl border-2 border-transparent hover:border-purple-500 hover:bg-purple-50 transition-all group"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg" alt="PhonePe" className="h-8 w-16 object-contain" />
+                          <span className="text-[10px] font-black text-gray-900 uppercase tracking-tighter">PhonePe</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
                       <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest">Other Payment Options</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div className="p-3 bg-gray-50 rounded-xl flex items-center gap-2 text-xs font-bold text-gray-600">
-                          <Smartphone size={16} className="text-blue-500" /> Paytm/PhonePe/GPay
-                        </div>
-                        <div className="p-3 bg-gray-50 rounded-xl flex items-center gap-2 text-xs font-bold text-gray-600">
-                          <CreditCard size={16} className="text-purple-500" /> UPI Option
-                        </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
                         <div className="p-3 bg-gray-50 rounded-xl flex items-center gap-2 text-xs font-bold text-gray-600">
                           <CreditCard size={16} className="text-orange-500" /> Credit/Debit Card
                         </div>
