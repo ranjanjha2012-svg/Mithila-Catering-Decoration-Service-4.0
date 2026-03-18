@@ -24,26 +24,27 @@ export default function Services() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
           {services.map((service, i) => (
-            <motion.div 
-              key={i}
-              whileHover={{ y: -5 }}
-              className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-orange-100 overflow-hidden hover:shadow-xl transition-all group"
-            >
-              <div className="h-32 md:h-48 overflow-hidden">
-                <img 
-                  src={service.image} 
-                  alt={service.title} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              <div className="p-4 md:p-6">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:bg-orange-600 group-hover:text-white transition-colors">
-                  {React.cloneElement(service.icon as React.ReactElement, { size: 24 })}
+            <a href="#enquiry" key={i}>
+              <motion.div 
+                whileHover={{ y: -5 }}
+                className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-orange-100 overflow-hidden hover:shadow-xl transition-all group h-full"
+              >
+                <div className="h-32 md:h-48 overflow-hidden">
+                  <img 
+                    src={service.image} 
+                    alt={service.title} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
                 </div>
-                <h3 className="text-sm md:text-xl font-bold text-gray-900 mb-1 md:mb-2">{service.title}</h3>
-                <p className="text-gray-600 text-[10px] md:text-sm leading-tight md:leading-relaxed line-clamp-2">{service.desc}</p>
-              </div>
-            </motion.div>
+                <div className="p-4 md:p-6">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                    {React.cloneElement(service.icon as React.ReactElement, { size: 24 })}
+                  </div>
+                  <h3 className="text-sm md:text-xl font-bold text-gray-900 mb-1 md:mb-2">{service.title}</h3>
+                  <p className="text-gray-600 text-[10px] md:text-sm leading-tight md:leading-relaxed line-clamp-2">{service.desc}</p>
+                </div>
+              </motion.div>
+            </a>
           ))}
         </div>
       </div>

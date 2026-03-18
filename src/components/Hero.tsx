@@ -46,7 +46,7 @@ export default function Hero() {
               transition={{ delay: 0.2 }}
               className="text-lg text-orange-50/80 mb-8 max-w-2xl mx-auto lg:mx-0"
             >
-              We provide premium catering, tent, and DJ music services for all types of events across India. From weddings to corporate parties, we make every moment delicious and memorable.
+              We provide premium Catering, Tent, and DJ music services for all types of events across India. From weddings to corporate parties, we make every moment delicious and memorable.
             </motion.p>
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
