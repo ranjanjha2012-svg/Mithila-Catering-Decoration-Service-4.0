@@ -83,7 +83,7 @@ export default function AIPlanner() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl border border-orange-100 flex flex-col h-[600px] overflow-hidden">
-          <div className="bg-green-900 p-6 text-white flex items-center justify-between">
+          <div className="bg-[#064e3b] p-6 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <img 
@@ -94,7 +94,7 @@ export default function AIPlanner() {
                 <span className="absolute -bottom-1 -right-1 live-indicator border-2 border-green-900"></span>
               </div>
               <div>
-                <h3 className="font-bold text-lg">Mithila AI Planner</h3>
+                <h3 className="font-bold text-lg text-white">Mithila AI Planner</h3>
                 <p className="text-xs text-green-100 flex items-center gap-1">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                   Live | Ready to help
@@ -155,7 +155,7 @@ export default function AIPlanner() {
               <button
                 onClick={handleSend}
                 disabled={isLoading}
-                className="bg-green-900 text-white px-6 rounded-2xl hover:bg-green-800 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg hover:shadow-green-200"
+                className="bg-[#064e3b] text-white px-6 rounded-2xl hover:bg-green-800 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg hover:shadow-green-200"
               >
                 <Send size={20} />
               </button>

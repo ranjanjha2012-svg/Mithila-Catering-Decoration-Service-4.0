@@ -1,7 +1,7 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/services", "destination": "/services.html" },
+    { "source": "/tiffin", "destination": "/tiffin.html" },
     { "source": "/gallery", "destination": "/gallery.html" },
     { "source": "/planner", "destination": "/planner.html" },
     { "source": "/contact", "destination": "/contact.html" }

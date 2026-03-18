@@ -29,7 +29,7 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
     { url: 'https://i.ibb.co/LXW20NxN/Whats-App-Image-2026-03-15-at-16-00-2534rfd34.jpg', title: 'Mehndi' },
   ];
 
-  const displayedImages = isFullPage ? images : images.slice(0, 2);
+  const displayedImages = isFullPage ? images : images.slice(0, 4);
 
   const nextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -46,7 +46,7 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
   };
 
   return (
-    <section id="gallery" className={`py-20 ${isFullPage ? 'bg-golden-shiny min-h-screen' : 'bg-black/10 backdrop-blur-sm'}`}>
+    <section id="gallery" className={`py-20 ${isFullPage ? 'bg-hero-red-gradient min-h-screen' : 'bg-black/10 backdrop-blur-sm'}`}>
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
           <div>
@@ -64,7 +64,7 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
           )}
         </div>
 
-        <div className={`grid gap-6 ${isFullPage ? 'grid-cols-2 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
+        <div className={`grid gap-6 ${isFullPage ? 'grid-cols-2 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
           {displayedImages.map((img, i) => (
             <motion.div 
               key={i} 

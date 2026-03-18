@@ -24,7 +24,7 @@ export default function Services() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
           {services.map((service, i) => (
-            <a href="#enquiry" key={i}>
+            <a href="/contact" key={i}>
               <motion.div 
                 whileHover={{ y: -5 }}
                 className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-orange-100 overflow-hidden hover:shadow-xl transition-all group h-full"
@@ -46,6 +46,15 @@ export default function Services() {
               </motion.div>
             </a>
           ))}
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-4 mt-12">
+          <a href="/tiffin" className="px-6 py-3 bg-white/10 backdrop-blur-md text-white font-bold rounded-xl border border-white/20 hover:bg-white/20 transition-all text-sm">
+            Learn More About Tiffin Service
+          </a>
+          <a href="/planner" className="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition-all text-sm">
+            Plan Your Event with AI
+          </a>
         </div>
       </div>
     </section>

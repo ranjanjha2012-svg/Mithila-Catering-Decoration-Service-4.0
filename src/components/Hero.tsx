@@ -54,11 +54,11 @@ export default function Hero() {
               transition={{ delay: 0.3 }}
               className="flex flex-wrap justify-center lg:justify-start gap-4"
             >
-              <a href="#enquiry" className="px-8 py-4 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition-all">
+              <a href="/contact" className="px-8 py-4 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition-all">
                 Book Now
               </a>
-              <a href="#services" className="px-8 py-4 bg-white/10 backdrop-blur-md text-white font-bold rounded-xl border-2 border-white/20 hover:bg-white/20 transition-all">
-                Our Services
+              <a href="/gallery" className="px-8 py-4 bg-white/10 backdrop-blur-md text-white font-bold rounded-xl border-2 border-white/20 hover:bg-white/20 transition-all">
+                Our Gallery
               </a>
             </motion.div>
           </div>
