@@ -78,7 +78,7 @@ export default function Footer() {
         <div className="border-t border-orange-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-orange-200/40">
           <p>© 2026 Mithila Catering & Decoration Service. All rights reserved.</p>
           <p className="flex items-center gap-1">
-            Design by <a href="https://bit.ly/waltdesignsstudio" target="_blank" rel="noopener noreferrer" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">Walt Designs & Studio</a>
+            Design by <a href="https://waltdesignsstudio.in" target="_blank" rel="noopener noreferrer" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">Walt Designs & Studio</a>
           </p>
         </div>
       </div>
