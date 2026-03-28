@@ -12,12 +12,12 @@ export default function Hero() {
 
   return (
     <section className="relative pt-32 pb-20 overflow-hidden bg-hero-red-gradient">
-      {/* Navratri Marquee */}
+      {/* Welcome Marquee */}
       <div className="absolute top-20 left-0 w-full bg-orange-600/80 backdrop-blur-md py-2 z-20 overflow-hidden border-y border-orange-400/30">
         <div className="whitespace-nowrap animate-marquee flex items-center gap-8">
           {[...Array(10)].map((_, i) => (
             <span key={i} className="text-white font-black text-xl uppercase tracking-widest flex items-center gap-4">
-              ✨ Happy Navratri ✨
+              Welcome to Mithila Catering & Decoration Service
             </span>
           ))}
         </div>
@@ -41,19 +41,6 @@ export default function Hero() {
             >
               <span className="red-dot"></span>
               Serving Excellence Since 2021
-            </motion.div>
-            
-            {/* Navratri Notice */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.05 }}
-              className="mb-6 p-4 bg-orange-500/20 backdrop-blur-sm border-l-4 border-orange-500 rounded-r-xl max-w-xl"
-            >
-              <p className="text-orange-400 font-bold text-sm md:text-base flex items-center gap-2">
-                <span className="animate-pulse">📢</span>
-                Notice: Due to Navratri Non-veg & Egg tiffin service is temprory closed...
-              </p>
             </motion.div>
 
             <motion.h1 

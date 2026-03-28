@@ -110,30 +110,16 @@ export default function TiffinService() {
                   <span className="text-4xl font-black text-green-700">₹{plan.price}</span>
                   <span className="text-gray-400 text-sm ml-2">/ month</span>
                 </div>
-                {plan.id !== 'veg' ? (
-                  <div className="space-y-3">
-                    <button
-                      disabled
-                      className="w-full py-4 bg-gray-200 text-gray-400 font-black rounded-2xl cursor-not-allowed uppercase tracking-widest flex items-center justify-center gap-2"
-                    >
-                      Locked
-                    </button>
-                    <p className="text-center text-red-600 text-xs font-bold animate-pulse">
-                      Blocked due to Navratri events
-                    </p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setSelectedPlan(plan);
-                      setShowBooking(true);
-                      setStep(1);
-                    }}
-                    className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest"
-                  >
-                    Book Now
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    setSelectedPlan(plan);
+                    setShowBooking(true);
+                    setStep(1);
+                  }}
+                  className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest"
+                >
+                  Book Now
+                </button>
               </div>
             </motion.div>
           ))}
