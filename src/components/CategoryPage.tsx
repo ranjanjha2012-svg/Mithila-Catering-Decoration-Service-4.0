@@ -28,7 +28,9 @@ export default function CategoryPage({ category, categoryName }: CategoryPagePro
     address: '',
     email: '',
     description: '',
-    location: ''
+    location: '',
+    orderDate: '',
+    orderTime: ''
   });
 
   const filteredItems = menuItems.filter(item => item.category === category);
@@ -75,6 +77,8 @@ export default function CategoryPage({ category, categoryName }: CategoryPagePro
           item_size: selectedSize !== 'single' ? selectedSize : 'Standard',
           item_price: currentPrice,
           total_amount: totalAmount,
+          order_date: formData.orderDate,
+          order_time: formData.orderTime,
           _subject: `New Order: ${selectedItem?.name} (${selectedSize}) from ${formData.name}`
         })
       });
@@ -340,6 +344,35 @@ export default function CategoryPage({ category, categoryName }: CategoryPagePro
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                      Order Date
+                    </label>
+                    <input 
+                      type="date" 
+                      name="orderDate" 
+                      required 
+                      value={formData.orderDate}
+                      onChange={handleInputChange}
+                      className="w-full px-6 py-4 rounded-2xl border border-stone-100 bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold text-black cursor-pointer"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                      Order Time
+                    </label>
+                    <input 
+                      type="time" 
+                      name="orderTime" 
+                      required 
+                      value={formData.orderTime}
+                      onChange={handleInputChange}
+                      className="w-full px-6 py-4 rounded-2xl border border-stone-100 bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all font-bold text-black cursor-pointer"
+                    />
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -453,7 +486,7 @@ export default function CategoryPage({ category, categoryName }: CategoryPagePro
                   </div>
                 </div>
                 <a 
-                  href={`https://wa.me/919650254164?text=Namaste Mithila Catering! I have just placed an order for ${selectedItem?.name} (${selectedSize !== 'single' ? selectedSize : 'Standard'}). My delivery address is: ${formData.address}, ${formData.location}. Total amount paid: ₹${totalAmount}. Please confirm my order.`}
+                  href={`https://wa.me/919650254164?text=Namaste Mithila Catering! I have just placed an order for ${selectedItem?.name} (${selectedSize !== 'single' ? selectedSize : 'Standard'}). My delivery address is: ${formData.address}, ${formData.location}. Order Date: ${formData.orderDate}, Order Time: ${formData.orderTime}. Total amount paid: ₹${totalAmount}. Please confirm my order.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full bg-green-600 text-white font-black py-4 rounded-2xl hover:bg-green-700 transition-all flex items-center justify-center gap-3 uppercase tracking-widest shadow-lg shadow-green-900/20"

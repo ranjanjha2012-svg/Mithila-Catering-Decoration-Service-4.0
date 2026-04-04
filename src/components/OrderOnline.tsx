@@ -57,14 +57,24 @@ export default function OrderOnline() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="group bg-white rounded-[2.5rem] p-8 shadow-xl border border-stone-100 hover:shadow-2xl transition-all duration-500 flex flex-col items-center text-center"
+                className="group bg-white rounded-[2.5rem] overflow-hidden shadow-xl border border-stone-100 hover:shadow-2xl transition-all duration-500 flex flex-col"
               >
-                <div className="w-20 h-20 bg-orange-50 rounded-3xl flex items-center justify-center text-4xl mb-6 group-hover:scale-110 group-hover:bg-orange-100 transition-all duration-500">
-                  {category.icon}
+                <div className="relative h-48 overflow-hidden">
+                  <img 
+                    src={category.image} 
+                    alt={category.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                  <div className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                    {category.icon}
+                  </div>
                 </div>
-                <h3 className="text-2xl font-black text-stone-900 mb-4">{category.name}</h3>
-                <div className="mt-auto flex items-center gap-2 text-orange-600 font-bold uppercase tracking-widest text-sm">
-                  Explore Menu <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
+                <div className="p-8 text-center flex flex-col items-center">
+                  <h3 className="text-2xl font-black text-stone-900 mb-4">{category.name}</h3>
+                  <div className="mt-auto flex items-center gap-2 text-orange-600 font-bold uppercase tracking-widest text-sm">
+                    Explore Menu <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
+                  </div>
                 </div>
               </motion.a>
             ))}
