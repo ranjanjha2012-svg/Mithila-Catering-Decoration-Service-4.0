@@ -1,6 +1,7 @@
-import React from 'react';
-import { Users, Utensils, Star, Globe } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Users, Utensils, Star, Globe, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
+import { menuItems } from '../constants/menu';
 
 export default function Hero() {
   const stats = [
@@ -9,6 +10,10 @@ export default function Hero() {
     { icon: <Star size={24} />, value: '4.2', label: 'Average Rating' },
     { icon: <Globe size={24} />, value: 'PAN India', label: 'Service Available' },
   ];
+
+  const featuredItems = useMemo(() => {
+    return [...menuItems].sort(() => 0.5 - Math.random()).slice(0, 2);
+  }, []);
 
   return (
     <section className="relative pt-32 pb-20 overflow-hidden bg-hero-red-gradient">
@@ -111,6 +116,44 @@ export default function Hero() {
               <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
             </motion.div>
           ))}
+        </div>
+
+        {/* Featured Menu Items */}
+        <div className="mt-20">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl md:text-3xl font-black text-white">Featured Menu</h2>
+            <a href="/order" className="text-orange-400 font-bold hover:text-orange-300 transition-colors flex items-center gap-2">
+              View All <ShoppingBag size={20} />
+            </a>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {featuredItems.map((item, i) => (
+              <motion.a
+                key={item.id}
+                href="/order"
+                initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="group relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 flex flex-col sm:flex-row items-center gap-6 p-6 hover:bg-white/20 transition-all duration-500"
+              >
+                <div className="w-full sm:w-40 h-40 shrink-0 overflow-hidden rounded-2xl">
+                  <img 
+                    src={item.image} 
+                    alt={item.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                  <h3 className="text-xl font-black text-white mb-2">{item.name}</h3>
+                  <p className="text-orange-100/60 text-sm mb-4 line-clamp-2">{item.description}</p>
+                  <div className="flex items-center justify-center sm:justify-start gap-4">
+                    <span className="text-2xl font-black text-orange-400">₹{item.price}</span>
+                    <span className="px-4 py-1.5 bg-orange-500 text-white text-xs font-black rounded-full uppercase tracking-widest">Order Now</span>
+                  </div>
+                </div>
+              </motion.a>
+            ))}
+          </div>
         </div>
 
         {/* Veg Tiffin Ad */}

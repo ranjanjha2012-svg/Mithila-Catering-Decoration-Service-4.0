@@ -1,53 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Check, X, Phone, MapPin, User, Mail, MessageSquare, CreditCard, Smartphone, Info, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Check, X, Phone, MapPin, User, Mail, MessageSquare, CreditCard, Smartphone, Info, ArrowRight, Loader2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-
-interface MenuItem {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  description: string;
-}
-
-const menuItems: MenuItem[] = [
-  {
-    id: 'fish-curry-half',
-    name: 'Fish Curry half (4 Piece)',
-    price: 300,
-    image: 'https://i.ibb.co/RxD9gj6/Whats-App-Image-2026-04-04-at-08-47-21.jpg',
-    description: 'Authentic Mithila style fish curry with 4 fresh pieces.'
-  },
-  {
-    id: 'fish-curry-full',
-    name: 'Fish Curry Full (8 Piece)',
-    price: 700,
-    image: 'https://i.ibb.co/B56GGMbM/Whats-App-Image-2026-04-04-at-08-44-09.jpg',
-    description: 'Authentic Mithila style fish curry with 8 fresh pieces.'
-  },
-  {
-    id: 'fish-curry-family',
-    name: 'Fish Curry Family Pack (12 Piece)',
-    price: 1050,
-    image: 'https://i.ibb.co/Q37wB0cj/Whats-App-Image-2026-04-04-at-08-47-21-1.jpg',
-    description: 'Perfect for families! 12 pieces of delicious fish curry.'
-  },
-  {
-    id: 'macch-bhaat',
-    name: 'Macch -Bhaat (2 Piece Fish Curry and Rice)',
-    price: 350,
-    image: 'https://i.ibb.co/k6MSnKDD/Whats-App-Image-2026-04-02-at-12-46-40.jpg',
-    description: 'Traditional Maach-Bhaat combo with 2 pieces of fish and steamed rice.'
-  },
-  {
-    id: 'special-fish-curry',
-    name: 'Special Fish Curry Silawat wali (8 Piece)',
-    price: 800,
-    image: 'https://i.ibb.co/B56GGMbM/Whats-App-Image-2026-04-04-at-08-44-09.jpg',
-    description: 'Hand-ground spices on Silawat for that extra authentic flavor. 8 pieces.'
-  }
-];
+import { menuItems, MenuItem } from '../constants/menu';
 
 const locations = ['NOIDA', 'FARIDABAD', 'DELHI'];
 
@@ -55,6 +10,7 @@ export default function OrderOnline() {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     number: '',
@@ -77,10 +33,37 @@ export default function OrderOnline() {
     setShowForm(true);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowForm(false);
-    setShowPayment(true);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("https://formspree.io/f/meeprnbl", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...formData,
+          item_name: selectedItem?.name,
+          item_price: selectedItem?.price,
+          total_amount: totalAmount,
+          _subject: `New Order: ${selectedItem?.name} from ${formData.name}`
+        })
+      });
+
+      if (response.ok) {
+        setShowForm(false);
+        setShowPayment(true);
+      } else {
+        alert("Something went wrong. Please try again or contact us directly.");
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+      alert("Failed to submit order. Please check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -293,9 +276,14 @@ export default function OrderOnline() {
 
                   <button
                     type="submit"
-                    className="w-full py-5 bg-orange-600 text-white font-black rounded-2xl shadow-xl hover:bg-orange-700 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                    disabled={isSubmitting}
+                    className="w-full py-5 bg-orange-600 text-white font-black rounded-2xl shadow-xl hover:bg-orange-700 transition-all uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    Confirm & Pay <ArrowRight size={20} />
+                    {isSubmitting ? (
+                      <>Processing... <Loader2 size={20} className="animate-spin" /></>
+                    ) : (
+                      <>Confirm & Pay <ArrowRight size={20} /></>
+                    )}
                   </button>
                 </form>
               </motion.div>
