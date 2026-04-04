@@ -21,6 +21,7 @@ export default function CategoryPage({ category, categoryName }: CategoryPagePro
   const [showForm, setShowForm] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortBy, setSortBy] = useState<'price-low' | 'price-high' | 'popularity' | 'default'>('default');
   const [formData, setFormData] = useState({
     name: '',
     number: '',
@@ -33,7 +34,18 @@ export default function CategoryPage({ category, categoryName }: CategoryPagePro
     orderTime: ''
   });
 
-  const filteredItems = menuItems.filter(item => item.category === category);
+  const getPrice = (item: MenuItem) => {
+    return item.price || item.halfPrice || 0;
+  };
+
+  const filteredItems = menuItems
+    .filter(item => item.category === category)
+    .sort((a, b) => {
+      if (sortBy === 'price-low') return getPrice(a) - getPrice(b);
+      if (sortBy === 'price-high') return getPrice(b) - getPrice(a);
+      if (sortBy === 'popularity') return (b.popularity || 0) - (a.popularity || 0);
+      return 0;
+    });
 
   const packingCharge = 12;
   const deliveryCharge = 40;
@@ -131,9 +143,39 @@ export default function CategoryPage({ category, categoryName }: CategoryPagePro
               {categoryName}
             </motion.div>
             <h1 className="text-4xl md:text-6xl font-black text-stone-900 mb-4">{categoryName}</h1>
-            <p className="text-stone-600 max-w-2xl mx-auto">
+            <p className="text-stone-600 max-w-2xl mx-auto mb-8">
               Freshly prepared {categoryName.toLowerCase()} delivered to your doorstep.
             </p>
+
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
+              <span className="text-xs font-black text-stone-400 uppercase tracking-widest flex items-center gap-2 w-full justify-center mb-2">
+                Sort By
+              </span>
+              <button
+                onClick={() => setSortBy('default')}
+                className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${sortBy === 'default' ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 hover:bg-stone-100'}`}
+              >
+                Default
+              </button>
+              <button
+                onClick={() => setSortBy('price-low')}
+                className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${sortBy === 'price-low' ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 hover:bg-stone-100'}`}
+              >
+                Price: Low to High
+              </button>
+              <button
+                onClick={() => setSortBy('price-high')}
+                className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${sortBy === 'price-high' ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 hover:bg-stone-100'}`}
+              >
+                Price: High to Low
+              </button>
+              <button
+                onClick={() => setSortBy('popularity')}
+                className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${sortBy === 'popularity' ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 hover:bg-stone-100'}`}
+              >
+                Popularity
+              </button>
+            </div>
 
             <motion.a
               href="/order.html"
