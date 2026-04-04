@@ -7,11 +7,11 @@ export default function Header() {
 
   const navItems = [
     { name: 'Home', href: '/' },
-    { name: 'Tiffin Service', href: '/tiffin' },
-    { name: 'Order Online', href: '/order' },
-    { name: 'Event Gallery', href: '/gallery' },
-    { name: 'AI Planner', href: '/planner' },
-    { name: 'Contact Us', href: '/contact' },
+    { name: 'Tiffin Service', href: '/tiffin.html' },
+    { name: 'Order Online', href: '/order.html' },
+    { name: 'Event Gallery', href: '/gallery.html' },
+    { name: 'AI Planner', href: '/planner.html' },
+    { name: 'Contact Us', href: '/contact.html' },
   ];
 
   return (
