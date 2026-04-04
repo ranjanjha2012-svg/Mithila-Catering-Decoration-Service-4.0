@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { ArrowRight } from 'lucide-react';
 
 export default function EnquiryForm() {
   const [guestOption, setGuestOption] = useState('');
   const [customGuests, setCustomGuests] = useState('');
 
   return (
-    <section id="enquiry" className="py-20 bg-black/20 backdrop-blur-sm">
+    <section id="enquiry" className="py-20 bg-black/20 backdrop-blur-sm min-h-screen">
       <div className="container mx-auto px-4 max-w-4xl">
+        <div className="mb-8">
+          <motion.a
+            href="/"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 text-white/60 hover:text-white font-bold transition-colors group"
+          >
+            <ArrowRight size={20} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+            Back to Home
+          </motion.a>
+        </div>
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Quick Enquiry</h2>
           <p className="text-orange-100/80">Tell us about your event and we'll get back to you with a customized quote.</p>

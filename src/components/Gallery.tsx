@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Play, Image as ImageIcon, ChevronRight, X, ChevronLeft } from 'lucide-react';
+import { Camera, Play, Image as ImageIcon, ChevronRight, X, ChevronLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface GalleryProps {
@@ -48,6 +48,17 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
   return (
     <section id="gallery" className={`py-20 ${isFullPage ? 'bg-blood min-h-screen' : 'bg-black/10 backdrop-blur-sm'}`}>
       <div className="container mx-auto px-4">
+        {isFullPage && (
+          <motion.a
+            href="/"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="inline-flex items-center gap-2 text-white/60 hover:text-white font-bold mb-8 transition-colors group"
+          >
+            <ArrowRight size={20} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+            Back to Home
+          </motion.a>
+        )}
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
           <div>
             <h2 className={`text-3xl md:text-4xl font-bold mb-4 text-white`}>

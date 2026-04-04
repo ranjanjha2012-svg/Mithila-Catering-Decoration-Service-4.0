@@ -78,7 +78,17 @@ export default function TiffinService() {
   return (
     <div className="min-h-screen bg-[#064e3b] pt-24 pb-20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div className="text-center mb-16 relative">
+          <motion.a
+            href="/"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute left-0 top-0 hidden md:flex items-center gap-2 text-green-100/60 hover:text-white font-bold transition-colors group"
+          >
+            <ArrowRight size={20} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+            Back to Home
+          </motion.a>
+
           <motion.h1 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -89,6 +99,16 @@ export default function TiffinService() {
           <p className="text-green-100/80 max-w-2xl mx-auto">
             Authentic home-style meals delivered to your doorstep. Healthy, hygienic, and delicious.
           </p>
+
+          <motion.a
+            href="/"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 md:hidden inline-flex items-center gap-2 text-white font-bold"
+          >
+            <ArrowRight size={18} className="rotate-180" />
+            Back to Home
+          </motion.a>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">

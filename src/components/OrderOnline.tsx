@@ -14,7 +14,17 @@ export default function OrderOnline() {
       
       <main className="pt-32 pb-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 relative">
+            <motion.a
+              href="/"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="absolute left-0 top-0 hidden md:flex items-center gap-2 text-stone-500 hover:text-orange-600 font-bold transition-colors group"
+            >
+              <ArrowRight size={20} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+              Back to Home
+            </motion.a>
+
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -27,6 +37,16 @@ export default function OrderOnline() {
             <p className="text-stone-600 max-w-2xl mx-auto">
               Select a category to explore our authentic Mithila menu and place your order.
             </p>
+
+            <motion.a
+              href="/"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 md:hidden inline-flex items-center gap-2 text-orange-600 font-bold"
+            >
+              <ArrowRight size={18} className="rotate-180" />
+              Back to Home
+            </motion.a>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
