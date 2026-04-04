@@ -8,6 +8,7 @@ export default function Header() {
   const navItems = [
     { name: 'Home', href: '/' },
     { name: 'Tiffin Service', href: '/tiffin' },
+    { name: 'Order Online', href: '/order' },
     { name: 'Event Gallery', href: '/gallery' },
     { name: 'AI Planner', href: '/planner' },
     { name: 'Contact Us', href: '/contact' },

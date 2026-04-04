@@ -16,6 +16,7 @@ export default defineConfig({
         gallery: path.resolve(__dirname, 'gallery.html'),
         planner: path.resolve(__dirname, 'planner.html'),
         contact: path.resolve(__dirname, 'contact.html'),
+        order: path.resolve(__dirname, 'order.html'),
       },
     },
   },

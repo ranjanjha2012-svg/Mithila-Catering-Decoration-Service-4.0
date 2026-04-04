@@ -28,6 +28,7 @@ export default function Footer() {
             <ul className="space-y-3 text-sm text-orange-200/70">
               <li><a href="/" className="hover:text-white transition-colors">Home</a></li>
               <li><a href="/tiffin" className="hover:text-white transition-colors">Tiffin Service</a></li>
+              <li><a href="/order" className="hover:text-white transition-colors">Order Online</a></li>
               <li><a href="/gallery" className="hover:text-white transition-colors">Event Gallery</a></li>
               <li><a href="/planner" className="hover:text-white transition-colors">AI Planner</a></li>
               <li><a href="/contact" className="hover:text-white transition-colors">Enquiry Form</a></li>

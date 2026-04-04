@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import AIPlanner from './components/AIPlanner';
+import OrderOnline from './components/OrderOnline';
 import CurtainLoader from './components/CurtainLoader';
 import WhatsAppButton from './components/WhatsAppButton';
 import './index.css';
@@ -13,7 +13,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <div className="min-h-screen">
       <Header />
       <main className="pt-20">
-        <AIPlanner />
+        <OrderOnline />
       </main>
       <Footer />
       <WhatsAppButton />
