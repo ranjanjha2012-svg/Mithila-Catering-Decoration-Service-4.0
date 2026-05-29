@@ -340,7 +340,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 mt-20 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 pt-10 max-w-7xl">
       {/* Upper Account Welcome Section */}
       <motion.div 
         initial={{ opacity: 0, y: -15 }}

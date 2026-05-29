@@ -33,6 +33,33 @@ export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDraw
     orderTime: '12:00'
   });
 
+  React.useEffect(() => {
+    if (isOpen && auth.currentUser) {
+      const fetchProfile = async () => {
+        try {
+          const { db } = await import('../lib/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          const userRef = doc(db, 'users', auth.currentUser!.uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            const data = snap.data();
+            setFormData(prev => ({
+              ...prev,
+              name: data.name || prev.name || auth.currentUser?.displayName || '',
+              number: data.phone || data.number || prev.number || '',
+              whatsapp: data.whatsapp || data.phone || data.number || prev.whatsapp || '',
+              address: data.address || prev.address || '',
+              location: data.location || prev.location || ''
+            }));
+          }
+        } catch (err) {
+          console.error("Error fetching autofill profile in CartDrawer:", err);
+        }
+      };
+      fetchProfile();
+    }
+  }, [isOpen]);
+
   const packingCharge = cart.length > 0 ? 12 : 0;
   const deliveryCharge = cart.length > 0 ? 40 : 0;
   const totalAmount = cartTotal + packingCharge + deliveryCharge;

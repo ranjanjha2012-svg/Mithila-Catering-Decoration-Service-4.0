@@ -4,6 +4,11 @@
     { "source": "/tiffin", "destination": "/tiffin.html" },
     { "source": "/gallery", "destination": "/gallery.html" },
     { "source": "/planner", "destination": "/planner.html" },
-    { "source": "/contact", "destination": "/contact.html" }
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/careers", "destination": "/careers.html" },
+    { "source": "/order", "destination": "/order.html" },
+    { "source": "/profile", "destination": "/profile.html" },
+    { "source": "/admin-dashboard", "destination": "/admin-dashboard.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" }
   ]
 }

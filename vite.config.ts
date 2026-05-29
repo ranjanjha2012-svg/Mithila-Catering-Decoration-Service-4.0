@@ -12,6 +12,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
+        profile: path.resolve(__dirname, 'profile.html'),
+        'admin-dashboard': path.resolve(__dirname, 'admin-dashboard.html'),
         dashboard: path.resolve(__dirname, 'dashboard.html'),
         tiffin: path.resolve(__dirname, 'tiffin.html'),
         gallery: path.resolve(__dirname, 'gallery.html'),

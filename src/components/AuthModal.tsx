@@ -5,7 +5,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
-  signOut
+  signOut,
+  sendEmailVerification
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, googleProvider, db, logUserActivity } from '../lib/firebase';
@@ -121,7 +122,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         localStorage.setItem('userRole', finalRole);
         await logUserActivity('Google Sign-In Success', { email: result.user.email, role: finalRole });
         if (finalRole === 'admin') {
-          window.location.href = '/dashboard.html';
+          window.location.href = '/admin-dashboard';
         } else {
           onClose();
         }
@@ -148,6 +149,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
+        // Send email authorization link
+        await sendEmailVerification(user);
+
         // Save profile in Firestore
         const userRef = doc(db, 'users', user.uid);
         await setDoc(userRef, {
@@ -158,18 +162,27 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           createdAt: new Date().toISOString()
         }, { merge: true });
 
-        // Store role & close or redirect
-        localStorage.setItem('userRole', role);
-        await logUserActivity('User Signed Up', { email: user.email, role: role });
-        if (role === 'customer') {
-          onClose();
-        } else {
-          window.location.href = '/dashboard.html';
-        }
+        // Sign the user out immediately so they cannot access pages as unverified logged-in users
+        await signOut(auth);
+        localStorage.removeItem('userRole');
+
+        await logUserActivity('User Signed Up - Verification Email Sent', { email: user.email, role: role });
+        
+        setRegisteredEmail(user.email || email);
+        setScreen('verification-sent');
       } else {
         // Login mode
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+
+        // Strict Email Authorization Check
+        if (!user.emailVerified) {
+          // Resend email verification link for helper convenience
+          await sendEmailVerification(user);
+          await signOut(auth);
+          localStorage.removeItem('userRole');
+          throw new Error("Email unverified. We have sent an authorization approval link to your email. Please check your inbox and click the link to verify first!");
+        }
 
         // Fetch user document from Firestore to find their real role
         const userRef = doc(db, 'users', user.uid);
@@ -196,7 +209,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         localStorage.setItem('userRole', finalRole);
         await logUserActivity('User Logged In', { email: user.email, role: finalRole });
         if (finalRole === 'admin') {
-          window.location.href = '/dashboard.html';
+          window.location.href = '/admin-dashboard';
         } else {
           onClose();
         }

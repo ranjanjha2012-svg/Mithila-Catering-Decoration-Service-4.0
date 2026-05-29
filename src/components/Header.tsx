@@ -55,6 +55,14 @@ export default function Header() {
           }
         }
         setRole(savedRole);
+
+        // Strict Admin Redirection away from customer facing views
+        if (savedRole === 'admin') {
+          const path = window.location.pathname;
+          if (!path.includes('admin-dashboard') && !path.includes('dashboard')) {
+            window.location.href = '/admin-dashboard';
+          }
+        }
       } else {
         setUser(null);
         setRole(null);
@@ -92,6 +100,8 @@ export default function Header() {
     { name: 'Contact Us', href: '/contact.html' },
   ];
 
+  const displayNavItems = user ? [...navItems, { name: 'My Profile', href: '/profile.html' }] : navItems;
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md z-40 border-b border-orange-100 shadow-sm">
       {/* Welcome Running Marquee - integrated to avoid overlapping */}
@@ -119,7 +129,7 @@ export default function Header() {
 
         <div className="flex items-center gap-4 sm:gap-6">
           <nav className="hidden lg:flex items-center gap-8">
-            {navItems.map((item) => (
+            {displayNavItems.map((item) => (
               <a 
                 key={item.name} 
                 href={item.href}
@@ -135,7 +145,7 @@ export default function Header() {
               <div className="flex items-center gap-4 border-l border-orange-100 pl-6">
                 {role === 'admin' && (
                   <a 
-                    href="/dashboard.html"
+                    href="/admin-dashboard"
                     className="text-sm font-black text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 px-4 py-2 border-2 border-orange-100 rounded-xl transition-all"
                     id="header-dashboard-link"
                   >
@@ -207,7 +217,7 @@ export default function Header() {
             className="lg:hidden bg-white border-t border-orange-50 overflow-hidden"
           >
             <div className="container mx-auto px-4 py-6 flex flex-col gap-4">
-              {navItems.map((item) => (
+              {displayNavItems.map((item) => (
                 <a 
                   key={item.name} 
                   href={item.href}
@@ -225,7 +235,7 @@ export default function Header() {
                   <div className="flex flex-col gap-3">
                     {role === 'admin' && (
                       <a
-                        href="/dashboard.html"
+                        href="/admin-dashboard"
                         onClick={() => setIsMenuOpen(false)}
                         className="w-full text-center py-2.5 bg-orange-50 text-orange-600 border border-orange-100 font-extrabold rounded-xl"
                       >
