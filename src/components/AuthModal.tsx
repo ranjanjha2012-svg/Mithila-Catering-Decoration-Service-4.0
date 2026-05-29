@@ -211,14 +211,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 w-screen h-screen top-0 left-0">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-neutral-900/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-neutral-900/80 backdrop-blur-sm w-screen h-screen"
           />
 
           {/* Modal Content */}
@@ -227,7 +227,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.5 }}
-            className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-orange-100 z-10"
+            className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-orange-100 z-10 m-auto self-center"
           >
             {/* Header / Background Pattern */}
             <div className="bg-orange-600 px-6 py-6 text-white relative">

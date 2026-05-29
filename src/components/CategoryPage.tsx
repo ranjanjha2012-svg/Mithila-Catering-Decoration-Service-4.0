@@ -7,6 +7,7 @@ import Footer from './Footer';
 import CurtainLoader from './CurtainLoader';
 import { useCart } from '../context/CartContext';
 import CateringRoot from './CateringRoot';
+import { auth } from '../lib/firebase';
 
 interface CategoryPageProps {
   category: string;
@@ -42,6 +43,10 @@ function CategoryPageContent({ category, categoryName }: CategoryPageProps) {
     });
 
   const handleOrderClick = (item: MenuItem) => {
+    if (!auth.currentUser) {
+      window.dispatchEvent(new CustomEvent('open-mithila-auth'));
+      return;
+    }
     if (item.halfPrice && item.fullPrice) {
       setSelectedItem(item);
       setSelectedSize('half');
@@ -53,6 +58,10 @@ function CategoryPageContent({ category, categoryName }: CategoryPageProps) {
   };
 
   const handleAddWithSelectedSize = () => {
+    if (!auth.currentUser) {
+      window.dispatchEvent(new CustomEvent('open-mithila-auth'));
+      return;
+    }
     if (selectedItem) {
       addToCart(selectedItem, selectedSize);
       setShowSizeModal(false);

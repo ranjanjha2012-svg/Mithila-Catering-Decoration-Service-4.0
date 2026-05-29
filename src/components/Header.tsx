@@ -162,18 +162,20 @@ export default function Header() {
           </nav>
 
           {/* Cart trigger button with reactive count */}
-          <button
-            onClick={triggerCartOpen}
-            className="relative p-2.5 text-stone-700 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer flex items-center justify-center"
-            id="header-cart-trigger"
-          >
-            <ShoppingCart size={22} />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-600 text-white font-black text-[10px] rounded-full flex items-center justify-center border-2 border-white animate-pulse">
-                {cartCount}
-              </span>
-            )}
-          </button>
+          {user && (
+            <button
+              onClick={triggerCartOpen}
+              className="relative p-2.5 text-stone-700 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer flex items-center justify-center"
+              id="header-cart-trigger"
+            >
+              <ShoppingCart size={22} />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-600 text-white font-black text-[10px] rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Mobile Login indicator or menu trigger */}
           {!user && (
