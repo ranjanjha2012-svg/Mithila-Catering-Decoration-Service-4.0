@@ -7,7 +7,7 @@ import {
   signInWithPopup, 
   signOut
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../lib/firebase';
 
 interface AuthModalProps {
@@ -87,21 +87,34 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       if (result.user) {
-        // Successful Google login automatically bypasses email verification check
-        localStorage.setItem('userRole', 'customer');
-        
-        // Write user profile to Firestore
+        // Find if user already exists
         const userRef = doc(db, 'users', result.user.uid);
-        await setDoc(userRef, {
-          uid: result.user.uid,
-          name: result.user.displayName || 'Customer',
-          email: result.user.email,
-          role: 'customer',
-          createdAt: new Date().toISOString()
-        }, { merge: true });
+        const userDoc = await getDoc(userRef);
+        let finalRole = 'customer';
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data && data.role) {
+            finalRole = data.role;
+          }
+        } else {
+          // Write user profile to Firestore
+          await setDoc(userRef, {
+            uid: result.user.uid,
+            name: result.user.displayName || 'Customer',
+            email: result.user.email,
+            role: 'customer',
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        }
 
-        // Customers are redirected directly to Home page as requested
-        window.location.href = '/';
+        // Store role & close modal instantly (no full page reload)
+        localStorage.setItem('userRole', finalRole);
+        if (finalRole === 'admin') {
+          window.location.href = '/dashboard.html';
+        } else {
+          onClose();
+        }
       }
     } catch (err: any) {
       handleError(err);
@@ -135,10 +148,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           createdAt: new Date().toISOString()
         }, { merge: true });
 
-        // Store role & redirect
+        // Store role & close or redirect
         localStorage.setItem('userRole', role);
         if (role === 'customer') {
-          window.location.href = '/';
+          onClose();
         } else {
           window.location.href = '/dashboard.html';
         }
@@ -147,22 +160,33 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Save profile in Firestore to ensure it exists
+        // Fetch user document from Firestore to find their real role
         const userRef = doc(db, 'users', user.uid);
-        await setDoc(userRef, {
-          uid: user.uid,
-          name: user.displayName || email.split('@')[0],
-          email: user.email,
-          role: role,
-          createdAt: new Date().toISOString()
-        }, { merge: true });
+        const userDoc = await getDoc(userRef);
+        let finalRole = role; // fall back to chosen form role if profile not in DB
 
-        // Store role & redirect
-        localStorage.setItem('userRole', role);
-        if (role === 'customer') {
-          window.location.href = '/';
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data && data.role) {
+            finalRole = data.role;
+          }
         } else {
+          // Document doesn't exist, create it
+          await setDoc(userRef, {
+            uid: user.uid,
+            name: user.displayName || email.split('@')[0],
+            email: user.email,
+            role: finalRole,
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        }
+
+        // Store role & close or redirect
+        localStorage.setItem('userRole', finalRole);
+        if (finalRole === 'admin') {
           window.location.href = '/dashboard.html';
+        } else {
+          onClose();
         }
       }
     } catch (err: any) {
@@ -175,7 +199,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 w-screen h-screen top-0 left-0">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

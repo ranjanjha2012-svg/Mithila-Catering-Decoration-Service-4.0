@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 
 export interface CartItem {
@@ -40,11 +41,58 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Save cart to localStorage on state change
+  // Listen to Auth State to load and merge cloud cart
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          const userRef = doc(db, 'users', currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            const cloudCart: CartItem[] = data.cart || [];
+            if (cloudCart.length > 0) {
+              setCart((prevLocalCart) => {
+                const merged = [...cloudCart];
+                prevLocalCart.forEach((localItem) => {
+                  const cloudItemIdx = merged.findIndex((ci) => ci.id === localItem.id);
+                  if (cloudItemIdx > -1) {
+                    merged[cloudItemIdx].quantity = Math.max(merged[cloudItemIdx].quantity, localItem.quantity);
+                  } else {
+                    merged.push(localItem);
+                  }
+                });
+                return merged;
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error reading user cart from Firestore:", err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Save cart to localStorage and optionally Firestore on state change
   useEffect(() => {
     localStorage.setItem('mithila_cart', JSON.stringify(cart));
     // Dispatch global event for non-context headers (e.g. multi-page decoupled headers)
     window.dispatchEvent(new CustomEvent('mithila_cart_updated'));
+
+    const syncToFirebase = async () => {
+      if (auth.currentUser) {
+        try {
+          const userRef = doc(db, 'users', auth.currentUser.uid);
+          await setDoc(userRef, { cart }, { merge: true });
+        } catch (err) {
+          console.error("Error syncing cart to Firestore:", err);
+        }
+      }
+    };
+
+    syncToFirebase();
   }, [cart]);
 
   const addToCart = (item: any, size: 'half' | 'full' | 'single' = 'single') => {
@@ -105,18 +153,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const orderPayload = {
       userId: auth.currentUser.uid,
+      customerName: formData.name,
+      customerPhone: formData.number,
+      customerEmail: auth.currentUser.email || '',
       userName: formData.name,
       userPhone: formData.number,
       whatsapp: formData.whatsapp,
       address: formData.address,
       location: formData.location || 'General',
-      items: JSON.stringify(cart.map(i => ({
+      items: cart.map(i => ({
+        id: i.id,
         name: i.name,
         size: i.size,
         price: i.price,
         quantity: i.quantity,
         total: i.price * i.quantity
-      }))),
+      })),
+      subtotal: cartTotal,
+      packingCharge: 12,
+      deliveryCharge: 40,
       totalAmount: cartTotal + 12 + 40, // packing + delivery charges
       status: 'Pending',
       paymentMethod,
