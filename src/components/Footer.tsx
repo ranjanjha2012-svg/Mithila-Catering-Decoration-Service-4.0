@@ -49,7 +49,7 @@ export default function Footer() {
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-orange-500 shrink-0" />
                 <div className="flex flex-col">
-                  <span>ranjanjha2012@gmail.com</span>
+                  <span>ranjanjha@mithilacatering.com</span>
                   <span className="text-xs">mithilacateringservice@gmail.com</span>
                 </div>
               </li>
@@ -76,8 +76,25 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Google Map View */}
+        <div className="mb-12 rounded-2xl overflow-hidden shadow-lg border border-orange-950 h-64 md:h-80 relative">
+          <iframe 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d224345.8392319277!2d77.06889754725782!3d28.527280306053616!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5b347eb62d%3A0x37205b715326640f!2sDelhi!5e0!3m2!1sen!2sin!4v1710731480000!5m2!1sen!2sin" 
+            width="100%" 
+            height="100%" 
+            style={{ border: 0 }} 
+            allowFullScreen 
+            loading="lazy" 
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Mithila Catering Location Map"
+          ></iframe>
+        </div>
+
         <div className="border-t border-orange-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-orange-200/40">
-          <p>© 2026 Mithila Catering & Decoration Service. All rights reserved.</p>
+          <div className="flex flex-col gap-1 items-center md:items-start text-center md:text-left">
+            <p>© 2026 Mithila Catering & Decoration Service. All rights reserved.</p>
+            <p className="text-orange-400/60 font-semibold mt-1">Last Updated 29 May 2026</p>
+          </div>
           <p className="flex items-center gap-1">
             Design by <a href="https://waltdesignsstudio.in" target="_blank" rel="noopener noreferrer" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">Walt Designs & Studio</a>
           </p>
