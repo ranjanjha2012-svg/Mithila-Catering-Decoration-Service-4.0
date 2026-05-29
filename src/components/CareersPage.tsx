@@ -62,7 +62,7 @@ export default function CareersPage() {
   useEffect(() => {
     // Listen to Auth State
     const unsubscribe = onAuthStateChanged(auth, (usr) => {
-      if (usr && (usr.emailVerified || usr.providerData.some(p => p.providerId === 'google.com'))) {
+      if (usr) {
         setCurrentUser(usr);
         // Pre-fill form if display details are known
         setFormData(prev => ({

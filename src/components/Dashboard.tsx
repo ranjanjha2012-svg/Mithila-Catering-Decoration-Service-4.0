@@ -9,7 +9,7 @@ import {
   User as UserIcon, Shield, LogOut, CheckCircle, Clock, Search, ListFilter,
   DollarSign, FileText, Settings, UserCheck, Calendar, MapPin, Sparkles, Send, Phone,
   Coffee, ChevronRight, Calculator, CheckSquare, Plus, Trash2, Mail, ShoppingBag, Layers,
-  Activity, Tag, ExternalLink, Loader2
+  Activity, Tag, ExternalLink, Loader2, X
 } from 'lucide-react';
 
 interface Inquiry {
@@ -111,7 +111,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser && (currentUser.emailVerified || currentUser.providerData.some(p => p.providerId === 'google.com'))) {
+      if (currentUser) {
         const savedRole = localStorage.getItem('userRole');
         
         if (savedRole !== 'admin') {

@@ -34,8 +34,8 @@ export default function Header() {
     window.addEventListener('storage', updateCartCount);
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      // Direct session validation: only authenticated and verified users or organic Google users are logged in
-      if (currentUser && (currentUser.emailVerified || currentUser.providerData.some(p => p.providerId === 'google.com'))) {
+      // Direct session validation: accept authenticated users
+      if (currentUser) {
         setUser(currentUser);
         setRole(localStorage.getItem('userRole'));
       } else {

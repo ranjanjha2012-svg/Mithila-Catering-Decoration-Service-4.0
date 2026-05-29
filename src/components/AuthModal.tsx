@@ -4,7 +4,6 @@ import { X, Mail, Lock, LogIn, User, ShieldCheck, Chrome } from 'lucide-react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  sendEmailVerification, 
   signInWithPopup, 
   signOut
 } from 'firebase/auth';
@@ -136,28 +135,17 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           createdAt: new Date().toISOString()
         }, { merge: true });
 
-        // Send email verification
-        await sendEmailVerification(user);
-        
-        // Immediately sign them out so they are not logged in automatically
-        await signOut(auth);
-        
-        setRegisteredEmail(email);
-        setScreen('verification-sent');
+        // Store role & redirect
+        localStorage.setItem('userRole', role);
+        if (role === 'customer') {
+          window.location.href = '/';
+        } else {
+          window.location.href = '/dashboard.html';
+        }
       } else {
         // Login mode
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
-        // Check if email is verified
-        if (!user.emailVerified) {
-          // If the email is not verified, sign out and show instructions
-          await signOut(auth);
-          setRegisteredEmail(email);
-          setScreen('verification-sent');
-          setLoading(false);
-          return;
-        }
 
         // Save profile in Firestore to ensure it exists
         const userRef = doc(db, 'users', user.uid);
