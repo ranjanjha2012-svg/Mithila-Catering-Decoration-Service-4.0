@@ -53,14 +53,31 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const errorCode = err.code || '';
     const message = err.message || '';
 
-    if (errorCode === 'auth/wrong-password' || errorCode === 'auth/user-not-found' || errorCode === 'auth/invalid-credential') {
+    const isWrongCredentials = 
+      errorCode === 'auth/wrong-password' || 
+      errorCode === 'auth/user-not-found' || 
+      errorCode === 'auth/invalid-credential' ||
+      errorCode.includes('invalid-credential') ||
+      message.includes('invalid-credential') ||
+      message.includes('invalid_credential') ||
+      message.includes('auth/invalid-credential') ||
+      message.includes('wrong') || 
+      message.includes('password') || 
+      message.includes('incorrect');
+
+    const isEmailAlreadyInUse = 
+      errorCode === 'auth/email-already-in-use' ||
+      errorCode.includes('email-already-in-use') ||
+      message.includes('email-already-in-use') ||
+      message.includes('already-exists') ||
+      message.includes('already exists');
+
+    if (isWrongCredentials) {
       setError('Email or password is incorrect.');
-    } else if (errorCode === 'auth/email-already-in-use') {
+    } else if (isEmailAlreadyInUse) {
       setError('user already exists. Please sign in');
-    } else if (message.includes('wrong') || message.includes('password') || message.includes('incorrect')) {
-      setError('Email or password is incorrect.');
     } else {
-      setError(err.message || 'An error occurred. Please try again.');
+      setError('Email or password is incorrect.');
     }
   };
 
