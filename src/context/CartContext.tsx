@@ -41,38 +41,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Listen to Auth State to load and merge cloud cart
+  // Listen to Auth State to load and override cart on login or completely wipe on logout
   useEffect(() => {
+    let active = true;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         try {
           const userRef = doc(db, 'users', currentUser.uid);
           const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            const cloudCart: CartItem[] = data.cart || [];
-            if (cloudCart.length > 0) {
-              setCart((prevLocalCart) => {
-                const merged = [...cloudCart];
-                prevLocalCart.forEach((localItem) => {
-                  const cloudItemIdx = merged.findIndex((ci) => ci.id === localItem.id);
-                  if (cloudItemIdx > -1) {
-                    merged[cloudItemIdx].quantity = Math.max(merged[cloudItemIdx].quantity, localItem.quantity);
-                  } else {
-                    merged.push(localItem);
-                  }
-                });
-                return merged;
-              });
+          if (active) {
+            if (userSnap.exists()) {
+              const data = userSnap.data();
+              const cloudCart: CartItem[] = data.cart || [];
+              setCart(cloudCart);
+            } else {
+              setCart([]);
             }
           }
         } catch (err) {
           console.error("Error reading user cart from Firestore:", err);
+          if (active) {
+            setCart([]);
+          }
+        }
+      } else {
+        if (active) {
+          setCart([]);
+          localStorage.removeItem('mithila_cart');
+          sessionStorage.removeItem('mithila_cart');
         }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   // Save cart to localStorage and optionally Firestore on state change
