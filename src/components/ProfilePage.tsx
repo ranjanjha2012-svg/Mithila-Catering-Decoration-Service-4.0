@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { 
   User as UserIcon, Mail, Phone, MapPin, Loader2, Save, 
@@ -44,6 +44,8 @@ export default function ProfilePage() {
     location: ''
   });
 
+  const ordersUnsubscribeRef = React.useRef<(() => void) | null>(null);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -56,7 +58,7 @@ export default function ProfilePage() {
 
         setUser(currentUser);
         await fetchUserProfile(currentUser);
-        await fetchUserOrders(currentUser.uid);
+        fetchUserOrders(currentUser.uid);
       } else {
         // If not logged in, boot back to main website
         setUser(null);
@@ -65,7 +67,12 @@ export default function ProfilePage() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (ordersUnsubscribeRef.current) {
+        ordersUnsubscribeRef.current();
+      }
+    };
   }, []);
 
   const fetchUserProfile = async (currentUser: FirebaseUser) => {
@@ -96,32 +103,42 @@ export default function ProfilePage() {
     }
   };
 
-  const fetchUserOrders = async (userId: string) => {
+  const fetchUserOrders = (userId: string) => {
     setLoadingOrders(true);
+    if (ordersUnsubscribeRef.current) {
+      ordersUnsubscribeRef.current();
+    }
+
     try {
       const q = query(collection(db, 'orders'), where('userId', '==', userId));
-      const ordersSnap = await getDocs(q);
-      const list: FirestoreOrder[] = [];
-      ordersSnap.forEach((doc) => {
-        const data = doc.data();
-        list.push({
-          id: doc.id,
-          items: data.items || [],
-          subtotal: data.subtotal || 0,
-          totalAmount: data.totalAmount || 0,
-          address: data.address || '',
-          location: data.location || '',
-          paymentMethod: data.paymentMethod || 'COD',
-          status: data.status || 'Pending',
-          createdAt: data.createdAt || ''
+      const unsub = onSnapshot(q, (snapshot) => {
+        const list: FirestoreOrder[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          list.push({
+            id: doc.id,
+            items: data.items || [],
+            subtotal: data.subtotal || 0,
+            totalAmount: data.totalAmount || 0,
+            address: data.address || '',
+            location: data.location || '',
+            paymentMethod: data.paymentMethod || 'COD',
+            status: data.status || 'Pending',
+            createdAt: data.createdAt || ''
+          });
         });
+        // Sort newest first
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setPastOrders(list);
+        setLoadingOrders(false);
+      }, (err) => {
+        console.error('Real-time query error for user orders:', err);
+        setLoadingOrders(false);
       });
-      // Sort newest first
-      list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setPastOrders(list);
+
+      ordersUnsubscribeRef.current = unsub;
     } catch (err) {
       console.error('Error fetching past orders:', err);
-    } finally {
       setLoadingOrders(false);
     }
   };

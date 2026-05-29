@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { 
-  collection, query, getDocs, doc, updateDoc, addDoc, deleteDoc, where, orderBy 
+  collection, query, getDocs, doc, updateDoc, addDoc, deleteDoc, where, orderBy, onSnapshot 
 } from 'firebase/firestore';
 import { 
   User as UserIcon, Shield, LogOut, CheckCircle, Clock, Search, ListFilter,
@@ -43,6 +43,8 @@ interface FirestoreOrder {
   totalAmount: number;
   address: string;
   location: string;
+  state?: string;
+  instructions?: string;
   orderDate?: string;
   orderTime?: string;
   paymentMethod: string;
@@ -109,6 +111,8 @@ export default function Dashboard() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const ordersUnsubscribeRef = React.useRef<(() => void) | null>(null);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -134,40 +138,55 @@ export default function Dashboard() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (ordersUnsubscribeRef.current) {
+        ordersUnsubscribeRef.current();
+      }
+    };
   }, []);
 
   const fetchAdminData = async (adminUid: string) => {
     setLoadingDb(true);
+    if (ordersUnsubscribeRef.current) {
+      ordersUnsubscribeRef.current();
+    }
     try {
-      // 1. Fetch customer online orders
-      const ordersSnap = await getDocs(collection(db, 'orders'));
-      const ordersList: FirestoreOrder[] = [];
-      ordersSnap.forEach((doc) => {
-        const data = doc.data();
-        ordersList.push({
-          id: doc.id,
-          customerName: data.customerName || '',
-          customerEmail: data.customerEmail || '',
-          customerPhone: data.customerPhone || '',
-          items: data.items || [],
-          subtotal: data.subtotal || 0,
-          packingCharge: data.packingCharge || 0,
-          deliveryCharge: data.deliveryCharge || 0,
-          totalAmount: data.totalAmount || 0,
-          address: data.address || '',
-          location: data.location || '',
-          orderDate: data.orderDate || '',
-          orderTime: data.orderTime || '',
-          paymentMethod: data.paymentMethod || 'COD',
-          status: data.status || 'Pending',
-          createdAt: data.createdAt || '',
-          userId: data.userId || ''
+      // 1. Fetch customer online orders with onSnapshot for real-time live synchronization
+      const unsubscribeOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+        const ordersList: FirestoreOrder[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          ordersList.push({
+            id: doc.id,
+            customerName: data.customerName || data.userName || '',
+            customerEmail: data.customerEmail || '',
+            customerPhone: data.customerPhone || data.userPhone || '',
+            items: data.items || [],
+            subtotal: data.subtotal || 0,
+            packingCharge: data.packingCharge || 0,
+            deliveryCharge: data.deliveryCharge || 0,
+            totalAmount: data.totalAmount || 0,
+            address: data.address || '',
+            location: data.location || '',
+            state: data.state || '',
+            instructions: data.instructions || '',
+            orderDate: data.orderDate || '',
+            orderTime: data.orderTime || '',
+            paymentMethod: data.paymentMethod || 'COD',
+            status: data.status || 'Pending',
+            createdAt: data.createdAt || '',
+            userId: data.userId || ''
+          });
         });
+        // Sort orders by creation date descending
+        ordersList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setOrders(ordersList);
+      }, (error) => {
+        console.error("Real-time order sync failed:", error);
       });
-      // Sort orders by creation date descending
-      ordersList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setOrders(ordersList);
+
+      ordersUnsubscribeRef.current = unsubscribeOrders;
 
       // 2. Fetch jobs posted by ONLY this admin
       const jobsQuery = query(collection(db, 'jobs'), where('createdBy', '==', adminUid));
@@ -512,6 +531,12 @@ export default function Dashboard() {
                                   <div>
                                     <span className="text-[9px] font-black uppercase text-stone-400 block">Deliver Site:</span>
                                     <p className="text-stone-700 font-bold leading-tight mt-0.5">{order.address}, {order.location}</p>
+                                    {order.instructions && (
+                                      <div className="mt-1.5 p-1.5 bg-orange-50 border border-orange-100 text-orange-850 rounded text-[10px] font-bold">
+                                        <span className="text-[8px] font-extrabold uppercase text-orange-600 block tracking-wider">Instructions:</span>
+                                        {order.instructions}
+                                      </div>
+                                    )}
                                   </div>
                                   {order.orderDate && (
                                     <div>

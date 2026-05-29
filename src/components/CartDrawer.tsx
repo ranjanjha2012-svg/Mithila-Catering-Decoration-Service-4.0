@@ -28,9 +28,8 @@ export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDraw
     number: '',
     whatsapp: '',
     address: '',
-    location: '',
-    orderDate: new Date().toISOString().split('T')[0],
-    orderTime: '12:00'
+    state: '',
+    instructions: ''
   });
 
   React.useEffect(() => {
@@ -49,7 +48,8 @@ export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDraw
               number: data.phone || data.number || prev.number || '',
               whatsapp: data.whatsapp || data.phone || data.number || prev.whatsapp || '',
               address: data.address || prev.address || '',
-              location: data.location || prev.location || ''
+              state: data.location || data.state || prev.state || '',
+              instructions: prev.instructions || ''
             }));
           }
         } catch (err) {
@@ -106,11 +106,9 @@ ${itemsListString}
 *Delivery Details:*
 *Name:* ${formData.name}
 *Phone:* ${formData.number}
-*WhatsApp:* ${formData.whatsapp}
-*Address:* ${formData.address}, ${formData.location}
-*Date:* ${formData.orderDate}
-*Time:* ${formData.orderTime}
-*Total Paid/Due:* ₹${totalAmount}
+*WhatsApp:* ${formData.whatsapp || 'N/A'}
+*Address:* ${formData.address}, ${formData.state}
+${formData.instructions ? `*Instructions:* ${formData.instructions}\n` : ''}*Total Paid/Due:* ₹${totalAmount}
 
 Please confirm my order immediately.`;
 
@@ -305,7 +303,7 @@ Please confirm my order immediately.`;
 
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Phone</label>
+                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Phone Number</label>
                               <input
                                 type="tel"
                                 name="number"
@@ -317,21 +315,20 @@ Please confirm my order immediately.`;
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">WhatsApp</label>
+                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">WhatsApp (Optional)</label>
                               <input
                                 type="tel"
                                 name="whatsapp"
-                                required
                                 value={formData.whatsapp}
                                 onChange={handleInputChange}
-                                placeholder="WhatsApp count"
+                                placeholder="WhatsApp number"
                                 className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                               />
                             </div>
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Address</label>
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Delivery Address</label>
                             <textarea
                               name="address"
                               required
@@ -344,46 +341,28 @@ Please confirm my order immediately.`;
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Location region</label>
-                            <select
-                              name="location"
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">State / Region</label>
+                            <input
+                              type="text"
+                              name="state"
                               required
-                              value={formData.location}
+                              value={formData.state}
                               onChange={handleInputChange}
+                              placeholder="Enter state (e.g. Noida, Delhi, Faridabad)"
                               className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
-                            >
-                              <option value="">Select Location</option>
-                              {locations.map((loc) => (
-                                <option key={loc} value={loc}>
-                                  {loc}
-                                </option>
-                              ))}
-                            </select>
+                            />
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Delivery Date</label>
-                              <input
-                                type="date"
-                                name="orderDate"
-                                required
-                                value={formData.orderDate}
-                                onChange={handleInputChange}
-                                className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Apprx Time</label>
-                              <input
-                                type="time"
-                                name="orderTime"
-                                required
-                                value={formData.orderTime}
-                                onChange={handleInputChange}
-                                className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
-                              />
-                            </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Intructions</label>
+                            <textarea
+                              name="instructions"
+                              rows={2}
+                              value={formData.instructions}
+                              onChange={handleInputChange}
+                              placeholder="Any special cooking/delivery instructions"
+                              className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
+                            />
                           </div>
 
                           {/* Payment Modes selection */}
