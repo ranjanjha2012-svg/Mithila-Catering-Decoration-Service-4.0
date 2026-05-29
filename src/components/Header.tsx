@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Phone, Mail, MapPin } from 'lucide-react';
+import { Menu, X, Phone, Mail, MapPin, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -9,17 +9,46 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+
+  const updateCartCount = () => {
+    const savedCart = localStorage.getItem('mithila_cart');
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart);
+        const count = parsed.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0);
+        setCartCount(count);
+      } catch (e) {
+        setCartCount(0);
+      }
+    } else {
+      setCartCount(0);
+    }
+  };
 
   useEffect(() => {
+    // Sync cart count
+    updateCartCount();
+    window.addEventListener('mithila_cart_updated', updateCartCount);
+    window.addEventListener('storage', updateCartCount);
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       // Direct session validation: only authenticated and verified users or organic Google users are logged in
       if (currentUser && (currentUser.emailVerified || currentUser.providerData.some(p => p.providerId === 'google.com'))) {
         setUser(currentUser);
+        setRole(localStorage.getItem('userRole'));
       } else {
         setUser(null);
+        setRole(null);
       }
     });
-    return () => unsubscribe();
+
+    return () => {
+      window.removeEventListener('mithila_cart_updated', updateCartCount);
+      window.removeEventListener('storage', updateCartCount);
+      unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -32,12 +61,17 @@ export default function Header() {
     }
   };
 
+  const triggerCartOpen = () => {
+    window.dispatchEvent(new CustomEvent('open-mithila-cart'));
+  };
+
   const navItems = [
     { name: 'Home', href: '/' },
     { name: 'Tiffin Service', href: '/tiffin.html' },
     { name: 'Order Online', href: '/order.html' },
     { name: 'Event Gallery', href: '/gallery.html' },
     { name: 'AI Planner', href: '/planner.html' },
+    { name: 'Careers', href: '/careers.html' },
     { name: 'Contact Us', href: '/contact.html' },
   ];
 
@@ -56,7 +90,7 @@ export default function Header() {
           </div>
         </a>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <nav className="hidden lg:flex items-center gap-8">
             {navItems.map((item) => (
               <a 
@@ -72,13 +106,15 @@ export default function Header() {
 
             {user ? (
               <div className="flex items-center gap-4 border-l border-orange-100 pl-6">
-                <a 
-                  href="/dashboard.html"
-                  className="text-sm font-black text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 px-4 py-2 border-2 border-orange-100 rounded-xl transition-all"
-                  id="header-dashboard-link"
-                >
-                  Dashboard
-                </a>
+                {role === 'admin' && (
+                  <a 
+                    href="/dashboard.html"
+                    className="text-sm font-black text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 px-4 py-2 border-2 border-orange-100 rounded-xl transition-all"
+                    id="header-dashboard-link"
+                  >
+                    Dashboard
+                  </a>
+                )}
                 <button
                   onClick={handleLogout}
                   className="text-sm font-bold text-neutral-600 hover:text-red-600 transition-colors cursor-pointer"
@@ -97,6 +133,20 @@ export default function Header() {
               </button>
             )}
           </nav>
+
+          {/* Cart trigger button with reactive count */}
+          <button
+            onClick={triggerCartOpen}
+            className="relative p-2.5 text-stone-700 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer flex items-center justify-center"
+            id="header-cart-trigger"
+          >
+            <ShoppingCart size={22} />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-600 text-white font-black text-[10px] rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                {cartCount}
+              </span>
+            )}
+          </button>
 
           {/* Mobile Login indicator or menu trigger */}
           {!user && (
@@ -144,13 +194,15 @@ export default function Header() {
               <div className="pt-2">
                 {user ? (
                   <div className="flex flex-col gap-3">
-                    <a
-                      href="/dashboard.html"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="w-full text-center py-2.5 bg-orange-50 text-orange-600 border border-orange-100 font-extrabold rounded-xl"
-                    >
-                      Go to Dashboard
-                    </a>
+                    {role === 'admin' && (
+                      <a
+                        href="/dashboard.html"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="w-full text-center py-2.5 bg-orange-50 text-orange-600 border border-orange-100 font-extrabold rounded-xl"
+                      >
+                        Go to Dashboard
+                      </a>
+                    )}
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -193,3 +245,4 @@ export default function Header() {
     </header>
   );
 }
+

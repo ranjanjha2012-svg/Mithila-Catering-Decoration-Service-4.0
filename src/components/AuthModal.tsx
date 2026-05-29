@@ -8,7 +8,8 @@ import {
   signInWithPopup, 
   signOut
 } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, db } from '../lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -89,7 +90,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       if (result.user) {
         // Successful Google login automatically bypasses email verification check
         localStorage.setItem('userRole', 'customer');
-        window.location.href = '/dashboard.html';
+        
+        // Write user profile to Firestore
+        const userRef = doc(db, 'users', result.user.uid);
+        await setDoc(userRef, {
+          uid: result.user.uid,
+          name: result.user.displayName || 'Customer',
+          email: result.user.email,
+          role: 'customer',
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+
+        // Customers are redirected directly to Home page as requested
+        window.location.href = '/';
       }
     } catch (err: any) {
       handleError(err);
@@ -113,6 +126,16 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
+        // Save profile in Firestore
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: email.split('@')[0],
+          email: user.email,
+          role: role,
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+
         // Send email verification
         await sendEmailVerification(user);
         
@@ -136,9 +159,23 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           return;
         }
 
-        // Store role & redirect to dashboard
+        // Save profile in Firestore to ensure it exists
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName || email.split('@')[0],
+          email: user.email,
+          role: role,
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+
+        // Store role & redirect
         localStorage.setItem('userRole', role);
-        window.location.href = '/dashboard.html';
+        if (role === 'customer') {
+          window.location.href = '/';
+        } else {
+          window.location.href = '/dashboard.html';
+        }
       }
     } catch (err: any) {
       handleError(err);

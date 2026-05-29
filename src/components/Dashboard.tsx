@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { motion, AnimatePresence } from 'motion/react';
+import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
+import { 
+  collection, query, getDocs, doc, updateDoc, addDoc, deleteDoc, where, orderBy 
+} from 'firebase/firestore';
 import { 
   User as UserIcon, Shield, LogOut, CheckCircle, Clock, Search, ListFilter,
   DollarSign, FileText, Settings, UserCheck, Calendar, MapPin, Sparkles, Send, Phone,
-  Coffee, ChevronRight, Calculator, CheckSquare
+  Coffee, ChevronRight, Calculator, CheckSquare, Plus, Trash2, Mail, ShoppingBag, Layers,
+  Activity, Tag, ExternalLink, Loader2
 } from 'lucide-react';
-
-type UserRole = 'customer' | 'admin';
 
 interface Inquiry {
   id: string;
@@ -23,109 +25,193 @@ interface Inquiry {
   location: string;
 }
 
-const INITIAL_INQUIRIES: Inquiry[] = [
-  {
-    id: 'INQ-402',
-    name: 'Ramesh Kumar Jha',
-    phone: '+91 9876543210',
-    email: 'ramesh.jha@gmail.com',
-    event: 'Sacred Thread Ceremony (Upanayana)',
-    date: '2026-06-15',
-    guests: 250,
-    package: 'Mithilanchal Feast Special',
-    status: 'Pending',
-    location: 'Darbhanga, Bihar'
-  },
-  {
-    id: 'INQ-403',
-    name: 'Abhay Mishra',
-    phone: '+91 9654123580',
-    email: 'abhay.mishra@outlook.com',
-    event: 'Grand Wedding Reception',
-    date: '2026-07-02',
-    guests: 400,
-    package: 'Luxury Wedding Buffet (Pure Veg)',
-    status: 'Contacted',
-    location: 'Sarisab Pahi, Madhubani'
-  },
-  {
-    id: 'INQ-404',
-    name: 'Shreya Sharma',
-    phone: '+91 9582146973',
-    email: 'shreya.sharma@yahoo.com',
-    event: 'First Birthday Celebration',
-    date: '2026-06-20',
-    guests: 80,
-    package: 'Deluxe Party Bites & Starters',
-    status: 'Approved',
-    location: 'Sector 62, Noida'
-  },
-  {
-    id: 'INQ-405',
-    name: 'Pushpa Jha',
-    phone: '+91 9312456789',
-    email: 'pushpa.jha@gmail.com',
-    event: 'Family Upananayam Gathering',
-    date: '2026-06-25',
-    guests: 180,
-    package: 'Traditional Mithila Thali',
-    status: 'Pending',
-    location: 'Patna, Bihar'
-  },
-  {
-    id: 'INQ-406',
-    name: 'Vikram Aditya Roy',
-    phone: '+91 9999888812',
-    email: 'vikram.roy@techcorp.com',
-    event: 'Annual Corporate Meet',
-    date: '2026-08-10',
-    guests: 150,
-    package: 'Premium B2B Executive Platter',
-    status: 'Archived',
-    location: 'DLF CyberCity, Gurugram'
-  }
-];
+interface FirestoreOrder {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  items: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    size?: string;
+  }[];
+  subtotal: number;
+  packingCharge: number;
+  deliveryCharge: number;
+  totalAmount: number;
+  address: string;
+  location: string;
+  orderDate?: string;
+  orderTime?: string;
+  paymentMethod: string;
+  status: 'Pending' | 'Approved' | 'Delivered' | 'Archived';
+  createdAt: string;
+  userId: string;
+}
+
+interface JobPost {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  salary: string;
+  location: string;
+  requirements: string[];
+  createdBy: string;
+}
+
+interface Application {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  userId: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone: string;
+  experience: string;
+  coverLetter: string;
+  status: 'Pending' | 'Reviewed' | 'Approved' | 'Declined';
+  createdAt: string;
+}
 
 export default function Dashboard() {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<UserRole>('customer');
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [role, setRole] = useState<'admin' | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>('orders');
 
-  // Layout Subsections
-  const [activeTab, setActiveTab] = useState<string>('overview');
+  // Firestore Database items
+  const [orders, setOrders] = useState<FirestoreOrder[]>([]);
+  const [jobs, setJobs] = useState<JobPost[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loadingDb, setLoadingDb] = useState(false);
 
-  // Customer State
-  const [guestCount, setGuestCount] = useState<number>(100);
-  const [selectedPackage, setSelectedPackage] = useState<string>('mithila-feast');
-  const [selectedItems, setSelectedItems] = useState<string[]>(['Macha', 'Dahi Vada', 'Kheer']);
+  // Filters and Builders state
+  const [orderFilter, setOrderFilter] = useState<'All' | 'Pending' | 'Approved' | 'Delivered' | 'Archived'>('All');
+  const [showJobModal, setShowJobModal] = useState(false);
+  const [submittingJob, setSubmittingJob] = useState(false);
 
-  // Admin State
+  // New Job Form State
+  const [jobForm, setJobForm] = useState({
+    title: '',
+    department: 'Culinaries & Kitchens',
+    salary: '₹22,000 - ₹32,000 / month',
+    location: 'Delhi & NCR Sites',
+    description: '',
+    requirementsCsv: 'Punctual and polished hospitality habit, Able to travel to event sites promptly, Strong team coordinate nature'
+  });
+
+  // Local/Classic enquiries fallback
   const [inquiries, setInquiries] = useState<Inquiry[]>(() => {
     const saved = localStorage.getItem('mithila_inquiries');
-    return saved ? JSON.parse(saved) : INITIAL_INQUIRIES;
+    return saved ? JSON.parse(saved) : [];
   });
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Contacted' | 'Approved' | 'Archived'>('All');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser && (currentUser.emailVerified || currentUser.providerData.some(p => p.providerId === 'google.com'))) {
-        setUser(currentUser);
-        // Load role from localStorage
-        const savedRole = localStorage.getItem('userRole') as UserRole;
-        setRole(savedRole || 'customer');
+        const savedRole = localStorage.getItem('userRole');
+        
+        if (savedRole !== 'admin') {
+          // If customer, redirect immediately away from the dashboard back to index
+          window.location.href = '/';
+        } else {
+          setUser(currentUser);
+          setRole('admin');
+          // Load database values
+          fetchAdminData(currentUser.uid);
+        }
       } else {
         setUser(null);
+        setRole(null);
       }
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
-  // Save admin inquiries state inside local storage
-  useEffect(() => {
-    localStorage.setItem('mithila_inquiries', JSON.stringify(inquiries));
-  }, [inquiries]);
+  const fetchAdminData = async (adminUid: string) => {
+    setLoadingDb(true);
+    try {
+      // 1. Fetch customer online orders
+      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const ordersList: FirestoreOrder[] = [];
+      ordersSnap.forEach((doc) => {
+        const data = doc.data();
+        ordersList.push({
+          id: doc.id,
+          customerName: data.customerName || '',
+          customerEmail: data.customerEmail || '',
+          customerPhone: data.customerPhone || '',
+          items: data.items || [],
+          subtotal: data.subtotal || 0,
+          packingCharge: data.packingCharge || 0,
+          deliveryCharge: data.deliveryCharge || 0,
+          totalAmount: data.totalAmount || 0,
+          address: data.address || '',
+          location: data.location || '',
+          orderDate: data.orderDate || '',
+          orderTime: data.orderTime || '',
+          paymentMethod: data.paymentMethod || 'COD',
+          status: data.status || 'Pending',
+          createdAt: data.createdAt || '',
+          userId: data.userId || ''
+        });
+      });
+      // Sort orders by creation date descending
+      ordersList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setOrders(ordersList);
+
+      // 2. Fetch jobs posted by ONLY this admin
+      const jobsQuery = query(collection(db, 'jobs'), where('createdBy', '==', adminUid));
+      const jobsSnap = await getDocs(jobsQuery);
+      const jobsList: JobPost[] = [];
+      jobsSnap.forEach((doc) => {
+        const data = doc.data();
+        jobsList.push({
+          id: doc.id,
+          title: data.title || '',
+          description: data.description || '',
+          department: data.department || '',
+          salary: data.salary || '',
+          location: data.location || '',
+          requirements: data.requirements || [],
+          createdBy: data.createdBy || ''
+        });
+      });
+      setJobs(jobsList);
+
+      // 3. Fetch all job candidate submissions
+      const appsSnap = await getDocs(collection(db, 'applications'));
+      const appsList: Application[] = [];
+      appsSnap.forEach((doc) => {
+        const data = doc.data();
+        appsList.push({
+          id: doc.id,
+          jobId: data.jobId || '',
+          jobTitle: data.jobTitle || '',
+          userId: data.userId || '',
+          applicantName: data.applicantName || '',
+          applicantEmail: data.applicantEmail || '',
+          applicantPhone: data.applicantPhone || '',
+          experience: data.experience || '',
+          coverLetter: data.coverLetter || '',
+          status: data.status || 'Pending',
+          createdAt: data.createdAt || ''
+        });
+      });
+      appsList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setApplications(appsList);
+
+    } catch (error) {
+      console.error("Error loading admin collections:", error);
+    } finally {
+      setLoadingDb(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -133,73 +219,117 @@ export default function Dashboard() {
       localStorage.removeItem('userRole');
       window.location.href = '/';
     } catch (err) {
-      console.error('Error signing out:', err);
+      console.error('Error logging out:', err);
     }
   };
 
-  const handleUpdateInquiryStatus = (id: string, newStatus: Inquiry['status']) => {
-    setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, status: newStatus } : inq));
+  // Status updates for orders
+  const handleUpdateOrderStatus = async (orderId: string, nextStatus: FirestoreOrder['status']) => {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, { status: nextStatus });
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      alert("Failed to update status. Please try again.");
+    }
   };
 
-  // Cost estimates for Customer Planner
-  const PACKAGES = {
-    'mithila-feast': { name: 'Mithilanchal Royal Feast', pricePerPlate: 450, desc: 'Authentic Traditional flavors including Macha (Fish), Rice, Dal, Sabji, Dahi Vada, Maithilik sweets.' },
-    'corporate-combo': { name: 'Executive Premium Platter', pricePerPlate: 380, desc: 'Professional Indian & Continental fusion catered exquisitely for business meets and parties.' },
-    'delux-party': { name: 'Deluxe Celebrations Combo', pricePerPlate: 400, desc: 'Rich multi-course North Indian setup designed for grand birthdays, kitties, and events.' },
-    'starters-only': { name: 'Cocktail & Starters Plate', pricePerPlate: 250, desc: 'Scrumptious assortments of 6 signature hot finger starters & traditional street appetizers.' }
+  // Status updates for application reviews
+  const handleUpdateAppStatus = async (appId: string, nextStatus: Application['status']) => {
+    try {
+      const appRef = doc(db, 'applications', appId);
+      await updateDoc(appRef, { status: nextStatus });
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: nextStatus } : a));
+    } catch (err) {
+      console.error("Error updating application status:", err);
+    }
   };
 
-  const extraItems = [
-    { id: 'Macha', name: 'Fresh Mithila Fish Curry (Macha)', price: 120 },
-    { id: 'Dahi Vada', name: 'Traditional Soft Dahi Vada', price: 40 },
-    { id: 'Kheer', name: 'Makhana & Kesar Rabdi Kheer', price: 50 },
-    { id: 'Paneer Pasanda', name: 'Mithila Spiced Shahi Paneer', price: 60 },
-    { id: 'Litti Chokha', name: 'Clay Oven Smoked Litti Chokha', price: 70 },
-  ];
-
-  const handleItemToggle = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) ? prev.filter(i => i !== itemId) : [...prev, itemId]
-    );
+  // Delete Job Posting
+  const handleDeleteJob = async (jobId: string) => {
+    if (!window.confirm("Are you sure you want to delete this job posting permanently?")) return;
+    try {
+      await deleteDoc(doc(db, 'jobs', jobId));
+      setJobs(prev => prev.filter(j => j.id !== jobId));
+    } catch (err) {
+      console.error("Error deleting job posting:", err);
+    }
   };
 
-  const currentPackageInfo = PACKAGES[selectedPackage as keyof typeof PACKAGES] || PACKAGES['mithila-feast'];
-  const baseCost = currentPackageInfo.pricePerPlate * guestCount;
-  const extrasCost = selectedItems.reduce((acc, itemId) => {
-    const item = extraItems.find(x => x.id === itemId);
-    return acc + (item ? item.price : 0);
-  }, 0) * guestCount;
-  const totalCost = baseCost + extrasCost;
+  // Add new Job Posting
+  const handleCreateJobSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setSubmittingJob(true);
+
+    try {
+      const parsedReqs = jobForm.requirementsCsv
+        .split(',')
+        .map(r => r.trim())
+        .filter(r => r.length > 0);
+
+      const newJobDraft = {
+        title: jobForm.title,
+        department: jobForm.department,
+        salary: jobForm.salary,
+        location: jobForm.location,
+        description: jobForm.description,
+        requirements: parsedReqs,
+        createdBy: user.uid,
+        createdAt: new Date().toISOString()
+      };
+
+      const docRef = await addDoc(collection(db, 'jobs'), newJobDraft);
+      setJobs(prev => [...prev, { id: docRef.id, ...newJobDraft }]);
+      
+      // Reset form
+      setJobForm({
+        title: '',
+        department: 'Culinaries & Kitchens',
+        salary: '₹22,000 - ₹32,000 / month',
+        location: 'Delhi & NCR Sites',
+        description: '',
+        requirementsCsv: ''
+      });
+      setShowJobModal(false);
+    } catch (err) {
+      console.error("Error creating job posting:", err);
+      alert("Failed to create job posting. Please verify permissions.");
+    } finally {
+      setSubmittingJob(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8">
-        <div className="w-14 h-14 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-orange-900 font-bold mt-4 animate-pulse">Loading dashboard environment...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-zinc-50">
+        <Loader2 className="w-12 h-12 text-orange-600 animate-spin" />
+        <p className="text-stone-850 font-extrabold mt-4 animate-pulse">Establishing Admin Environment...</p>
       </div>
     );
   }
 
-  // Route Guard: if user is not logged in, stop render and show visual warning
-  if (!user) {
+  // Route fallback for unauthorized logins
+  if (!user || role !== 'admin') {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-lg mt-12 text-center">
+      <div className="container mx-auto px-4 py-24 max-w-lg text-center">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-8 shadow-2xl border-2 border-orange-100"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-red-100"
         >
           <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <Shield size={32} />
           </div>
-          <h2 className="text-2xl font-black text-neutral-800 tracking-tight">Unauthorized Access</h2>
-          <p className="text-neutral-500 mt-2 text-sm leading-relaxed">
-            Please log in or sign up first to view your personalized catering and event planning dashboard.
+          <h2 className="text-2xl font-black text-rose-950">Access Refused</h2>
+          <p className="text-stone-500 mt-2 text-sm">
+            This dashboard is dedicated exclusively to Mithila Catering Store Administrators.
           </p>
-          <div className="mt-8 space-y-3">
+          <div className="mt-8">
             <a
               href="/"
-              className="block w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-2xl transition-all shadow-md active:scale-[0.99]"
+              className="block w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl transition-all shadow-md"
             >
               Back to Home
             </a>
@@ -210,471 +340,565 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 mt-12 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 mt-20 max-w-7xl">
       {/* Upper Account Welcome Section */}
       <motion.div 
         initial={{ opacity: 0, y: -15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-orange-600 rounded-3xl p-6 md:p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl mb-8 relative overflow-hidden"
+        className="bg-stone-900 rounded-[2rem] p-6 md:p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl mb-8 relative overflow-hidden"
       >
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-orange-500/20 rounded-full pointer-events-none" />
-        <div className="absolute left-1/3 bottom-0 translate-y-24 w-48 h-48 bg-orange-700/10 rounded-full pointer-events-none" />
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
         
         <div className="flex items-center gap-4 z-10">
-          <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-            {role === 'admin' ? <Shield size={28} className="text-white" /> : <UserIcon size={28} className="text-white" />}
+          <div className="w-14 h-14 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-600/30 text-white font-black">
+            MT
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                Namaste, {user.displayName || user.email?.split('@')[0]}
+              <h2 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2 text-neutral-50 font-sans">
+                Admin Control Room
               </h2>
-              <span className={`text-xs px-2.5 py-0.5 font-bold uppercase rounded-full ${role === 'admin' ? 'bg-neutral-900 text-yellow-400' : 'bg-white/20 text-white'}`}>
-                {role === 'admin' ? 'Admin Store' : 'Customer'}
+              <span className="text-[10px] px-2 py-0.5 font-black uppercase rounded-lg bg-orange-600 text-white tracking-widest animate-pulse">
+                Live Store
               </span>
             </div>
-            <p className="text-orange-100 text-xs md:text-sm mt-0.5 font-medium">{user.email}</p>
+            <p className="text-stone-400 text-xs mt-1 font-semibold">Store Manager Email: <span className="text-orange-400">{user.email}</span></p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 z-10 w-full md:w-auto">
           <button 
-            onClick={handleLogout}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-black/20 hover:bg-black/30 text-white font-bold rounded-2xl border border-white/15 transition-all text-sm active:scale-[0.98]"
-            id="dashboard-logout-btn"
+            onClick={() => fetchAdminData(user.uid)}
+            className="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold rounded-xl transition-colors text-xs inline-flex items-center gap-1.5"
           >
-            <LogOut size={16} />
-            <span>Sign Out</span>
+            <Activity size={14} className={loadingDb ? "animate-spin text-orange-500" : ""} />
+            Sync Data
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-lg transition-all text-xs inline-flex items-center gap-1.5"
+          >
+            <LogOut size={14} />
+            Sign Out
           </button>
         </div>
       </motion.div>
 
-      {role === 'admin' ? (
-        /* ==================== ADMIN DASHBOARD ==================== */
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
-          {/* Side navigation */}
-          <div className="lg:col-span-1 space-y-3">
-            <div className="bg-white border border-orange-100 rounded-3xl p-5 shadow-sm">
-              <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mb-3 px-2">Catering Console</p>
-              <div className="space-y-1">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-bold transition-all ${activeTab === 'overview' ? 'bg-orange-600 text-white shadow-md shadow-orange-500/10' : 'text-gray-700 hover:bg-orange-50'}`}
-                >
-                  <ListFilter size={18} />
-                  <span>Enquiries Live</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('analytics')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-bold transition-all ${activeTab === 'analytics' ? 'bg-orange-600 text-white shadow-md shadow-orange-500/10' : 'text-gray-700 hover:bg-orange-50'}`}
-                >
-                  <DollarSign size={18} />
-                  <span>Catering Analytics</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-orange-50 border border-orange-100/50 rounded-3xl p-5 text-center">
-              <h4 className="font-extrabold text-orange-950 text-sm">Need Service Support?</h4>
-              <p className="text-xs text-orange-900/70 mt-1">If there are any system queries or technical updates required, write to contact.</p>
-              <a 
-                href="mailto:ranjanjha2012@gmail.com" 
-                className="inline-block mt-3 px-4 py-1.5 bg-orange-600 text-white rounded-xl text-xs font-extrabold hover:bg-orange-700"
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Side Selection Panels */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="bg-white border border-stone-200/60 rounded-3xl p-5 shadow-sm">
+            <p className="text-[10px] font-black text-stone-400 tracking-widest uppercase mb-4 px-2">Operational Hub</p>
+            <div className="space-y-1.5">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'orders' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
               >
-                Send Support Mail
-              </a>
+                <ShoppingBag size={16} />
+                <span>Customer Orders</span>
+                {orders.filter(o => o.status === 'Pending').length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-orange-150 text-orange-600 rounded-full flex items-center justify-center text-[10px] font-black border border-orange-100">
+                    {orders.filter(o => o.status === 'Pending').length}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('jobs')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'jobs' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
+              >
+                <Layers size={16} />
+                <span>Active Job Openings</span>
+                <span className="ml-auto text-[10px] bg-stone-100 px-1.5 py-0.5 rounded font-bold text-stone-500">
+                  {jobs.length} open
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('resumes')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'resumes' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
+              >
+                <UserCheck size={16} />
+                <span>Careers Applications</span>
+                {applications.filter(a => a.status === 'Pending').length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-orange-150 text-orange-600 rounded-full flex items-center justify-center text-[10px] font-black border border-orange-100">
+                    {applications.filter(a => a.status === 'Pending').length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab('enquiries')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'enquiries' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
+              >
+                <Calendar size={16} />
+                <span>Event Inquiries</span>
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Main admin view panel */}
-          <div className="lg:col-span-3">
-            {activeTab === 'overview' && (
-              <div className="bg-white border border-orange-100 rounded-3xl p-6 shadow-sm space-y-6">
-                
-                {/* Filters */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <h3 className="text-xl font-black text-neutral-800 tracking-tight">Active Inquiries</h3>
-                    <p className="text-xs text-neutral-400 font-bold uppercase mt-0.5 font-mono">Total Found ({inquiries.length})</p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    {/* Search Input */}
-                    <div className="relative flex-1 md:flex-none">
-                      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search Guest name..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full md:w-48 pl-10 pr-4 py-2 border border-neutral-200 focus:border-orange-500 rounded-xl text-xs outline-none font-semibold text-neutral-800"
-                      />
+        {/* Console Workspace panel */}
+        <div className="lg:col-span-3">
+          {loadingDb ? (
+            <div className="bg-white border border-stone-100 rounded-3xl p-12 text-center shadow-sm">
+              <Loader2 className="w-10 h-10 text-orange-600 animate-spin mx-auto mb-4" />
+              <p className="text-stone-500 text-xs font-black uppercase tracking-wider">Syncing Firestore collections...</p>
+            </div>
+          ) : (
+            <>
+              {/* ===================== CUSTOMER ORDERS VIEW ===================== */}
+              {activeTab === 'orders' && (
+                <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Food Delivery Orders</h3>
+                      <p className="text-xs text-stone-400 font-bold uppercase mt-1">Total Placed: {orders.length} orders</p>
                     </div>
 
-                    {/* Filter selector */}
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as any)}
-                      className="border border-neutral-200 px-3 py-2 focus:border-orange-500 rounded-xl text-xs font-bold text-neutral-700 bg-white"
-                    >
-                      <option value="All">All Statuses</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Contacted">Contacted</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Archived">Archived</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={orderFilter}
+                        onChange={(e) => setOrderFilter(e.target.value as any)}
+                        className="text-xs font-bold border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 text-stone-700 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                      >
+                        <option value="All">All statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Archived">Archived</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {orders
+                      .filter(o => orderFilter === 'All' || o.status === orderFilter)
+                      .map((order) => (
+                        <div 
+                          key={order.id}
+                          className="bg-neutral-50/50 hover:bg-white border border-neutral-150 rounded-2xl p-6 transition-all duration-300"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 pb-4 mb-4">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-rose-950">{order.customerName}</span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-black uppercase ${
+                                  order.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                                  order.status === 'Delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                  order.status === 'Archived' ? 'bg-stone-50 text-stone-500 border-stone-200' :
+                                  'bg-amber-150 text-amber-800 border-amber-200 animate-pulse'
+                                }`}>
+                                  {order.status}
+                                </span>
+                              </div>
+                              <div className="flex gap-4 mt-2 text-[11px] text-stone-400 font-semibold uppercase">
+                                <span>Phone: {order.customerPhone}</span>
+                                <span>Pay: <strong className="text-stone-700 font-black">{order.paymentMethod}</strong></span>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="text-stone-400 text-[10px] font-bold block uppercase">Date Created:</span>
+                              <span className="font-mono text-stone-500 text-[11px] font-semibold">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</span>
+                            </div>
+                          </div>
+
+                          {/* Ordered Menu list */}
+                          <div className="bg-white p-4 rounded-xl border border-stone-100 mb-4 space-y-2.5">
+                            <span className="text-[9px] font-black uppercase text-stone-400 tracking-wider block">Menu Items Purchased:</span>
+                            {order.items.map((it, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-xs font-semibold text-stone-700">
+                                <span>{it.quantity}x {it.name} {it.size && it.size !== 'single' ? `(${it.size})` : ''}</span>
+                                <span className="font-bold text-stone-900">₹{it.price * it.quantity}</span>
+                              </div>
+                            ))}
+
+                            <div className="border-t border-stone-100 pt-3 flex justify-between items-center">
+                              <div>
+                                <p className="text-[10px] font-bold text-stone-400">Address: <span className="text-stone-600 font-semibold">{order.address}, {order.location}</span></p>
+                                {order.orderDate && (
+                                  <p className="text-[10px] font-bold text-stone-400 mt-0.5">Scheduler: <span className="text-orange-600 font-bold">{order.orderDate} - {order.orderTime}</span></p>
+                                )}
+                              </div>
+                              <span className="text-lg font-black text-orange-600">₹{order.totalAmount}</span>
+                            </div>
+                          </div>
+
+                          {/* Order Actions */}
+                          <div className="flex flex-wrap gap-2.5 justify-end">
+                            {order.status === 'Pending' && (
+                              <button
+                                onClick={() => handleUpdateOrderStatus(order.id, 'Approved')}
+                                className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-black transition-colors"
+                              >
+                                Approve Order
+                              </button>
+                            )}
+                            {order.status === 'Approved' && (
+                              <button
+                                onClick={() => handleUpdateOrderStatus(order.id, 'Delivered')}
+                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-black transition-colors"
+                              >
+                                Mark Delivered
+                              </button>
+                            )}
+                            {order.status !== 'Archived' && (
+                              <button
+                                onClick={() => handleUpdateOrderStatus(order.id, 'Archived')}
+                                className="px-3.5 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-lg text-xs font-bold transition-colors"
+                              >
+                                Archive
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                    {orders.length === 0 && (
+                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
+                        <ShoppingBag className="mx-auto text-stone-300 mb-2" size={36} />
+                        <p className="text-stone-400 text-xs font-black uppercase">No Online orders active on store.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
+              )}
 
-                {/* Inquiries Table or Listing Grid */}
-                <div className="space-y-4">
-                  {inquiries
-                    .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) && (statusFilter === 'All' || i.status === statusFilter))
-                    .map((inq) => (
-                      <motion.div
-                        layout
-                        key={inq.id}
-                        className="p-5 border border-neutral-100 rounded-2xl hover:border-orange-100 bg-neutral-50/50 hover:bg-white transition-all grid grid-cols-1 md:grid-cols-3 gap-4 items-center"
+              {/* ===================== ACTIVE JOBS PANEL ===================== */}
+              {activeTab === 'jobs' && (
+                <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                  <div className="flex justify-between items-center gap-4 border-b border-stone-50 pb-4">
+                    <div>
+                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Your Recruitment Openings</h3>
+                      <p className="text-xs text-stone-400 font-bold uppercase mt-1">Manage jobs hosted by you ({jobs.length})</p>
+                    </div>
+
+                    <button
+                      onClick={() => setShowJobModal(true)}
+                      className="px-4 py-2 bg-stone-900 hover:bg-orange-600 text-white rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Post Career
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {jobs.map((job) => (
+                      <div 
+                        key={job.id}
+                        className="bg-white border border-stone-200 rounded-2xl p-6 relative hover:shadow-md transition-all duration-300"
                       >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-extrabold text-neutral-800 text-base">{inq.name}</h4>
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-black ${
-                              inq.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                              inq.status === 'Contacted' ? 'bg-blue-100 text-blue-700' :
-                              inq.status === 'Archived' ? 'bg-neutral-200 text-neutral-700' :
-                              'bg-amber-100 text-amber-700'
-                            }`}>
-                              {inq.status}
-                            </span>
+                        <button
+                          onClick={() => handleDeleteJob(job.id)}
+                          className="absolute top-6 right-6 p-2 bg-stone-50 hover:bg-rose-50 rounded-lg text-stone-400 hover:text-red-600 transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+
+                        <span className="text-[9px] font-black uppercase text-orange-600 tracking-wider">{job.department}</span>
+                        <h4 className="text-base font-black text-rose-955 mt-0.5">{job.title}</h4>
+                        
+                        <div className="flex flex-wrap gap-4 mt-2 text-xs font-bold text-stone-500">
+                          <span className="flex items-center gap-1"><MapPin size={12} /> {job.location}</span>
+                          <span className="flex items-center gap-1 text-orange-600"><DollarSign size={12} /> {job.salary}</span>
+                        </div>
+
+                        <p className="text-stone-600 text-xs mt-3 leading-relaxed font-semibold">{job.description}</p>
+
+                        {job.requirements && job.requirements.length > 0 && (
+                          <div className="mt-4 bg-stone-50/50 p-4 rounded-xl border border-stone-100">
+                            <span className="text-[10px] font-black text-stone-400 uppercase block mb-1">Pre-requisite Skills:</span>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {job.requirements.map((req, rid) => (
+                                <span key={rid} className="px-2.5 py-0.5 bg-white text-stone-600 text-[10px] font-black rounded-md border border-stone-100">
+                                  {req}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          <p className="text-xs text-orange-850 font-bold mt-1 inline-flex items-center gap-1">
-                            <Calendar size={12} /> {inq.event}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                            <MapPin size={12} /> {inq.location}
-                          </p>
+                        )}
+                      </div>
+                    ))}
+
+                    {jobs.length === 0 && (
+                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
+                        <Layers className="mx-auto text-stone-300 mb-2" size={36} />
+                        <p className="text-stone-400 text-xs font-black uppercase">You haven't posted any jobs yet.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ===================== CAREERS APPLICATIONS VIEWER ===================== */}
+              {activeTab === 'resumes' && (
+                <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="text-xl font-black text-rose-955 tracking-tight">Candidates Resume Ledger</h3>
+                    <p className="text-xs text-stone-400 font-bold uppercase mt-1">Review candidates applied via Careers webpage ({applications.length})</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {applications.map((app) => (
+                      <div 
+                        key={app.id}
+                        className="bg-stone-50/40 hover:bg-white border border-stone-150 rounded-2xl p-6 transition-all duration-300"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 pb-4 mb-4">
+                          <div>
+                            <span className="text-[9px] font-black uppercase text-stone-400">Position Profile:</span>
+                            <h4 className="text-base font-black text-rose-955 mt-0.5">{app.jobTitle}</h4>
+                            <div className="flex gap-4 mt-1.5 text-xs text-stone-500 font-bold">
+                              <span>Applicant: {app.applicantName}</span>
+                              <span>Exp: {app.experience}</span>
+                            </div>
+                          </div>
+
+                          <span className={`text-[10px] px-3 py-1 bg-white hover:bg-stone-50 text-stone-800 rounded-xl font-black border uppercase ${
+                            app.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                            app.status === 'Reviewed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            app.status === 'Declined' ? 'bg-red-50 text-red-700 border-red-200' :
+                            'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {app.status}
+                          </span>
                         </div>
 
-                        <div className="text-left md:text-center space-y-1">
-                          <p className="text-xs text-neutral-600 font-bold uppercase tracking-wider">
-                            Guests: <span className="text-neutral-800 font-black">{inq.guests}</span>
-                          </p>
-                          <p className="text-xs text-neutral-500 font-bold">
-                            Package: <span className="text-gray-700 text-xs font-medium">{inq.package}</span>
-                          </p>
-                          <p className="text-xs font-mono text-gray-500">Date: {inq.date}</p>
+                        <div className="text-xs text-stone-600 bg-white p-4 rounded-xl border border-stone-100/50 mb-4 font-medium leading-relaxed">
+                          <p className="text-[9px] font-black text-stone-400 uppercase tracking-wider mb-1.5">Applicant Cover Statement:</p>
+                          {app.coverLetter}
+                          
+                          <div className="mt-3 pt-3 border-t border-stone-100/70 grid grid-cols-2 gap-4 text-stone-500 font-semibold text-[11px]">
+                            <span>Email: <a href={`mailto:${app.applicantEmail}`} className="text-orange-600 hover:underline">{app.applicantEmail}</a></span>
+                            <span>Phone: <a href={`tel:${app.applicantPhone}`} className="text-orange-600 hover:underline">{app.applicantPhone}</a></span>
+                          </div>
                         </div>
 
-                        <div className="flex flex-wrap justify-start md:justify-end gap-2">
-                          {inq.status !== 'Approved' && (
+                        <div className="flex gap-2 justify-end">
+                          {app.status === 'Pending' && (
                             <button
-                              onClick={() => handleUpdateInquiryStatus(inq.id, 'Approved')}
-                              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-black transition-colors"
+                              onClick={() => handleUpdateAppStatus(app.id, 'Reviewed')}
+                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-black transition-colors"
+                            >
+                              Mark Reviewed
+                            </button>
+                          )}
+                          {app.status !== 'Approved' && (
+                            <button
+                              onClick={() => handleUpdateAppStatus(app.id, 'Approved')}
+                              className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-black transition-colors"
                             >
                               Approve
                             </button>
                           )}
-                          {inq.status !== 'Contacted' && inq.status !== 'Approved' && (
+                          {app.status !== 'Declined' && (
                             <button
-                              onClick={() => handleUpdateInquiryStatus(inq.id, 'Contacted')}
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-black transition-colors"
+                              onClick={() => handleUpdateAppStatus(app.id, 'Declined')}
+                              className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 rounded-lg text-xs font-black transition-colors"
                             >
-                              Contacted
-                            </button>
-                          )}
-                          {inq.status !== 'Archived' && (
-                            <button
-                              onClick={() => handleUpdateInquiryStatus(inq.id, 'Archived')}
-                              className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-black transition-colors"
-                            >
-                              Archive
+                              Decline candidate
                             </button>
                           )}
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
 
-                  {inquiries.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) && (statusFilter === 'All' || i.status === statusFilter)).length === 0 && (
-                    <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
-                      <p className="text-neutral-500 text-sm font-bold">No catering inquiries found matching filters.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'analytics' && (
-              <div className="bg-white border border-orange-100 rounded-3xl p-6 shadow-sm space-y-6">
-                <div>
-                  <h3 className="text-xl font-black text-neutral-800 tracking-tight">Catering Business Analytics</h3>
-                  <p className="text-xs text-neutral-500 font-semibold mt-0.5">Real-time catering business revenue predictions & stats based on active bookings.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="p-5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl border border-orange-200/50">
-                    <h4 className="text-xs font-black text-orange-900 uppercase tracking-widest">Estimated Gross Revenue</h4>
-                    <p className="text-3xl font-black text-orange-700 mt-2">
-                       ₹{(inquiries.filter(i => i.status === 'Approved').reduce((acc, current) => acc + (current.guests * 450), 0) + 120000).toLocaleString('en-IN')}
-                    </p>
-                    <span className="text-[10px] text-orange-800 font-bold block mt-1">Based on Approved Event Bookings (₹450/Plate avg)</span>
-                  </div>
-
-                  <div className="p-5 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200/50">
-                    <h4 className="text-xs font-black text-green-950 uppercase tracking-widest">Active Conversions</h4>
-                    <p className="text-3xl font-black text-green-700 mt-2">
-                      {Math.round((inquiries.filter(i => i.status === 'Approved' || i.status === 'Contacted').length / inquiries.length) * 100)}%
-                    </p>
-                    <span className="text-[10px] text-green-800 font-bold block mt-1">Conversion of general enquiries to events</span>
-                  </div>
-
-                  <div className="p-5 bg-gradient-to-br from-neutral-50 to-neutral-100 rounded-2xl border border-neutral-200/50">
-                    <h4 className="text-xs font-black text-neutral-900 uppercase tracking-widest">Total Guest Footprint</h4>
-                    <p className="text-3xl font-black text-neutral-700 mt-2">
-                      {inquiries.reduce((acc, current) => acc + current.guests, 0)} Guests
-                    </p>
-                    <span className="text-[10px] text-neutral-500 font-bold block mt-1">Planned capacity across upcoming events</span>
+                    {applications.length === 0 && (
+                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
+                        <UserCheck className="mx-auto text-stone-300 mb-2" size={36} />
+                        <p className="text-stone-400 text-xs font-black uppercase">No direct applications submitted yet.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
+              )}
 
-                <div className="p-5 border border-neutral-100 rounded-2xl bg-neutral-50/50">
-                  <h4 className="font-extrabold text-neutral-800 text-sm">Event Volume Breakdown</h4>
-                  <div className="space-y-3 mt-4">
-                    <div>
-                      <div className="flex justify-between text-xs text-neutral-600 font-bold mb-1">
-                        <span>Traditional Upanayana Thread Ceremonies</span>
-                        <span>{inquiries.filter(i => i.event.includes('Upanayana')).length} Bookings</span>
-                      </div>
-                      <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
-                        <div className="bg-orange-600 h-full rounded-full" style={{ width: `${(inquiries.filter(i => i.event.includes('Upanayana')).length / inquiries.length) * 100}%` }}></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs text-neutral-600 font-bold mb-1">
-                        <span>Grand Weddings & Receptions</span>
-                        <span>{inquiries.filter(i => i.event.includes('Wedding')).length} Bookings</span>
-                      </div>
-                      <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
-                        <div className="bg-red-600 h-full rounded-full" style={{ width: `${(inquiries.filter(i => i.event.includes('Wedding')).length / inquiries.length) * 100}%` }}></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs text-neutral-600 font-bold mb-1">
-                        <span>Birthdays & Kitties</span>
-                        <span>{inquiries.filter(i => i.event.includes('Birthday')).length} Bookings</span>
-                      </div>
-                      <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
-                        <div className="bg-blue-600 h-full rounded-full" style={{ width: `${(inquiries.filter(i => i.event.includes('Birthday')).length / inquiries.length) * 100}%` }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* ==================== CUSTOMER DASHBOARD ==================== */
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
-          {/* Side navigation */}
-          <div className="lg:col-span-1 space-y-3">
-            <div className="bg-white border border-orange-100 rounded-3xl p-5 shadow-sm">
-              <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mb-3 px-2">Customer Hub</p>
-              <div className="space-y-1">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-bold transition-all ${activeTab === 'overview' ? 'bg-orange-600 text-white shadow-md shadow-orange-500/10' : 'text-gray-700 hover:bg-orange-50'}`}
-                >
-                  <Calculator size={18} />
-                  <span>Menu Cost Calculator</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('tiffin')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-bold transition-all ${activeTab === 'tiffin' ? 'bg-orange-600 text-white shadow-md shadow-orange-500/10' : 'text-gray-700 hover:bg-orange-50'}`}
-                >
-                  <Coffee size={18} />
-                  <span>Tiffin Subscriptions</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200/50 rounded-3xl p-5 text-center">
-              <Sparkles size={24} className="text-orange-600 mx-auto mb-2 animate-bounce" />
-              <h4 className="font-extrabold text-orange-950 text-sm">Need Custom Planning?</h4>
-              <p className="text-xs text-orange-900/70 mt-1">Talk to our experts directly for custom pricing, items, and arrangements!</p>
-              <a 
-                href="/planner.html"
-                className="inline-block mt-4 w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-extrabold transition-colors shadow"
-              >
-                Launch Mithila AI Planner
-              </a>
-            </div>
-          </div>
-
-          {/* Main customer view panel */}
-          <div className="lg:col-span-3">
-            {activeTab === 'overview' && (
-              <div className="bg-white border border-orange-100 rounded-3xl p-6 shadow-sm space-y-6">
-                <div>
-                  <h3 className="text-xl font-black text-neutral-800 tracking-tight">Interactive Event & Menu Cost Estimator</h3>
-                  <p className="text-xs text-neutral-500 font-semibold mt-0.5">Define your guest count and choose packages to estimate catering costs instantly.</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Column Controls */}
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">Number of Guests</label>
-                      <input
-                        type="range"
-                        min="50"
-                        max="1000"
-                        step="10"
-                        value={guestCount}
-                        onChange={(e) => setGuestCount(Number(e.target.value))}
-                        className="w-full h-2 bg-orange-100 rounded-lg appearance-none cursor-pointer accent-orange-600"
-                      />
-                      <div className="flex justify-between items-center mt-2.5">
-                        <span className="text-xs text-neutral-400 font-semibold">Min: 50</span>
-                        <span className="text-sm px-3 py-1 bg-orange-50 text-orange-700 rounded-lg font-black border border-orange-100">{guestCount} Guests</span>
-                        <span className="text-xs text-neutral-400 font-semibold">Max: 1000</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">Select Catering Platter Package</label>
-                      <div className="grid grid-cols-1 gap-2">
-                        {Object.entries(PACKAGES).map(([key, pack]) => (
-                          <label
-                            key={key}
-                            onClick={() => setSelectedPackage(key)}
-                            className={`flex flex-col p-3 border rounded-xl cursor-pointer transition-all ${
-                              selectedPackage === key ? 'border-orange-500 bg-orange-50/40 text-orange-900 shadow-sm' : 'border-neutral-200 hover:border-orange-200'
-                            }`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs font-black">{pack.name}</span>
-                              <span className="text-xs font-extrabold text-orange-600">₹{pack.pricePerPlate}/Plate</span>
-                            </div>
-                            <span className="text-[10px] text-gray-500 mt-1 leading-relaxed">{pack.desc}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column Custom Addons & Output */}
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">Include Traditional Mithila Extras (Per Plate)</label>
-                      <div className="space-y-1.5 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
-                        {extraItems.map((item) => (
-                          <label key={item.id} className="flex items-center gap-3 cursor-pointer p-1">
-                            <input
-                              type="checkbox"
-                              checked={selectedItems.includes(item.id)}
-                              onChange={() => handleItemToggle(item.id)}
-                              className="rounded border-gray-300 text-orange-600 focus:ring-orange-500 w-4 h-4"
-                            />
-                            <div className="flex justify-between w-full text-xs font-medium text-neutral-700">
-                              <span>{item.name}</span>
-                              <span className="font-bold text-orange-600">+₹{item.price}</span>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Total Estimate Calculation Block */}
-                    <div className="p-5 bg-neutral-900 text-white rounded-3xl space-y-4">
-                      <h4 className="text-xs font-black uppercase text-orange-400 tracking-widest flex items-center gap-2">
-                        <Calculator size={14} /> Total Cost Estimate
-                      </h4>
-
-                      <div className="space-y-1.5 text-xs text-neutral-300">
-                        <div className="flex justify-between">
-                          <span>Base Platter: {guestCount} x ₹{currentPackageInfo.pricePerPlate}</span>
-                          <span>₹{baseCost.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Traditional Extras:</span>
-                          <span> ₹{extrasCost.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="border-t border-white/10 my-2 pt-2 flex justify-between font-extrabold text-neutral-100">
-                          <span>Subtotal Estimate</span>
-                          <span>₹{(totalCost).toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-
-                      <div className="bg-white/10 rounded-2xl p-3 text-[11px] text-orange-100/90 leading-relaxed">
-                        ★ This estimate covers catering staff, professional decorations assistance, food warmers, and pristine plate setups.
-                      </div>
-
-                      <a
-                        href="/contact.html"
-                        className="block text-center py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-all shadow text-xs"
-                      >
-                        Submit Official Enquiry With This Setup
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'tiffin' && (
-              <div className="bg-white border border-orange-100 rounded-3xl p-6 shadow-sm space-y-6">
-                <div>
-                  <h3 className="text-xl font-black text-neutral-800 tracking-tight">Your Tiffin Service Dashboard</h3>
-                  <p className="text-xs text-neutral-500 font-semibold mt-0.5">Explore authentic, piping hot daily office/home delivery plans with custom options.</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 border border-neutral-100 rounded-2xl bg-neutral-50/50">
-                    <h4 className="font-extrabold text-neutral-800 text-sm">Pure Vegetarian</h4>
-                    <p className="text-xs text-gray-500 mt-1">4 Roti + Rice + Sabji + Dal + Salad + Sweet/Raita</p>
-                    <p className="text-lg font-black text-orange-600 mt-3">₹2,700 /Month</p>
-                    <a href="/tiffin.html" className="inline-block mt-3 text-xs font-bold text-orange-600 hover:text-orange-700">Explore Plan →</a>
-                  </div>
-
-                  <div className="p-4 border border-neutral-100 rounded-2xl bg-neutral-50/50">
-                    <h4 className="font-extrabold text-neutral-800 text-sm">Fresh Egg Base</h4>
-                    <p className="text-xs text-gray-500 mt-1">Daily Menu with extra nutritious egg-based premium meals</p>
-                    <p className="text-lg font-black text-orange-600 mt-3">₹2,900 /Month</p>
-                    <a href="/tiffin.html" className="inline-block mt-3 text-xs font-bold text-orange-600 hover:text-orange-700">Explore Plan →</a>
-                  </div>
-
-                  <div className="p-4 border border-neutral-100 rounded-2xl bg-neutral-50/50">
-                    <h4 className="font-extrabold text-neutral-800 text-sm">Non-Veg Special</h4>
-                    <p className="text-xs text-gray-500 mt-1">Succulent Chicken/Mutton curries twice on weekdays</p>
-                    <p className="text-lg font-black text-orange-600 mt-3">₹3,100 /Month</p>
-                    <a href="/tiffin.html" className="inline-block mt-3 text-xs font-bold text-orange-600 hover:text-orange-700">Explore Plan →</a>
-                  </div>
-                </div>
-
-                <div className="p-5 bg-orange-50 border border-orange-100 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+              {/* ===================== TRADITIONAL EVENT ENQUIRIES ===================== */}
+              {activeTab === 'enquiries' && (
+                <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
                   <div>
-                    <h4 className="font-black text-neutral-800 text-sm">Need quick custom adjustments to daily tiffins?</h4>
-                    <p className="text-xs text-neutral-500 mt-0.5">Pause your deliveries, change timing, or choose specific daily side dishes immediately.</p>
+                    <h3 className="text-xl font-black text-rose-950 tracking-tight">Catering Banqueting Inquiries</h3>
+                    <p className="text-xs text-stone-400 font-bold uppercase mt-1">Catering requests from local form enquiry boards ({inquiries.length})</p>
                   </div>
-                  <a
-                    href="https://wa.me/919650254164"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow flex items-center gap-1.5"
-                  >
-                    <Send size={14} /> WhatsApp Support
-                  </a>
+
+                  <div className="space-y-4">
+                    {inquiries.map((inq) => (
+                      <div 
+                        key={inq.id}
+                        className="bg-neutral-50/50 border border-neutral-100 rounded-2xl p-5 hover:bg-white transition-all grid grid-cols-1 md:grid-cols-3 gap-4 items-center"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-extrabold text-stone-900 text-sm">{inq.name}</h4>
+                            <span className="text-[9px] px-2 py-0.5 rounded font-black bg-amber-50 rounded-md border border-amber-200 text-amber-700 uppercase">
+                              {inq.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-orange-900 font-bold mt-1 inline-flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded border border-orange-100/50">
+                            <Calendar size={12} /> {inq.event}
+                          </p>
+                        </div>
+
+                        <div className="text-left md:text-center space-y-1">
+                          <p className="text-xs text-stone-500 font-semibold uppercase tracking-wider">
+                            Capacity: <span className="text-stone-850 font-black">{inq.guests} Guest plates</span>
+                          </p>
+                          <p className="text-[10px] text-stone-400 font-bold font-mono">Book Date: {inq.date}</p>
+                        </div>
+
+                        <div className="flex justify-start md:justify-end gap-2 text-xs">
+                          <a 
+                            href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white font-extrabold rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                          >
+                            <Send size={12} /> WhatsApp Inquiry
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+
+                    {inquiries.length === 0 && (
+                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
+                        <Calendar className="mx-auto text-stone-300 mb-2" size={36} />
+                        <p className="text-stone-400 text-xs font-black uppercase">No traditional banqueting enquiries submitted yet.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* ===================== POST CAREER OPENING MODAL ===================== */}
+      <AnimatePresence>
+        {showJobModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowJobModal(false)}
+              className="fixed inset-0 bg-neutral-950/75 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl z-10 border border-orange-100"
+            >
+              <button 
+                onClick={() => setShowJobModal(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-neutral-50 rounded-full transition-colors"
+              >
+                <X size={20} className="text-stone-400" />
+              </button>
+
+              <div className="mb-6">
+                <span className="text-[10px] font-black uppercase text-orange-600 tracking-wider">Publish Career</span>
+                <h3 className="text-2xl md:text-3xl font-black text-rose-955 mt-0.5">Define New Job Offering</h3>
+                <p className="text-stone-400 text-xs mt-1">Make a direct requirement post open to candidate submissions.</p>
+              </div>
+
+              <form onSubmit={handleCreateJobSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Job Offering Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={jobForm.title}
+                      onChange={(e) => setJobForm({...jobForm, title: e.target.value})}
+                      placeholder="e.g. Senior Kitchen Curry Coordinator"
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-orange-500 outline-none text-xs font-bold text-stone-850"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Operational Department</label>
+                    <select
+                      value={jobForm.department}
+                      onChange={(e) => setJobForm({...jobForm, department: e.target.value})}
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-orange-500 outline-none text-xs font-bold text-stone-850 cursor-pointer"
+                    >
+                      <option>Culinaries & Kitchens</option>
+                      <option>Hospitality & Services</option>
+                      <option>Logistics</option>
+                      <option>Event Management</option>
+                      <option>Support staff</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Compensation Segment (Salary)</label>
+                    <input
+                      type="text"
+                      required
+                      value={jobForm.salary}
+                      onChange={(e) => setJobForm({...jobForm, salary: e.target.value})}
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-orange-500 outline-none text-xs font-bold text-stone-850"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Workplace Location</label>
+                    <input
+                      type="text"
+                      required
+                      value={jobForm.location}
+                      onChange={(e) => setJobForm({...jobForm, location: e.target.value})}
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-orange-500 outline-none text-xs font-bold text-stone-850"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Performance Duties (Description)</label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={jobForm.description}
+                    onChange={(e) => setJobForm({...jobForm, description: e.target.value})}
+                    placeholder="Short summary detailing typical responsibilities, working hours, and benefits..."
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-orange-500 outline-none text-xs font-semibold text-stone-850 resize-none leading-relaxed"
+                  />
+                </div>
+
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Prerequisites list (Separate with commas)</label>
+                  <input
+                    type="text"
+                    required
+                    value={jobForm.requirementsCsv}
+                    onChange={(e) => setJobForm({...jobForm, requirementsCsv: e.target.value})}
+                    placeholder="e.g. 3+ Years Chef experience, Deep food safety knowledge, Immediate Joiner preferred"
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-orange-500 outline-none text-xs font-bold text-stone-850"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingJob}
+                  className="w-full py-3.5 mt-2 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-xl transition-all uppercase tracking-widest text-[11px] flex items-center justify-center gap-2"
+                >
+                  {submittingJob ? (
+                    <>Uploading Record... <Loader2 size={14} className="animate-spin" /></>
+                  ) : (
+                    <>Publish Opening <Send size={12} /></>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

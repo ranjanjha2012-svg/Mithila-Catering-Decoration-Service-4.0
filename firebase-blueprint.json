@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile representation in Firestore",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Authenticated user ID" },
+        "name": { "type": "string", "description": "Display name of the user" },
+        "email": { "type": "string", "description": "Email address of the user" },
+        "role": { "type": "string", "enum": ["customer", "admin"], "description": "System access role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Time profile was registered" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer food order",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "address": { "type": "string" },
+        "location": { "type": "string" },
+        "items": { "type": "string", "description": "Serialized list of ordered items with details" },
+        "totalAmount": { "type": "integer" },
+        "status": { "type": "string", "enum": ["Pending", "Contacted", "Approved", "Archived"] },
+        "paymentMethod": { "type": "string", "enum": ["COD", "UPI"] },
+        "orderDate": { "type": "string" },
+        "orderTime": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "userPhone", "items", "totalAmount", "status", "paymentMethod"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Job post created by are admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "salary": { "type": "string" },
+        "location": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "createdBy"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Applications submitted by helpers or customers for jobs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "jobId": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "applicantId": { "type": "string" },
+        "applicantName": { "type": "string" },
+        "applicantPhone": { "type": "string" },
+        "applicantEmail": { "type": "string" },
+        "experience": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Reviewed", "Approved", "Rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["jobId", "applicantId", "applicantName", "applicantPhone", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles indexed by UID"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Orders placed by customers"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Job openings posted by Admins"
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Job applications submitted by applicants"
+    }
+  }
+}
