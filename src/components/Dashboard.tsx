@@ -46,7 +46,7 @@ interface FirestoreOrder {
   orderDate?: string;
   orderTime?: string;
   paymentMethod: string;
-  status: 'Pending' | 'Approved' | 'Delivered' | 'Archived';
+  status: 'Placed' | 'Processing' | 'On the way' | 'Delivered' | 'Pending' | 'Approved' | 'Archived';
   createdAt: string;
   userId: string;
 }
@@ -89,7 +89,7 @@ export default function Dashboard() {
   const [loadingDb, setLoadingDb] = useState(false);
 
   // Filters and Builders state
-  const [orderFilter, setOrderFilter] = useState<'All' | 'Pending' | 'Approved' | 'Delivered' | 'Archived'>('All');
+  const [orderFilter, setOrderFilter] = useState<'All' | 'Placed' | 'Processing' | 'On the way' | 'Delivered' | 'Pending' | 'Approved' | 'Archived'>('All');
   const [showJobModal, setShowJobModal] = useState(false);
   const [submittingJob, setSubmittingJob] = useState(false);
 
@@ -396,37 +396,13 @@ export default function Dashboard() {
               >
                 <ShoppingBag size={16} />
                 <span>Customer Orders</span>
-                {orders.filter(o => o.status === 'Pending').length > 0 && (
+                {orders.filter(o => o.status === 'Pending' || o.status === 'Placed').length > 0 && (
                   <span className="ml-auto w-5 h-5 bg-orange-150 text-orange-600 rounded-full flex items-center justify-center text-[10px] font-black border border-orange-100">
-                    {orders.filter(o => o.status === 'Pending').length}
+                    {orders.filter(o => o.status === 'Pending' || o.status === 'Placed').length}
                   </span>
                 )}
               </button>
               
-              <button
-                onClick={() => setActiveTab('jobs')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'jobs' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
-              >
-                <Layers size={16} />
-                <span>Active Job Openings</span>
-                <span className="ml-auto text-[10px] bg-stone-100 px-1.5 py-0.5 rounded font-bold text-stone-500">
-                  {jobs.length} open
-                </span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('resumes')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'resumes' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
-              >
-                <UserCheck size={16} />
-                <span>Careers Applications</span>
-                {applications.filter(a => a.status === 'Pending').length > 0 && (
-                  <span className="ml-auto w-5 h-5 bg-orange-150 text-orange-600 rounded-full flex items-center justify-center text-[10px] font-black border border-orange-100">
-                    {applications.filter(a => a.status === 'Pending').length}
-                  </span>
-                )}
-              </button>
-
               <button
                 onClick={() => setActiveTab('enquiries')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'enquiries' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
@@ -449,267 +425,142 @@ export default function Dashboard() {
             <>
               {/* ===================== CUSTOMER ORDERS VIEW ===================== */}
               {activeTab === 'orders' && (
-                <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                <div className="bg-white border border-stone-200/55 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Food Delivery Orders</h3>
+                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Active Customer Orders</h3>
                       <p className="text-xs text-stone-400 font-bold uppercase mt-1">Total Placed: {orders.length} orders</p>
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-stone-400 uppercase tracking-wider">Status:</span>
                       <select
                         value={orderFilter}
                         onChange={(e) => setOrderFilter(e.target.value as any)}
                         className="text-xs font-bold border border-stone-200 rounded-xl px-3 py-2 bg-stone-50 text-stone-700 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
                       >
                         <option value="All">All statuses</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Approved">Approved</option>
+                        <option value="Placed">Placed</option>
+                        <option value="Processing">Processing</option>
+                        <option value="On the way">On the way</option>
                         <option value="Delivered">Delivered</option>
-                        <option value="Archived">Archived</option>
                       </select>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {orders
-                      .filter(o => orderFilter === 'All' || o.status === orderFilter)
-                      .map((order) => (
-                        <div 
-                          key={order.id}
-                          className="bg-neutral-50/50 hover:bg-white border border-neutral-150 rounded-2xl p-6 transition-all duration-300"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 pb-4 mb-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-rose-950">{order.customerName}</span>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-black uppercase ${
-                                  order.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                                  order.status === 'Delivered' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                  order.status === 'Archived' ? 'bg-stone-50 text-stone-500 border-stone-200' :
-                                  'bg-amber-150 text-amber-800 border-amber-200 animate-pulse'
-                                }`}>
-                                  {order.status}
-                                </span>
-                              </div>
-                              <div className="flex gap-4 mt-2 text-[11px] text-stone-400 font-semibold uppercase">
-                                <span>Phone: {order.customerPhone}</span>
-                                <span>Pay: <strong className="text-stone-700 font-black">{order.paymentMethod}</strong></span>
-                              </div>
-                            </div>
-
-                            <div className="text-right">
-                              <span className="text-stone-400 text-[10px] font-bold block uppercase">Date Created:</span>
-                              <span className="font-mono text-stone-500 text-[11px] font-semibold">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</span>
-                            </div>
-                          </div>
-
-                          {/* Ordered Menu list */}
-                          <div className="bg-white p-4 rounded-xl border border-stone-100 mb-4 space-y-2.5">
-                            <span className="text-[9px] font-black uppercase text-stone-400 tracking-wider block">Menu Items Purchased:</span>
-                            {order.items.map((it, idx) => (
-                              <div key={idx} className="flex justify-between items-center text-xs font-semibold text-stone-700">
-                                <span>{it.quantity}x {it.name} {it.size && it.size !== 'single' ? `(${it.size})` : ''}</span>
-                                <span className="font-bold text-stone-900">₹{it.price * it.quantity}</span>
-                              </div>
-                            ))}
-
-                            <div className="border-t border-stone-100 pt-3 flex justify-between items-center">
-                              <div>
-                                <p className="text-[10px] font-bold text-stone-400">Address: <span className="text-stone-600 font-semibold">{order.address}, {order.location}</span></p>
-                                {order.orderDate && (
-                                  <p className="text-[10px] font-bold text-stone-400 mt-0.5">Scheduler: <span className="text-orange-600 font-bold">{order.orderDate} - {order.orderTime}</span></p>
-                                )}
-                              </div>
-                              <span className="text-lg font-black text-orange-600">₹{order.totalAmount}</span>
-                            </div>
-                          </div>
-
-                          {/* Order Actions */}
-                          <div className="flex flex-wrap gap-2.5 justify-end">
-                            {order.status === 'Pending' && (
-                              <button
-                                onClick={() => handleUpdateOrderStatus(order.id, 'Approved')}
-                                className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-black transition-colors"
-                              >
-                                Approve Order
-                              </button>
-                            )}
-                            {order.status === 'Approved' && (
-                              <button
-                                onClick={() => handleUpdateOrderStatus(order.id, 'Delivered')}
-                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-black transition-colors"
-                              >
-                                Mark Delivered
-                              </button>
-                            )}
-                            {order.status !== 'Archived' && (
-                              <button
-                                onClick={() => handleUpdateOrderStatus(order.id, 'Archived')}
-                                className="px-3.5 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-lg text-xs font-bold transition-colors"
-                              >
-                                Archive
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-
-                    {orders.length === 0 && (
-                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
-                        <ShoppingBag className="mx-auto text-stone-300 mb-2" size={36} />
-                        <p className="text-stone-400 text-xs font-black uppercase">No Online orders active on store.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ===================== ACTIVE JOBS PANEL ===================== */}
-              {activeTab === 'jobs' && (
-                <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-                  <div className="flex justify-between items-center gap-4 border-b border-stone-50 pb-4">
-                    <div>
-                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Your Recruitment Openings</h3>
-                      <p className="text-xs text-stone-400 font-bold uppercase mt-1">Manage jobs hosted by you ({jobs.length})</p>
+                  {/* Modern Orders List Table/Layout */}
+                  <div className="overflow-hidden border border-stone-200/60 rounded-2xl bg-white shadow-sm">
+                    <div className="hidden md:grid grid-cols-12 gap-2 bg-stone-50 p-4 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-wider">
+                      <div className="col-span-3">Customer & Contact</div>
+                      <div className="col-span-3">Purchased Items</div>
+                      <div className="col-span-3">Delivery Site & Time</div>
+                      <div className="col-span-1 text-center">Amount</div>
+                      <div className="col-span-2 text-right">Status State</div>
                     </div>
 
-                    <button
-                      onClick={() => setShowJobModal(true)}
-                      className="px-4 py-2 bg-stone-900 hover:bg-orange-600 text-white rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition-colors"
-                    >
-                      <Plus size={14} />
-                      Post Career
-                    </button>
-                  </div>
+                    <div className="divide-y divide-stone-150">
+                      {orders
+                        .filter((order) => {
+                          const mapped = order.status === 'Pending' ? 'Placed' : order.status === 'Approved' ? 'Processing' : order.status;
+                          if (orderFilter === 'All') return true;
+                          return mapped === orderFilter;
+                        })
+                        .map((order) => {
+                          const currentMappedStatus = order.status === 'Pending' ? 'Placed' : order.status === 'Approved' ? 'Processing' : order.status;
+                          return (
+                            <div 
+                              key={order.id}
+                              className="p-4 md:p-6 hover:bg-neutral-50/50 transition-all duration-200"
+                            >
+                              {/* Responsive Mobile Header / Tablet Layout */}
+                              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                                {/* Col 1: Customer details */}
+                                <div className="col-span-3 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-stone-900 block">{order.customerName || 'Mithila Guest'}</span>
+                                    <span className="text-[9px] font-mono font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">#{order.id.slice(-6).toUpperCase()}</span>
+                                  </div>
+                                  <p className="text-[11px] font-semibold text-stone-600 block">{order.customerEmail}</p>
+                                  <p className="text-[11px] font-extrabold text-orange-600 block">{order.customerPhone}</p>
+                                  {order.paymentMethod && (
+                                    <span className="inline-block text-[9px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-black uppercase tracking-wider mt-1 border border-stone-200">
+                                      Pay: {order.paymentMethod}
+                                    </span>
+                                  )}
+                                </div>
 
-                  <div className="space-y-4">
-                    {jobs.map((job) => (
-                      <div 
-                        key={job.id}
-                        className="bg-white border border-stone-200 rounded-2xl p-6 relative hover:shadow-md transition-all duration-300"
-                      >
-                        <button
-                          onClick={() => handleDeleteJob(job.id)}
-                          className="absolute top-6 right-6 p-2 bg-stone-50 hover:bg-rose-50 rounded-lg text-stone-400 hover:text-red-600 transition-colors cursor-pointer"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                                {/* Col 2: Items Purchased details */}
+                                <div className="col-span-3 space-y-1.5 bg-stone-50 md:bg-transparent p-3 md:p-0 rounded-xl border border-stone-200/55 md:border-none">
+                                  <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Purchased List:</span>
+                                  <div className="space-y-1">
+                                    {(order.items || []).map((it, idx) => (
+                                      <div key={idx} className="flex justify-between md:justify-start items-center gap-2 text-xs font-semibold text-stone-700">
+                                        <span className="font-extrabold text-orange-600">{it.quantity}x</span>
+                                        <span className="truncate max-w-[150px]">{it.name} {it.size && it.size !== 'single' ? `(${it.size})` : ''}</span>
+                                        <span className="text-[10px] text-stone-400 font-mono ml-auto md:ml-1">₹{it.price * it.quantity}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
 
-                        <span className="text-[9px] font-black uppercase text-orange-600 tracking-wider">{job.department}</span>
-                        <h4 className="text-base font-black text-rose-955 mt-0.5">{job.title}</h4>
-                        
-                        <div className="flex flex-wrap gap-4 mt-2 text-xs font-bold text-stone-500">
-                          <span className="flex items-center gap-1"><MapPin size={12} /> {job.location}</span>
-                          <span className="flex items-center gap-1 text-orange-600"><DollarSign size={12} /> {job.salary}</span>
-                        </div>
+                                {/* Col 3: Delivery Site/Time details */}
+                                <div className="col-span-3 text-xs text-stone-600 font-semibold space-y-1.5">
+                                  <div>
+                                    <span className="text-[9px] font-black uppercase text-stone-400 block">Deliver Site:</span>
+                                    <p className="text-stone-700 font-bold leading-tight mt-0.5">{order.address}, {order.location}</p>
+                                  </div>
+                                  {order.orderDate && (
+                                    <div>
+                                      <span className="text-[9px] font-black uppercase text-stone-400 block">Scheduled:</span>
+                                      <p className="text-orange-600 font-extrabold mt-0.5">{order.orderDate} at {order.orderTime}</p>
+                                    </div>
+                                  )}
+                                </div>
 
-                        <p className="text-stone-600 text-xs mt-3 leading-relaxed font-semibold">{job.description}</p>
+                                {/* Col 4: Amount */}
+                                <div className="col-span-1 text-left md:text-center">
+                                  <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Total Amount:</span>
+                                  <span className="text-sm font-black text-stone-850 md:text-orange-600">₹{order.totalAmount}</span>
+                                </div>
 
-                        {job.requirements && job.requirements.length > 0 && (
-                          <div className="mt-4 bg-stone-50/50 p-4 rounded-xl border border-stone-100">
-                            <span className="text-[10px] font-black text-stone-400 uppercase block mb-1">Pre-requisite Skills:</span>
-                            <div className="flex flex-wrap gap-1.5 mt-1.5">
-                              {job.requirements.map((req, rid) => (
-                                <span key={rid} className="px-2.5 py-0.5 bg-white text-stone-600 text-[10px] font-black rounded-md border border-stone-100">
-                                  {req}
-                                </span>
-                              ))}
+                                {/* Col 5: Status State Dropdown */}
+                                <div className="col-span-2 text-left md:text-right space-y-2">
+                                  <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Set Status:</span>
+                                  <div className="inline-flex flex-col gap-1.5 w-full md:w-auto">
+                                    <select
+                                      value={currentMappedStatus}
+                                      onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value as any)}
+                                      className="w-full md:w-auto text-xs font-black border-2 border-stone-200 hover:border-orange-500 rounded-xl px-2.5 py-1.5 bg-white text-stone-850 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-sm active:scale-[0.98] transition-all"
+                                    >
+                                      <option value="Placed">Placed</option>
+                                      <option value="Processing">Processing</option>
+                                      <option value="On the way">On the way</option>
+                                      <option value="Delivered">Delivered</option>
+                                    </select>
+                                    
+                                    {/* Small visual accent pill */}
+                                    <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider text-center block ${
+                                      currentMappedStatus === 'Placed' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                                      currentMappedStatus === 'Processing' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                                      currentMappedStatus === 'On the way' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
+                                      'bg-green-50 text-green-600 border border-green-200'
+                                    }`}>
+                                      {currentMappedStatus}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          );
+                        })}
 
-                    {jobs.length === 0 && (
-                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
-                        <Layers className="mx-auto text-stone-300 mb-2" size={36} />
-                        <p className="text-stone-400 text-xs font-black uppercase">You haven't posted any jobs yet.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ===================== CAREERS APPLICATIONS VIEWER ===================== */}
-              {activeTab === 'resumes' && (
-                <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-                  <div>
-                    <h3 className="text-xl font-black text-rose-955 tracking-tight">Candidates Resume Ledger</h3>
-                    <p className="text-xs text-stone-400 font-bold uppercase mt-1">Review candidates applied via Careers webpage ({applications.length})</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    {applications.map((app) => (
-                      <div 
-                        key={app.id}
-                        className="bg-stone-50/40 hover:bg-white border border-stone-150 rounded-2xl p-6 transition-all duration-300"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 pb-4 mb-4">
-                          <div>
-                            <span className="text-[9px] font-black uppercase text-stone-400">Position Profile:</span>
-                            <h4 className="text-base font-black text-rose-955 mt-0.5">{app.jobTitle}</h4>
-                            <div className="flex gap-4 mt-1.5 text-xs text-stone-500 font-bold">
-                              <span>Applicant: {app.applicantName}</span>
-                              <span>Exp: {app.experience}</span>
-                            </div>
-                          </div>
-
-                          <span className={`text-[10px] px-3 py-1 bg-white hover:bg-stone-50 text-stone-800 rounded-xl font-black border uppercase ${
-                            app.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                            app.status === 'Reviewed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            app.status === 'Declined' ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}>
-                            {app.status}
-                          </span>
+                      {orders.length === 0 && (
+                        <div className="text-center py-16 bg-stone-50/50">
+                          <ShoppingBag className="mx-auto text-stone-300 mb-2" size={36} />
+                          <p className="text-stone-500 text-sm font-bold uppercase">No active customer orders placed.</p>
                         </div>
-
-                        <div className="text-xs text-stone-600 bg-white p-4 rounded-xl border border-stone-100/50 mb-4 font-medium leading-relaxed">
-                          <p className="text-[9px] font-black text-stone-400 uppercase tracking-wider mb-1.5">Applicant Cover Statement:</p>
-                          {app.coverLetter}
-                          
-                          <div className="mt-3 pt-3 border-t border-stone-100/70 grid grid-cols-2 gap-4 text-stone-500 font-semibold text-[11px]">
-                            <span>Email: <a href={`mailto:${app.applicantEmail}`} className="text-orange-600 hover:underline">{app.applicantEmail}</a></span>
-                            <span>Phone: <a href={`tel:${app.applicantPhone}`} className="text-orange-600 hover:underline">{app.applicantPhone}</a></span>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2 justify-end">
-                          {app.status === 'Pending' && (
-                            <button
-                              onClick={() => handleUpdateAppStatus(app.id, 'Reviewed')}
-                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-black transition-colors"
-                            >
-                              Mark Reviewed
-                            </button>
-                          )}
-                          {app.status !== 'Approved' && (
-                            <button
-                              onClick={() => handleUpdateAppStatus(app.id, 'Approved')}
-                              className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-black transition-colors"
-                            >
-                              Approve
-                            </button>
-                          )}
-                          {app.status !== 'Declined' && (
-                            <button
-                              onClick={() => handleUpdateAppStatus(app.id, 'Declined')}
-                              className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 rounded-lg text-xs font-black transition-colors"
-                            >
-                              Decline candidate
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {applications.length === 0 && (
-                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
-                        <UserCheck className="mx-auto text-stone-300 mb-2" size={36} />
-                        <p className="text-stone-400 text-xs font-black uppercase">No direct applications submitted yet.</p>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

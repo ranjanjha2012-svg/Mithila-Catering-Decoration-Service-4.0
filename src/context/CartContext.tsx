@@ -187,7 +187,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       packingCharge: 12,
       deliveryCharge: 40,
       totalAmount: cartTotal + 12 + 40, // packing + delivery charges
-      status: 'Pending',
+      status: 'Placed',
       paymentMethod,
       orderDate: formData.orderDate || new Date().toISOString().split('T')[0],
       orderTime: formData.orderTime || new Date().toTimeString().split(' ')[0],

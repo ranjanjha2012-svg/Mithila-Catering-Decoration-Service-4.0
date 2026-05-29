@@ -343,7 +343,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="name@example.com"
-                          className="w-full pl-11 pr-4 py-3 bg-neutral-50 border-2 border-neutral-100 focus:border-orange-500 focus:bg-white rounded-2xl text-sm transition-colors outline-none font-medium"
+                          className="w-full pl-11 pr-4 py-3 bg-neutral-50 border-2 border-neutral-100 focus:border-orange-500 focus:bg-white rounded-2xl text-sm transition-colors outline-none font-bold text-black placeholder-stone-400"
                         />
                       </div>
                     </div>
@@ -358,7 +358,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full pl-11 pr-4 py-3 bg-neutral-50 border-2 border-neutral-100 focus:border-orange-500 focus:bg-white rounded-2xl text-sm transition-colors outline-none font-medium"
+                          className="w-full pl-11 pr-4 py-3 bg-neutral-50 border-2 border-neutral-100 focus:border-orange-500 focus:bg-white rounded-2xl text-sm transition-colors outline-none font-bold text-black placeholder-stone-400"
                         />
                       </div>
                     </div>
