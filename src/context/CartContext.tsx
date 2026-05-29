@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType, logUserActivity } from '../lib/firebase';
 
 export interface CartItem {
   id: string; // Unique composite key: menuItemId + '-' + size
@@ -123,13 +123,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         },
       ];
     });
+
+    logUserActivity('Added to Cart', { itemName: item.name, price: finalPrice, size });
   };
 
   const removeFromCart = (id: string) => {
+    const item = cart.find((i) => i.id === id);
+    if (item) {
+      logUserActivity('Removed from Cart', { itemName: item.name, size: item.size, qty: item.quantity });
+    }
     setCart((prev) => prev.filter((i) => i.id !== id));
   };
 
   const updateQuantity = (id: string, qty: number) => {
+    const item = cart.find((i) => i.id === id);
+    if (item) {
+      logUserActivity('Updated Cart Item Quantity', { itemName: item.name, oldQty: item.quantity, newQty: qty, size: item.size });
+    }
     if (qty <= 0) {
       removeFromCart(id);
       return;
@@ -183,6 +193,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const pathForWrite = 'orders';
     try {
       const docRef = await addDoc(collection(db, pathForWrite), orderPayload);
+      await logUserActivity('Placed Order', { orderId: docRef.id, totalAmount: orderPayload.totalAmount, itemsCount: orderPayload.items.length, items: orderPayload.items.map(it => `${it.name} (${it.size}) x${it.quantity}`) });
       clearCart();
       return docRef.id;
     } catch (error) {

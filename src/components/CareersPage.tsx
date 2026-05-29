@@ -4,7 +4,7 @@ import {
   Briefcase, MapPin, DollarSign, Clock, FileText, Send, User, Phone, Mail, 
   Sparkles, CheckCircle2, ChevronRight, X, Loader2, AlertCircle 
 } from 'lucide-react';
-import { db, auth } from '../lib/firebase';
+import { db, auth, logUserActivity } from '../lib/firebase';
 import { collection, query, getDocs, addDoc, where, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import Header from './Header';
@@ -180,6 +180,7 @@ export default function CareersPage() {
       };
 
       await addDoc(collection(db, 'applications'), newApp);
+      await logUserActivity('Applied for Career', { jobId: selectedJob.id, jobTitle: selectedJob.title });
       setMessage({ type: 'success', text: 'Application submitted successfully! Our HR team will contact you shortly.' });
       setFormData(prev => ({ ...prev, phone: '', coverLetter: '' }));
       

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, arrayUnion } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCGiYhVhkfLu7_YAqy02K5P9O1vvriLUfA",
@@ -65,4 +65,21 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.error('Firestore Error Details: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
+}
+
+export async function logUserActivity(action: string, details?: any) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+  try {
+    const userRef = doc(db, 'users', currentUser.uid);
+    await setDoc(userRef, {
+      activities: arrayUnion({
+        action,
+        details: details || null,
+        timestamp: new Date().toISOString()
+      })
+    }, { merge: true });
+  } catch (err) {
+    console.error('Failed to log user activity', err);
+  }
 }

@@ -76,7 +76,7 @@ export default function TiffinService() {
   const upiLink = `upi://pay?pa=${upiId}&pn=Mithila%20Catering&am=${totalAmount}&cu=INR`;
 
   return (
-    <div className="min-h-screen bg-[#064e3b] pt-24 pb-20">
+    <div className="min-h-screen bg-[#064e3b] pt-32 pb-20">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16 relative">
           <motion.a

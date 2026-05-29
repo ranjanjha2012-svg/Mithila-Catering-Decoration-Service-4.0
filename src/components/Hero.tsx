@@ -16,18 +16,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative pt-24 pb-20 overflow-hidden bg-hero-red-gradient">
-      {/* Welcome Marquee in standard layout flow */}
-      <div className="w-full bg-orange-600/90 backdrop-blur-md py-2.5 z-20 overflow-hidden border-y border-orange-400/30 mb-8">
-        <div className="whitespace-nowrap animate-marquee flex items-center gap-8">
-          {[...Array(10)].map((_, i) => (
-            <span key={i} className="text-white font-black text-lg uppercase tracking-widest flex items-center gap-4">
-              Welcome to Mithila Catering & Decoration Service
-            </span>
-          ))}
-        </div>
-      </div>
-
+    <section className="relative pt-32 pb-20 overflow-hidden bg-hero-red-gradient">
       <div className="absolute inset-0 z-0 opacity-20">
         <img 
           src="https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=2000" 

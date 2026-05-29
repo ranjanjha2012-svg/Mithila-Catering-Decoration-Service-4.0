@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Phone, Mail, MapPin, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import AuthModal from './AuthModal';
 
 export default function Header() {
@@ -33,11 +34,27 @@ export default function Header() {
     window.addEventListener('mithila_cart_updated', updateCartCount);
     window.addEventListener('storage', updateCartCount);
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       // Direct session validation: accept authenticated users
       if (currentUser) {
         setUser(currentUser);
-        setRole(localStorage.getItem('userRole'));
+        let savedRole = localStorage.getItem('userRole');
+        if (!savedRole) {
+          try {
+            const userRef = doc(db, 'users', currentUser.uid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              savedRole = userSnap.data().role || 'customer';
+              localStorage.setItem('userRole', savedRole);
+            } else {
+              savedRole = 'customer';
+            }
+          } catch (e) {
+            console.error("Error fetching user role inside Header:", e);
+            savedRole = 'customer';
+          }
+        }
+        setRole(savedRole);
       } else {
         setUser(null);
         setRole(null);
@@ -76,7 +93,17 @@ export default function Header() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-lg z-40 border-b border-orange-100">
+    <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md z-40 border-b border-orange-100 shadow-sm">
+      {/* Welcome Running Marquee - integrated to avoid overlapping */}
+      <div className="w-full bg-orange-600 py-1.5 overflow-hidden border-b border-orange-500/20">
+        <div className="whitespace-nowrap animate-marquee flex items-center gap-8">
+          {[...Array(10)].map((_, i) => (
+            <span key={i} className="text-white font-black text-xs uppercase tracking-widest flex items-center gap-4">
+              ✨ Welcome to Mithila Catering &amp; Decoration Service ✨
+            </span>
+          ))}
+        </div>
+      </div>
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <a href="/" className="flex items-center gap-3">
           <img 

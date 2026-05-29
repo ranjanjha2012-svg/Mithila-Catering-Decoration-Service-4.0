@@ -8,7 +8,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, googleProvider, db } from '../lib/firebase';
+import { auth, googleProvider, db, logUserActivity } from '../lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -119,6 +119,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         // Store role & close modal instantly (no full page reload)
         localStorage.setItem('userRole', finalRole);
+        await logUserActivity('Google Sign-In Success', { email: result.user.email, role: finalRole });
         if (finalRole === 'admin') {
           window.location.href = '/dashboard.html';
         } else {
@@ -159,6 +160,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         // Store role & close or redirect
         localStorage.setItem('userRole', role);
+        await logUserActivity('User Signed Up', { email: user.email, role: role });
         if (role === 'customer') {
           onClose();
         } else {
@@ -192,6 +194,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         // Store role & close or redirect
         localStorage.setItem('userRole', finalRole);
+        await logUserActivity('User Logged In', { email: user.email, role: finalRole });
         if (finalRole === 'admin') {
           window.location.href = '/dashboard.html';
         } else {
@@ -208,7 +211,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 w-screen h-screen top-0 left-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
