@@ -72,12 +72,21 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       message.includes('already-exists') ||
       message.includes('already exists');
 
-    if (isWrongCredentials) {
+    const isUnauthorizedDomain =
+      errorCode === 'auth/unauthorized-domain' ||
+      errorCode.includes('unauthorized-domain') ||
+      message.includes('unauthorized-domain') ||
+      message.includes('unauthorized domain') ||
+      message.includes('auth/unauthorized-domain');
+
+    if (isUnauthorizedDomain) {
+      setError(`Domain unauthorized. Please add "${window.location.hostname}" to the "Authorized domains" list under your Firebase Console (Authentication > Settings).`);
+    } else if (isWrongCredentials) {
       setError('Email or password is incorrect.');
     } else if (isEmailAlreadyInUse) {
-      setError('user already exists. Please sign in');
+      setError('User already exists. Please sign in instead.');
     } else {
-      setError('Email or password is incorrect.');
+      setError(message.replace('Firebase:', '').trim() || 'Authentication failed. Please try again.');
     }
   };
 
