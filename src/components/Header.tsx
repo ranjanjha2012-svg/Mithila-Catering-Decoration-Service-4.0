@@ -39,6 +39,10 @@ export default function Header() {
       if (currentUser) {
         setUser(currentUser);
         let savedRole = localStorage.getItem('userRole');
+        if (currentUser.email === 'mithilacateringservices@gmail.com') {
+          savedRole = 'admin';
+          localStorage.setItem('userRole', 'admin');
+        }
         if (!savedRole) {
           try {
             const userRef = doc(db, 'users', currentUser.uid);

@@ -100,12 +100,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         // Find if user already exists
         const userRef = doc(db, 'users', result.user.uid);
         const userDoc = await getDoc(userRef);
-        let finalRole = 'customer';
+        let finalRole = result.user.email === 'mithilacateringservices@gmail.com' ? 'admin' : 'customer';
         
         if (userDoc.exists()) {
           const data = userDoc.data();
           if (data && data.role) {
-            finalRole = data.role;
+            finalRole = result.user.email === 'mithilacateringservices@gmail.com' ? 'admin' : data.role;
           }
         } else {
           // Write user profile to Firestore
@@ -113,7 +113,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             uid: result.user.uid,
             name: result.user.displayName || 'Customer',
             email: result.user.email,
-            role: 'customer',
+            role: result.user.email === 'mithilacateringservices@gmail.com' ? 'admin' : 'customer',
             createdAt: new Date().toISOString()
           }, { merge: true });
         }
@@ -154,29 +154,35 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         // Save profile in Firestore
         const userRef = doc(db, 'users', user.uid);
+        const targetRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : role;
         await setDoc(userRef, {
           uid: user.uid,
           name: email.split('@')[0],
           email: user.email,
-          role: role,
+          role: targetRole,
           createdAt: new Date().toISOString()
         }, { merge: true });
 
         // Sign the user out immediately so they cannot access pages as unverified logged-in users
-        await signOut(auth);
-        localStorage.removeItem('userRole');
+        if (email.toLowerCase() !== 'mithilacateringservices@gmail.com') {
+          await signOut(auth);
+          localStorage.removeItem('userRole');
+          setRegisteredEmail(user.email || email);
+          setScreen('verification-sent');
+        } else {
+          localStorage.setItem('userRole', 'admin');
+          onClose();
+          window.location.href = '/admin-dashboard';
+        }
 
-        await logUserActivity('User Signed Up - Verification Email Sent', { email: user.email, role: role });
-        
-        setRegisteredEmail(user.email || email);
-        setScreen('verification-sent');
+        await logUserActivity('User Signed Up - Verification Email Sent', { email: user.email, role: targetRole });
       } else {
         // Login mode
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
         // Strict Email Authorization Check
-        if (!user.emailVerified) {
+        if (!user.emailVerified && user.email?.toLowerCase() !== 'mithilacateringservices@gmail.com') {
           // Resend email verification link for helper convenience
           await sendEmailVerification(user);
           await signOut(auth);
@@ -187,12 +193,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         // Fetch user document from Firestore to find their real role
         const userRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userRef);
-        let finalRole = role; // fall back to chosen form role if profile not in DB
+        let finalRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : role; // fall back to chosen form role if profile not in DB
 
         if (userDoc.exists()) {
           const data = userDoc.data();
           if (data && data.role) {
-            finalRole = data.role;
+            finalRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : data.role;
           }
         } else {
           // Document doesn't exist, create it

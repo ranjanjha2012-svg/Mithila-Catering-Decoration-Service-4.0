@@ -182,25 +182,25 @@ export default function ProfilePage() {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-orange-850 rounded-[2rem] p-6 md:p-8 text-white shadow-xl mb-8 relative overflow-hidden"
+        className="bg-red-50 border-2 border-red-200 rounded-[2rem] p-6 md:p-8 shadow-xl mb-8 relative overflow-hidden"
       >
-        <div className="absolute right-0 top-0 translate-x-16 -translate-y-16 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
+        <div className="absolute right-0 top-0 translate-x-16 -translate-y-16 w-64 h-64 bg-red-100/30 rounded-full pointer-events-none" />
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 z-10 relative">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center text-white text-3xl font-black shadow-lg">
+            <div className="w-16 h-16 bg-red-200/50 rounded-2xl flex items-center justify-center text-red-600 text-3xl font-black shadow-lg">
               {profileData.name ? profileData.name.charAt(0).toUpperCase() : 'M'}
             </div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white font-sans">
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-red-600 font-sans">
                 Namaste, {profileData.name || 'Mithila Guest'}!
               </h2>
-              <p className="text-orange-100 text-xs md:text-sm mt-1 font-semibold">
+              <p className="text-red-500 text-xs md:text-sm mt-1 font-bold">
                 Manage your catering delivery address and browse past purchases.
               </p>
             </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-mono">
-            ID: <span className="text-orange-200">{user.uid.substring(0, 10)}...</span>
+          <div className="bg-red-100 border border-red-200 px-4 py-2 rounded-xl text-xs font-mono text-red-600 font-bold">
+            ID: <span className="text-red-700 font-black">{user.uid.substring(0, 10)}...</span>
           </div>
         </div>
       </motion.div>

@@ -112,7 +112,11 @@ export default function Dashboard() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
-        const savedRole = localStorage.getItem('userRole');
+        let savedRole = localStorage.getItem('userRole');
+        if (currentUser.email === 'mithilacateringservices@gmail.com') {
+          savedRole = 'admin';
+          localStorage.setItem('userRole', 'admin');
+        }
         
         if (savedRole !== 'admin') {
           // If customer, redirect immediately away from the dashboard back to index
