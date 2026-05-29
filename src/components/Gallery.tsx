@@ -46,7 +46,7 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
   };
 
   return (
-    <section id="gallery" className={`py-20 ${isFullPage ? 'bg-blood min-h-screen' : 'bg-black/10 backdrop-blur-sm'}`}>
+    <section id="gallery" className={`py-20 ${isFullPage ? 'bg-blood min-h-screen' : 'bg-orange-600'}`}>
       <div className="container mx-auto px-4">
         {isFullPage && (
           <motion.a
@@ -69,7 +69,7 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
             </p>
           </div>
           {!isFullPage && (
-            <a href="/gallery" className="flex items-center gap-2 text-orange-400 font-bold hover:gap-3 transition-all group">
+            <a href="/gallery" className="flex items-center gap-2 text-white font-bold hover:text-orange-200 hover:gap-3 transition-all group">
               View All Photos <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </a>
           )}
@@ -96,7 +96,7 @@ export default function Gallery({ isFullPage = false }: GalleryProps) {
               </motion.div>
               <div className="text-center md:text-left px-2">
                 <p className="font-bold text-lg text-white uppercase tracking-wider">{img.title}</p>
-                <p className="text-xs text-orange-400 font-bold">Mithila Catering & Decoration</p>
+                <p className="text-xs text-orange-200 font-bold">Mithila Catering & Decoration</p>
               </div>
             </div>
           ))}

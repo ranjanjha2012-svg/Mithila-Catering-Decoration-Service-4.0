@@ -20,7 +20,7 @@ function HomePage() {
       <Hero />
       <Services />
       <Gallery />
-      <AIPlanner />
+      <AIPlanner hideBackToHome={true} />
       <EnquiryForm />
       <GoogleMap />
     </>

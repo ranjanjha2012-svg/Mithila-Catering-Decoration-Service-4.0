@@ -18,7 +18,7 @@ const plans: TiffinPlan[] = [
     name: 'Pure Veg',
     price: 2700,
     description: '4 Roti + Rice + Sabji + Dal + Salad + Sweet/Raita (Weekdays)',
-    logo: 'https://cdn-icons-png.flaticon.com/512/706/706164.png',
+    logo: 'https://i.ibb.co/Z6fr2j20/images.jpg',
     color: 'bg-green-600',
   },
   {
@@ -26,7 +26,7 @@ const plans: TiffinPlan[] = [
     name: 'Egg Tiffin',
     price: 2900,
     description: 'Menu as per you (Egg based dishes included)',
-    logo: 'https://cdn-icons-png.flaticon.com/512/2913/2913990.png',
+    logo: 'https://i.ibb.co/CK3GVkh5/egg.jpg',
     color: 'bg-yellow-600',
   },
   {
@@ -34,7 +34,7 @@ const plans: TiffinPlan[] = [
     name: 'Non-Veg',
     price: 3100,
     description: 'Menu as per you (Chicken/Mutton based dishes included)',
-    logo: 'https://cdn-icons-png.flaticon.com/512/1046/1046769.png',
+    logo: 'https://i.ibb.co/TDcBbnpk/pawan-tiffin-service-sultanpur-majra-delhi-ccor92cbjx.avif',
     color: 'bg-red-600',
   },
 ];
@@ -120,8 +120,8 @@ export default function TiffinService() {
               transition={{ delay: i * 0.1 }}
               className="bg-white rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 flex flex-col"
             >
-              <div className={`${plan.color} p-8 flex justify-center`}>
-                <img src={plan.logo} alt={plan.name} className="h-24 w-24 object-contain brightness-0 invert" />
+              <div className="h-56 overflow-hidden relative">
+                <img src={plan.logo} alt={plan.name} className="w-full h-full object-cover transition-transform duration-500" />
               </div>
               <div className="p-8 flex-1 flex flex-col">
                 <h3 className="text-2xl font-black text-gray-900 mb-2">{plan.name}</h3>

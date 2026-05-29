@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 
 export default function Services() {
   const services = [
-    { icon: <Cake size={32} />, title: 'Birthday Parties', desc: 'Making your little one\'s big day extra special.', image: 'https://images.unsplash.com/photo-1530103043960-ef38714abb15?auto=format&fit=crop&q=80&w=600' },
+    { icon: <Cake size={32} />, title: 'Birthday Parties', desc: 'Making your little one\'s big day extra special.', image: 'https://i.ibb.co/bg87yFcZ/birthday.jpg' },
     { icon: <Users size={32} />, title: 'Kitty Parties', desc: 'Perfect snacks and meals for your social gatherings.', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600' },
     { icon: <Briefcase size={32} />, title: 'Corporate Parties', desc: 'Professional catering for meetings and events.', image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=600' },
     { icon: <Heart size={32} />, title: 'Weddings', desc: 'Grand catering for the most important day of your life.', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600' },
