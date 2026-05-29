@@ -22,7 +22,7 @@ interface FirestoreOrder {
   address: string;
   location: string;
   paymentMethod: string;
-  status: 'Pending' | 'Approved' | 'Delivered' | 'Archived';
+  status: 'Placed' | 'Processing' | 'On the way' | 'Delivered' | 'Pending' | 'Approved' | 'Archived';
   createdAt: string;
   orderDate?: string;
   orderTime?: string;
@@ -99,23 +99,22 @@ export default function ProfilePage() {
   const fetchUserOrders = async (userId: string) => {
     setLoadingOrders(true);
     try {
-      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const q = query(collection(db, 'orders'), where('userId', '==', userId));
+      const ordersSnap = await getDocs(q);
       const list: FirestoreOrder[] = [];
       ordersSnap.forEach((doc) => {
         const data = doc.data();
-        if (data.userId === userId) {
-          list.push({
-            id: doc.id,
-            items: data.items || [],
-            subtotal: data.subtotal || 0,
-            totalAmount: data.totalAmount || 0,
-            address: data.address || '',
-            location: data.location || '',
-            paymentMethod: data.paymentMethod || 'COD',
-            status: data.status || 'Pending',
-            createdAt: data.createdAt || ''
-          });
-        }
+        list.push({
+          id: doc.id,
+          items: data.items || [],
+          subtotal: data.subtotal || 0,
+          totalAmount: data.totalAmount || 0,
+          address: data.address || '',
+          location: data.location || '',
+          paymentMethod: data.paymentMethod || 'COD',
+          status: data.status || 'Pending',
+          createdAt: data.createdAt || ''
+        });
       });
       // Sort newest first
       list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
