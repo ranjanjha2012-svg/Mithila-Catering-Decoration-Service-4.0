@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, Lock, LogIn, User, ShieldCheck, Chrome } from 'lucide-react';
+import { X, Mail, Lock, LogIn, User, ShieldCheck, Chrome, RefreshCw } from 'lucide-react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -29,6 +29,24 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [captchaCode, setCaptchaCode] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
+
+  const generateCaptcha = () => {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Avoid confusing chars like 1/I, 0/O
+    let result = '';
+    for (let i = 0; i < 5; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(result);
+    setCaptchaInput('');
+  };
+
+  useEffect(() => {
+    if (isOpen && screen === 'auth-form' && mode === 'login') {
+      generateCaptcha();
+    }
+  }, [isOpen, screen, mode]);
 
   const resetFormState = () => {
     setEmail('');
@@ -139,6 +157,16 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     if (!email || !password) {
       setError('Please fill in all fields.');
       return;
+    }
+
+    if (mode === 'login') {
+      const inputNorm = captchaInput.toUpperCase().trim();
+      const codeNorm = captchaCode.toUpperCase().trim();
+      if (!inputNorm || inputNorm !== codeNorm) {
+        setError('CAPTCHA verification mismatch. Please solve the code correctly.');
+        generateCaptcha();
+        return;
+      }
     }
 
     setError('');
@@ -369,6 +397,50 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       </div>
                     </div>
 
+                    {/* Captcha challenge verification widget for Login Mode only */}
+                    {mode === 'login' && (
+                      <div className="p-4 bg-orange-50/50 rounded-2xl border border-orange-100/60 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-black text-rose-800 uppercase tracking-widest block">
+                            Anti-Bot Verification
+                          </label>
+                          <button
+                            type="button"
+                            onClick={generateCaptcha}
+                            className="text-[10px] font-black text-orange-600 hover:text-orange-700 flex items-center gap-1 uppercase tracking-wider bg-white px-2 py-1 rounded-lg border border-orange-200"
+                          >
+                            <RefreshCw size={10} className="text-orange-500" />
+                            <span>Reload</span>
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          {/* Captcha box itself */}
+                          <div className="h-11 w-32 bg-stone-900 rounded-xl relative overflow-hidden select-none flex items-center justify-center border border-stone-800 shadow-inner">
+                            {/* Visual grid line deco */}
+                            <div className="absolute inset-0 opacity-15 bg-[linear-gradient(45deg,#ccc_25%,transparent_25%),linear-gradient(-45deg,#ccc_25%,transparent_25%)] bg-[size:10px_10px]" />
+                            <span 
+                              className="text-stone-300 font-extrabold text-base tracking-widest select-none select-none select-none font-mono relative z-10 italic line-through decoration-orange-500/70 select-none cursor-default"
+                              style={{ transform: 'rotate(-4deg)', letterSpacing: '4px' }}
+                            >
+                              {captchaCode}
+                            </span>
+                          </div>
+
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              required
+                              placeholder="Solve CAPTCHA code"
+                              value={captchaInput}
+                              onChange={(e) => setCaptchaInput(e.target.value)}
+                              className="w-full px-3.5 py-2.5 bg-white border border-stone-200 focus:border-orange-500 rounded-xl text-xs font-black text-neutral-800 placeholder-stone-400 tracking-wider uppercase text-center"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       type="submit"
                       disabled={loading}
@@ -388,16 +460,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       ← Back to roles
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setMode(mode === 'login' ? 'signup' : 'login');
-                        setError('');
-                      }}
-                      className="text-orange-600 hover:text-orange-700 font-extrabold transition-colors"
-                      id="toggle-auth-mode-btn"
-                    >
-                      {mode === 'login' ? "Don't have an account? Sign Up" : 'Already have an account? Log In'}
-                    </button>
+                    {role !== 'admin' && (
+                      <button
+                        onClick={() => {
+                          setMode(mode === 'login' ? 'signup' : 'login');
+                          setError('');
+                        }}
+                        className="text-orange-600 hover:text-orange-700 font-extrabold transition-colors"
+                        id="toggle-auth-mode-btn"
+                      >
+                        {mode === 'login' ? "Don't have an account? Sign Up" : 'Already have an account? Log In'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

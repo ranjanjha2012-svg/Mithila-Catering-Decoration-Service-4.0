@@ -297,7 +297,7 @@ Please confirm my order immediately.`;
                               value={formData.name}
                               onChange={handleInputChange}
                               placeholder="Receiver name"
-                              className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                             />
                           </div>
 
@@ -311,7 +311,7 @@ Please confirm my order immediately.`;
                                 value={formData.number}
                                 onChange={handleInputChange}
                                 placeholder="Contact number"
-                                className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                                className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                               />
                             </div>
                             <div className="space-y-1">
@@ -322,7 +322,7 @@ Please confirm my order immediately.`;
                                 value={formData.whatsapp}
                                 onChange={handleInputChange}
                                 placeholder="WhatsApp number"
-                                className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                                className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                               />
                             </div>
                           </div>
@@ -336,7 +336,7 @@ Please confirm my order immediately.`;
                               value={formData.address}
                               onChange={handleInputChange}
                               placeholder="Complete doorstep delivery address"
-                              className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
+                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
                             />
                           </div>
 
@@ -349,7 +349,7 @@ Please confirm my order immediately.`;
                               value={formData.state}
                               onChange={handleInputChange}
                               placeholder="Enter state (e.g. Noida, Delhi, Faridabad)"
-                              className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                             />
                           </div>
 
@@ -361,7 +361,7 @@ Please confirm my order immediately.`;
                               value={formData.instructions}
                               onChange={handleInputChange}
                               placeholder="Any special cooking/delivery instructions"
-                              className="w-full px-4 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
+                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
                             />
                           </div>
 

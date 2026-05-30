@@ -1,11 +1,13 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { Sparkles, Award, Star, Heart, FileText, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Sparkles, Award, Star, Heart, FileText, ChevronRight, ChevronLeft, X, Maximize2 } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import CurtainLoader from './CurtainLoader';
 
 export default function CareersPage() {
+  const [slideshowIndex, setSlideshowIndex] = useState<number | null>(null);
+
   const schemes = [
     {
       title: "Sweets Special",
@@ -64,9 +66,17 @@ export default function CareersPage() {
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 className="bg-white rounded-[2.5rem] border border-stone-200/60 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl hover:border-orange-200 transition-all duration-300"
               >
-                {/* Image Section */}
-                <div className="relative aspect-4/3 overflow-hidden bg-stone-100 border-b border-stone-100">
-                  <div className="absolute inset-0 bg-stone-900/10 group-hover:bg-stone-900/0 transition-all duration-300 z-10" />
+                {/* Image Section clickable with beautiful magnify button */}
+                <div 
+                  onClick={() => setSlideshowIndex(idx)}
+                  className="relative aspect-4/3 overflow-hidden bg-stone-100 border-b border-stone-100 cursor-pointer group/img"
+                >
+                  <div className="absolute inset-0 bg-stone-900/10 group-hover:bg-stone-950/40 transition-all duration-300 z-10 flex items-center justify-center">
+                    <span className="opacity-0 group-hover/img:opacity-100 transition-all duration-300 transform translate-y-2 group-hover/img:translate-y-0 bg-orange-600/95 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-lg shadow-orange-600/35">
+                      <Maximize2 size={12} />
+                      <span>Open Slideshow HD</span>
+                    </span>
+                  </div>
                   <img
                     src={scheme.image}
                     alt={scheme.title}
@@ -103,7 +113,10 @@ export default function CareersPage() {
                     </div>
 
                     <div className="border-t border-stone-100 pt-4 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-rose-900 uppercase">
+                      <div 
+                        onClick={() => setSlideshowIndex(idx)}
+                        className="flex items-center gap-1.5 text-[10px] font-black text-rose-900 uppercase cursor-pointer hover:text-orange-600 transition-colors"
+                      >
                         <Award size={14} className="text-orange-500" /> Premium Grade Approved
                       </div>
                       <ChevronRight size={16} className="text-stone-400 group-hover:translate-x-1 group-hover:text-orange-500 transition-all" />
@@ -146,13 +159,89 @@ export default function CareersPage() {
                   href="/profile.html"
                   className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-colors inline-block"
                 >
-                  View Job & Career Options
+                  View My Profile & Orders
                 </a>
               </div>
             </div>
           </motion.div>
         </div>
       </main>
+
+      {/* Product Schemes HD Slideshow Lightbox */}
+      <AnimatePresence>
+        {slideshowIndex !== null && (
+          <div className="fixed inset-0 z-50 flex flex-col justify-between bg-zinc-950/98 backdrop-blur-md p-4 md:p-8">
+            {/* Header: Title and Close button */}
+            <div className="flex justify-between items-center z-10 w-full">
+              <div className="font-sans text-left">
+                <span className="text-[10px] font-black uppercase text-orange-400 tracking-widest block">
+                  Product Scheme HD Slideshow ({slideshowIndex + 1} of {schemes.length})
+                </span>
+                <span className="text-xl md:text-2xl font-black text-white block mt-0.5">
+                  {schemes[slideshowIndex].title}
+                </span>
+              </div>
+              <button
+                onClick={() => setSlideshowIndex(null)}
+                className="p-3 bg-white/10 hover:bg-orange-600 rounded-full text-white transition-colors cursor-pointer"
+                aria-label="Close Slideshow"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Central Area: Chevron Left, Image Frame, Chevron Right */}
+            <div className="flex-grow flex items-center justify-between gap-4 max-w-5xl mx-auto w-full relative my-4">
+              <button
+                onClick={() => setSlideshowIndex((slideshowIndex - 1 + schemes.length) % schemes.length)}
+                className="p-3 bg-white/5 hover:bg-white/15 rounded-full text-white transition-colors cursor-pointer shrink-0"
+              >
+                <ChevronLeft size={24} />
+              </button>
+
+              <motion.div 
+                key={slideshowIndex}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="flex-grow flex items-center justify-center max-h-[55vh] md:max-h-[60vh] select-none"
+              >
+                <img
+                  src={schemes[slideshowIndex].image}
+                  alt={schemes[slideshowIndex].title}
+                  referrerPolicy="no-referrer"
+                  className="rounded-3xl max-h-[50vh] md:max-h-[55vh] w-auto max-w-full object-contain shadow-2xl border-2 border-white/10"
+                />
+              </motion.div>
+
+              <button
+                onClick={() => setSlideshowIndex((slideshowIndex + 1) % schemes.length)}
+                className="p-3 bg-white/5 hover:bg-white/15 rounded-full text-white transition-colors cursor-pointer shrink-0"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </div>
+
+            {/* Footer: Description & Tags */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 md:p-6 max-w-3xl mx-auto w-full mb-4 font-sans text-left">
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {schemes[slideshowIndex].tags.map((tag, tIdx) => (
+                  <span
+                    key={tIdx}
+                    className="bg-orange-600/20 text-orange-300 text-[9px] font-black uppercase border border-orange-500/20 px-2.5 py-1 rounded-lg animate-pulse"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <p className="text-zinc-300 text-xs md:text-sm font-semibold leading-relaxed">
+                {schemes[slideshowIndex].description}
+              </p>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </div>
