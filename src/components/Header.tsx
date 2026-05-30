@@ -100,7 +100,7 @@ export default function Header() {
     { name: 'Order Online', href: '/order.html' },
     { name: 'Event Gallery', href: '/gallery.html' },
     { name: 'AI Planner', href: '/planner.html' },
-    { name: 'Careers', href: '/careers.html' },
+    { name: 'Our Product Schemes', href: '/careers.html' },
     { name: 'Contact Us', href: '/contact.html' },
   ];
 
