@@ -37,7 +37,7 @@ export default function CareersPage() {
       <CurtainLoader />
       <Header />
 
-      <main className="pt-32 pb-24">
+      <main className="pt-36 lg:pt-32 pb-24">
         {/* Banner Section */}
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="text-center mb-16 relative">

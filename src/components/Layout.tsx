@@ -2,6 +2,7 @@ import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import WhatsAppButton from './WhatsAppButton';
+import AiSearchFloating from './AiSearchFloating';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main>{children}</main>
       <Footer />
       <WhatsAppButton />
+      <AiSearchFloating />
     </div>
   );
 }

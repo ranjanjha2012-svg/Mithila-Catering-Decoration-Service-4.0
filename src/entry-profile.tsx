@@ -14,7 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <CurtainLoader />
       <div className="min-h-screen">
         <Header />
-        <main className="pt-24 bg-neutral-50 min-h-screen pb-12">
+        <main className="pt-36 lg:pt-32 bg-neutral-50 min-h-screen pb-12">
           <ProfilePage />
         </main>
         <Footer />

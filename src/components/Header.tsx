@@ -136,7 +136,7 @@ export default function Header() {
   const displayNavItems = user ? [...navItems, { name: 'My Profile', href: '/profile.html' }] : navItems;
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md z-40 border-b border-orange-100 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 bg-[#e0f7fa]/95 backdrop-blur-md z-40 border-b border-cyan-200/50 shadow-sm">
       {/* Welcome Running Marquee - integrated to avoid overlapping */}
       <div className="w-full bg-orange-600 py-1.5 overflow-hidden border-b border-orange-500/20">
         <div className="whitespace-nowrap animate-marquee flex items-center gap-8">
@@ -147,21 +147,61 @@ export default function Header() {
           ))}
         </div>
       </div>
-      <div className="container mx-auto px-4 py-3 flex flex-wrap lg:flex-nowrap justify-between items-center gap-3">
-        <a href="/" className="flex items-center gap-3 shrink-0">
-          <img 
-            src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
-            alt="Mithila Catering Logo" 
-            className="h-10 w-10 sm:h-12 sm:w-12 object-contain"
-          />
-          <div>
-            <h1 className="text-sm sm:text-lg font-black text-red-800 leading-tight">Mithila Catering &</h1>
-            <p className="text-[9px] sm:text-xs font-bold text-orange-600 uppercase tracking-widest leading-none mt-0.5">Decoration Service</p>
-          </div>
-        </a>
+      <div className="container mx-auto px-4 py-2.5 flex flex-col lg:flex-row justify-between lg:items-center gap-3">
+        {/* Top bar for mobile: Logo & Brand on left, Cart & Register/Login on right */}
+        <div className="flex items-center justify-between w-full lg:w-auto gap-3 shrink-0">
+          <a href="/" className="flex items-center gap-2.5 sm:gap-3 shrink">
+            <img 
+              src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
+              alt="Mithila Catering Logo" 
+              className="h-9 w-9 sm:h-12 sm:w-12 object-contain shrink-0"
+            />
+            <div className="shrink-0 text-left">
+              <h1 className="text-xs sm:text-lg font-black text-red-800 leading-tight">Mithila Catering &</h1>
+              <p className="text-[7.5px] sm:text-xs font-bold text-orange-600 uppercase tracking-widest leading-none mt-1">Decoration Service</p>
+            </div>
+          </a>
 
-        {/* Permanent Responsive Search Bar */}
-        <div className="w-full lg:max-w-xs xl:max-w-sm order-3 lg:order-2 mx-auto lg:mx-0 relative">
+          {/* Mobile Interactive Actions Container */}
+          <div className="flex items-center gap-2 lg:hidden shrink-0">
+            {/* Cart trigger button with reactive count */}
+            {user && (
+              <button
+                onClick={triggerCartOpen}
+                className="relative p-2 text-stone-700 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0"
+                id="header-cart-trigger-mobile"
+              >
+                <ShoppingCart size={19} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-orange-600 text-white font-black text-[9px] rounded-full flex items-center justify-center border border-white animate-pulse">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {!user && (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="text-[10px] font-black text-white bg-orange-600 hover:bg-orange-700 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0"
+                id="mobile-header-login-btn-new"
+              >
+                Register/Login
+              </button>
+            )}
+
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-1.5 hover:bg-stone-200/50 rounded-lg transition-colors text-[#5c4033] shrink-0 select-none flex items-center justify-center"
+              id="menu-toggle"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar - Under mobile logo, centered on desktop */}
+        <div className="w-full lg:max-w-xs xl:max-w-sm relative">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <input
               type="text"
@@ -229,8 +269,9 @@ export default function Header() {
           </AnimatePresence>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-6 order-2 lg:order-3">
-          <nav className="hidden lg:flex items-center gap-8">
+        {/* Desktop Nav Items */}
+        <div className="hidden lg:flex items-center gap-3 sm:gap-6">
+          <nav className="flex items-center gap-8">
             {displayNavItems.map((item) => (
               <a 
                 key={item.name} 
@@ -273,11 +314,11 @@ export default function Header() {
             )}
           </nav>
 
-          {/* Cart trigger button with reactive count */}
+          {/* Desktop-only Cart trigger button with reactive count */}
           {user && (
             <button
               onClick={triggerCartOpen}
-              className="relative p-2.5 text-stone-700 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer flex items-center justify-center"
+              className="relative p-2.5 text-stone-700 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer flex items-center justify-center shrink-0"
               id="header-cart-trigger"
             >
               <ShoppingCart size={22} />
@@ -288,25 +329,6 @@ export default function Header() {
               )}
             </button>
           )}
-
-          {/* Mobile Login indicator or menu trigger */}
-          {!user && (
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="lg:hidden text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-              id="mobile-header-login-btn"
-            >
-              Register/Login
-            </button>
-          )}
-
-          <button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 hover:bg-orange-50 rounded-lg transition-colors text-orange-800 lg:hidden"
-            id="menu-toggle"
-          >
-            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
         </div>
       </div>
 

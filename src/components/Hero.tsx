@@ -16,7 +16,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden bg-hero-red-gradient">
+    <section className="relative pt-36 lg:pt-32 pb-20 overflow-hidden bg-hero-red-gradient">
       <div className="absolute inset-0 z-0 opacity-20">
         <img 
           src="https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=2000" 

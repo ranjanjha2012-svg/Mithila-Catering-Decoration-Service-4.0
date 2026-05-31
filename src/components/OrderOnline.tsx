@@ -124,13 +124,6 @@ function OrderOnlineContent() {
   const [normalResults, setNormalResults] = useState<MenuItem[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // AI countdown states
-  const [isCounting, setIsCounting] = useState(false);
-  const [countdown, setCountdown] = useState(3);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiCorrectedQuery, setAiCorrectedQuery] = useState('');
-  const [aiResults, setAiResults] = useState<MenuItem[]>([]);
-
   // Portions selection
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [selectedSize, setSelectedSize] = useState<'half' | 'full' | 'single'>('single');
@@ -146,31 +139,22 @@ function OrderOnlineContent() {
       if (q) {
         setHasSearched(true);
         // Find normal matching items
-        const matched = menuItems.filter(item => 
+        let matched = menuItems.filter(item => 
           item.name.toLowerCase().includes(q.toLowerCase()) ||
           item.description.toLowerCase().includes(q.toLowerCase()) ||
           item.category.toLowerCase().includes(q.toLowerCase())
         );
 
-        setNormalResults(matched);
-
         if (matched.length === 0) {
-          // Trigger the 3-second delay to activate AI Search!
-          setIsCounting(true);
-          setCountdown(3);
-          setAiResults([]);
-          setAiCorrectedQuery('');
-        } else {
-          setIsCounting(false);
-          setIsAiLoading(false);
-          setAiResults([]);
+          // Instantly fallback to our spelling/synonym dictionary results to be helpful
+          const { results } = fuzzyAiMatch(q);
+          matched = results;
         }
+
+        setNormalResults(matched);
       } else {
         setHasSearched(false);
         setNormalResults([]);
-        setIsCounting(false);
-        setIsAiLoading(false);
-        setAiResults([]);
       }
     };
 
@@ -179,30 +163,6 @@ function OrderOnlineContent() {
     window.addEventListener('popstate', handleLocationChange);
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, [window.location.search]);
-
-  // AI search countdown trigger
-  useEffect(() => {
-    if (!isCounting) return;
-    if (countdown === 0) {
-      setIsCounting(false);
-      setIsAiLoading(true);
-
-      const timer = setTimeout(() => {
-        const { correctedText, results: fuzzyMatched } = fuzzyAiMatch(searchQueryParam);
-        setAiCorrectedQuery(correctedText);
-        setAiResults(fuzzyMatched);
-        setIsAiLoading(false);
-      }, 700);
-
-      return () => clearTimeout(timer);
-    }
-
-    const interval = setTimeout(() => {
-      setCountdown(prev => prev - 1);
-    }, 1000);
-
-    return () => clearTimeout(interval);
-  }, [isCounting, countdown, searchQueryParam]);
 
   const handleClearSearch = () => {
     window.history.pushState(null, '', '/order.html');
@@ -241,7 +201,7 @@ function OrderOnlineContent() {
       <CurtainLoader />
       <Header />
       
-      <main className="pt-32 pb-20">
+      <main className="pt-36 lg:pt-32 pb-20">
         <div className="container mx-auto px-4 max-w-7xl">
           
           {/* Header section */}
@@ -335,12 +295,11 @@ function OrderOnlineContent() {
                 exit={{ opacity: 0, y: -15 }}
                 className="max-w-6xl mx-auto"
               >
-                {/* 1. Normal Results exist */}
-                {normalResults.length > 0 && (
+                {normalResults.length > 0 ? (
                   <div>
                     <div className="text-stone-800 text-xs font-black uppercase tracking-wider pb-6 flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-ping"></span>
-                      Loaded {normalResults.length} matching {normalResults.length === 1 ? 'item' : 'items'} directly:
+                      Loaded {normalResults.length} matching {normalResults.length === 1 ? 'item' : 'items'}:
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -382,130 +341,23 @@ function OrderOnlineContent() {
                       ))}
                     </div>
                   </div>
-                )}
-
-                {/* 2. Countdown Waiting State */}
-                {isCounting && (
-                  <div className="bg-white rounded-3xl p-10 md:p-14 text-center border-2 border-orange-100/50 shadow-xl max-w-xl mx-auto pb-12 select-none">
-                    <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                ) : (
+                  <div className="bg-white rounded-3xl p-10 md:p-14 text-center border-2 border-red-100 shadow-xl max-w-xl mx-auto pb-12 select-none">
+                    <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
                       <AlertCircle size={32} />
                     </div>
-                    <h3 className="text-xl font-black text-rose-955 mb-2">Item Not Explicitly Found</h3>
+                    <h3 className="text-xl font-black text-rose-955 mb-2">No Match Possible</h3>
                     <p className="text-stone-500 text-xs md:text-sm leading-relaxed mb-6 font-semibold">
-                      We couldn't find an exact spelling match for <span className="text-orange-600">"{searchQueryParam}"</span>.
+                      We couldn't find any dish named <span className="text-red-600 font-extrabold">"{searchQueryParam}"</span> on our menu list.
                     </p>
-                    <div className="space-y-2 bg-orange-50/50 p-4 rounded-2xl border border-orange-100/40">
-                      <p className="text-[11px] font-black uppercase text-orange-600 tracking-wider flex items-center justify-center gap-1.5 animate-bounce">
-                        <Sparkles size={14} /> Activating Mithila AI Smart Search
-                      </p>
-                      <p className="text-[10px] text-stone-500 font-bold">
-                        Running semantic checks, typo-corrections and ingredient matching in...
-                      </p>
-                      <div className="text-4xl font-extrabold text-orange-600 mt-2">{countdown}s</div>
+                    <div className="space-y-4 pt-4 border-t border-neutral-100">
+                      <button 
+                        onClick={handleClearSearch}
+                        className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95 mx-auto block"
+                      >
+                        Explore Categories Menu
+                      </button>
                     </div>
-                  </div>
-                )}
-
-                {/* 3. AI Smart Loading Animation */}
-                {isAiLoading && (
-                  <div className="text-center py-20 max-w-md mx-auto">
-                    <Loader2 size={44} className="animate-spin text-orange-600 mx-auto mb-4" />
-                    <p className="text-sm font-black text-rose-950 uppercase tracking-widest animate-pulse">
-                      Mithila AI Assist is thinking...
-                    </p>
-                    <p className="text-xs text-stone-500 font-bold mt-1 uppercase tracking-wider">
-                      Applying culinary spellcheck &amp; dialect synonyms
-                    </p>
-                  </div>
-                )}
-
-                {/* 4. AI Search Results found */}
-                {!isCounting && !isAiLoading && normalResults.length === 0 && (
-                  <div>
-                    {aiResults.length > 0 ? (
-                      <div className="space-y-8 select-none">
-                        <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-3xl p-6 md:p-8 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
-                          <div className="flex items-center gap-4 text-left">
-                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                              <Sparkles size={24} className="text-white animate-spin-slow" />
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-black uppercase tracking-widest text-orange-100 block">
-                                Mithila Smart AI Spellcheck Correction
-                              </span>
-                              <span className="text-lg md:text-xl font-black block">
-                                Corrected Query To: "{aiCorrectedQuery}"
-                              </span>
-                            </div>
-                          </div>
-                          <div className="bg-white/10 px-4 py-2 border border-white/20 rounded-xl text-xs font-black uppercase tracking-wider block shrink-0">
-                            Fuzzy Match AI Active
-                          </div>
-                        </div>
-
-                        <div className="text-stone-850 text-xs font-black uppercase tracking-wider text-left flex items-center gap-1">
-                          Loaded {aiResults.length} matching results:
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                          {aiResults.map((item, i) => (
-                            <motion.div
-                              key={item.id}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: i * 0.05 }}
-                              className="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-orange-100 group hover:shadow-2xl hover:border-orange-200 transition-all duration-500 flex flex-col justify-between"
-                            >
-                              <div className="relative h-56 overflow-hidden">
-                                <img 
-                                  src={item.image} 
-                                  alt={item.name} 
-                                  referrerPolicy="no-referrer"
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                  loading="lazy"
-                                />
-                                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-lg border border-orange-50">
-                                  <span className="text-sm font-black text-orange-600">
-                                    {item.price ? `₹${item.price}${item.unit ? ` / ${item.unit}` : ''}` : `₹${item.halfPrice} / ₹${item.fullPrice}`}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="p-6 md:p-8 flex-grow flex flex-col justify-between">
-                                <div>
-                                  <h3 className="text-lg md:text-xl font-black text-rose-955 mb-2">{item.name}</h3>
-                                  <p className="text-stone-500 text-xs leading-relaxed mb-6">{item.description}</p>
-                                </div>
-                                <button
-                                  onClick={() => handleOrderClick(item)}
-                                  className="w-full py-3.5 bg-stone-900 text-white font-black rounded-xl shadow-md hover:bg-orange-600 transition-all uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                                >
-                                  Add to Cart <ArrowRight size={14} />
-                                </button>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      /* No results even in AI */
-                      <div className="bg-white rounded-3xl p-10 md:p-14 text-center border-2 border-red-100 shadow-xl max-w-xl mx-auto pb-12 select-none">
-                        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                          <AlertCircle size={32} />
-                        </div>
-                        <h3 className="text-xl font-black text-rose-955 mb-2">No Match Possible</h3>
-                        <p className="text-stone-500 text-xs md:text-sm leading-relaxed mb-6 font-semibold">
-                          Even with Mithila AI intelligent semantic mapping, we couldn't match <span className="text-red-600 font-extrabold">"{searchQueryParam}"</span> to any ingredients on our list!
-                        </p>
-                        <div className="space-y-4 pt-4 border-t border-neutral-100">
-                          <button 
-                            onClick={handleClearSearch}
-                            className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
-                          >
-                            Explore Categories Menu
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </motion.div>

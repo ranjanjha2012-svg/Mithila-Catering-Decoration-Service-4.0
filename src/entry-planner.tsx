@@ -12,7 +12,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <CurtainLoader />
     <div className="min-h-screen">
       <Header />
-      <main className="pt-20">
+      <main className="pt-36 lg:pt-32">
         <AIPlanner />
       </main>
       <Footer />

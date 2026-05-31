@@ -348,58 +348,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Dynamic AI Spelling Solver Search Bar */}
-        <div className="mt-6 pt-6 border-t border-red-200/50 z-10 relative">
-          <div className="max-w-2xl">
-            <label className="text-[11px] font-black text-rose-800 uppercase tracking-widest block mb-2 flex items-center gap-1.5">
-              <Sparkles size={14} className="text-red-600 animate-pulse" />
-              <span>AI Intelligent Food & Sweets spelling solver search</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Confused or mistyped? Type whatever you want to eat (e.g., 'mton', 'sweets', 'chiken', 'mithla')..."
-                value={searchQuery}
-                onChange={(e) => handleAiSearch(e.target.value)}
-                className="w-full px-5 py-3.5 pr-12 text-xs rounded-2xl border-2 border-red-200 bg-white focus:border-orange-500 outline-none font-bold text-neutral-800 placeholder-stone-400 shadow-sm"
-              />
-              <Sparkles className="absolute right-4 top-1/2 -translate-y-1/2 text-red-600/60" size={16} />
-            </div>
-
-            {/* AI Search Suggestions */}
-            <AnimatePresence>
-              {aiResults.length > 0 && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute left-0 right-0 mt-2 bg-white rounded-2xl border-2 border-stone-200/80 shadow-2xl p-3 z-30 space-y-1 max-h-72 overflow-y-auto"
-                >
-                  <p className="text-[10px] font-black text-stone-400 px-3 py-1.5 uppercase tracking-wider">AI Suggested Food Matches (Click to Redirect):</p>
-                  {aiResults.map((item) => (
-                    <a
-                      key={item.id}
-                      href={getCategoryUrl(item.category)}
-                      className="flex items-center justify-between p-2.5 hover:bg-orange-50 rounded-xl transition-all border border-transparent hover:border-orange-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm">🍲</span>
-                        <div>
-                          <p className="text-xs font-black text-rose-950">{item.name}</p>
-                          <p className="text-[10px] text-stone-500 font-semibold">{item.category} • {item.description.substring(0, 70)}...</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-orange-600 uppercase">
-                        <span>Order Now</span>
-                        <ChevronRight size={12} />
-                      </div>
-                    </a>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
