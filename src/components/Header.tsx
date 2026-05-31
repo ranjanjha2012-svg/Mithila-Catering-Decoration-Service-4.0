@@ -12,6 +12,21 @@ export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('search') || '';
+    }
+    return '';
+  });
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    
+    // Redirect to Order page with the query encoded in URLs
+    window.location.href = `/order.html?search=${encodeURIComponent(searchQuery.trim())}`;
+  };
 
   const updateCartCount = () => {
     const savedCart = localStorage.getItem('mithila_cart');
@@ -98,9 +113,8 @@ export default function Header() {
     { name: 'Home', href: '/' },
     { name: 'Tiffin Service', href: '/tiffin.html' },
     { name: 'Order Online', href: '/order.html' },
-    { name: 'Event Gallery', href: '/gallery.html' },
+    { name: 'Event Gallery & Schemes', href: '/gallery.html' },
     { name: 'AI Planner', href: '/planner.html' },
-    { name: 'Our Product Schemes', href: '/careers.html' },
     { name: 'Contact Us', href: '/contact.html' },
   ];
 
@@ -118,20 +132,38 @@ export default function Header() {
           ))}
         </div>
       </div>
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <a href="/" className="flex items-center gap-3">
+      <div className="container mx-auto px-4 py-3 flex flex-wrap lg:flex-nowrap justify-between items-center gap-3">
+        <a href="/" className="flex items-center gap-3 shrink-0">
           <img 
             src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
             alt="Mithila Catering Logo" 
-            className="h-12 w-12 object-contain"
+            className="h-10 w-10 sm:h-12 sm:w-12 object-contain"
           />
           <div>
-            <h1 className="text-lg sm:text-xl font-black text-orange-800 leading-tight">Mithila Catering &</h1>
-            <p className="text-xs font-bold text-orange-600 uppercase tracking-widest">Decoration Service</p>
+            <h1 className="text-sm sm:text-lg font-black text-orange-850 leading-tight">Mithila Catering &</h1>
+            <p className="text-[9px] sm:text-xs font-bold text-orange-600 uppercase tracking-widest leading-none mt-0.5">Decoration Service</p>
           </div>
         </a>
 
-        <div className="flex items-center gap-4 sm:gap-6">
+        {/* Permanent Responsive Search Bar */}
+        <div className="w-full lg:max-w-xs xl:max-w-sm order-3 lg:order-2 mx-auto lg:mx-0">
+          <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+            <input
+              type="text"
+              placeholder="Search authentic dishes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 border border-orange-200 focus:border-orange-500 hover:border-orange-300 rounded-full text-xs font-semibold outline-none pr-10 bg-orange-50/25 text-stone-800 transition-colors"
+            />
+            <button type="submit" className="absolute right-3.5 text-orange-600 hover:text-orange-700 flex items-center justify-center p-1" aria-label="Search">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.8" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </form>
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-6 order-2 lg:order-3">
           <nav className="hidden lg:flex items-center gap-8">
             {displayNavItems.map((item) => (
               <a 
@@ -218,7 +250,7 @@ export default function Header() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-white border-t border-orange-50 overflow-hidden"
+            className="lg:hidden bg-sky-100 border-t border-sky-200 overflow-hidden shadow-inner"
           >
             <div className="container mx-auto px-4 py-6 flex flex-col gap-4">
               {displayNavItems.map((item) => (
@@ -226,8 +258,8 @@ export default function Header() {
                   key={item.name} 
                   href={item.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`text-lg font-semibold py-2 border-b border-orange-50 last:border-0 ${
-                    (typeof window !== 'undefined' && window.location.pathname === item.href) ? 'text-orange-600' : 'text-gray-800 hover:text-orange-600'
+                  className={`text-lg font-bold py-2 border-b border-sky-200/60 last:border-0 ${
+                    (typeof window !== 'undefined' && window.location.pathname === item.href) ? 'text-orange-600 font-black' : 'text-stone-800 hover:text-orange-600'
                   }`}
                 >
                   {item.name}

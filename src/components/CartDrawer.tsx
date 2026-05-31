@@ -125,13 +125,13 @@ Please confirm my order immediately.`;
             className="absolute inset-0 bg-neutral-900/40 backdrop-blur-xs"
           />
 
-          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+          <div className="absolute inset-y-0 right-0 w-full max-w-md flex z-50">
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-screen max-w-md bg-white shadow-2xl flex flex-col h-full border-l border-orange-100"
+              className="w-full bg-white shadow-2xl flex flex-col h-full border-l border-orange-100"
             >
               {/* Header */}
               <div className="p-6 border-b border-orange-50 flex items-center justify-between bg-orange-50/50">
@@ -200,12 +200,19 @@ Please confirm my order immediately.`;
                   <div className="flex-1 overflow-y-auto p-6 space-y-4">
                     {cart.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                        <div className="w-16 h-16 bg-neutral-50 text-neutral-300 rounded-full flex items-center justify-center">
+                        <div className="w-16 h-16 bg-neutral-50 text-neutral-300 rounded-full flex items-center justify-center animate-bounce">
                           <ShoppingBag size={28} />
                         </div>
                         <div>
-                          <p className="font-extrabold text-neutral-800">Your cart is empty</p>
-                          <p className="text-xs text-neutral-400 mt-1">Add items from our order menu to start!</p>
+                          <p className="font-extrabold text-neutral-800 text-sm">Your cart is empty</p>
+                          <p className="text-xs text-neutral-400 mt-1 pb-2">Add items from our order menu to start!</p>
+                          <a
+                            href="/order.html"
+                            onClick={() => onClose()}
+                            className="inline-flex px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                          >
+                            Shop Items
+                          </a>
                         </div>
                       </div>
                     ) : !showCheckout ? (
@@ -297,7 +304,7 @@ Please confirm my order immediately.`;
                               value={formData.name}
                               onChange={handleInputChange}
                               placeholder="Receiver name"
-                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                              className="w-full px-4 py-2.5 text-xs !text-neutral-950 rounded-xl border border-neutral-200 !bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                             />
                           </div>
 
@@ -311,7 +318,7 @@ Please confirm my order immediately.`;
                                 value={formData.number}
                                 onChange={handleInputChange}
                                 placeholder="Contact number"
-                                className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                                className="w-full px-4 py-2.5 text-xs !text-neutral-950 rounded-xl border border-neutral-200 !bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                               />
                             </div>
                             <div className="space-y-1">
@@ -322,7 +329,7 @@ Please confirm my order immediately.`;
                                 value={formData.whatsapp}
                                 onChange={handleInputChange}
                                 placeholder="WhatsApp number"
-                                className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                                className="w-full px-4 py-2.5 text-xs !text-neutral-950 rounded-xl border border-neutral-200 !bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                               />
                             </div>
                           </div>
@@ -336,7 +343,7 @@ Please confirm my order immediately.`;
                               value={formData.address}
                               onChange={handleInputChange}
                               placeholder="Complete doorstep delivery address"
-                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
+                              className="w-full px-4 py-2.5 text-xs !text-neutral-950 rounded-xl border border-neutral-200 !bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
                             />
                           </div>
 
@@ -349,7 +356,7 @@ Please confirm my order immediately.`;
                               value={formData.state}
                               onChange={handleInputChange}
                               placeholder="Enter state (e.g. Noida, Delhi, Faridabad)"
-                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
+                              className="w-full px-4 py-2.5 text-xs !text-neutral-950 rounded-xl border border-neutral-200 !bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold"
                             />
                           </div>
 
@@ -361,7 +368,7 @@ Please confirm my order immediately.`;
                               value={formData.instructions}
                               onChange={handleInputChange}
                               placeholder="Any special cooking/delivery instructions"
-                              className="w-full px-4 py-2.5 text-xs text-neutral-900 rounded-xl border border-neutral-200 bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
+                              className="w-full px-4 py-2.5 text-xs !text-neutral-950 rounded-xl border border-neutral-200 !bg-white focus:ring-1 focus:ring-orange-500 outline-none font-bold resize-none"
                             />
                           </div>
 
@@ -410,6 +417,14 @@ Please confirm my order immediately.`;
                             <>Generate UPI Booking (₹{totalAmount})</>
                           )}
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowCheckout(false)}
+                          className="w-full py-3 mt-2.5 border-2 border-stone-200 hover:bg-neutral-50 text-neutral-800 font-extrabold rounded-2xl transition-all uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5"
+                        >
+                          ← Back & Add More Items
+                        </button>
                       </form>
                     )}
                   </div>
@@ -436,12 +451,22 @@ Please confirm my order immediately.`;
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => setShowCheckout(true)}
-                        className="w-full py-4 bg-stone-900 hover:bg-orange-600 text-white font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
-                      >
-                        Proceed to Checkout
-                      </button>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={onClose}
+                          className="py-3.5 border-2 border-stone-200 hover:bg-neutral-50 text-neutral-800 font-extrabold rounded-2xl transition-all uppercase tracking-wider text-[11px] flex items-center justify-center cursor-pointer active:scale-95"
+                        >
+                          Add More Items
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCheckout(true)}
+                          className="py-3.5 bg-stone-900 hover:bg-orange-600 text-white font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center uppercase tracking-wider text-[11px] cursor-pointer"
+                        >
+                          Proceed To Pay
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

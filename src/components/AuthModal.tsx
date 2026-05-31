@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithPopup, 
   signOut,
-  sendEmailVerification
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, googleProvider, db, logUserActivity } from '../lib/firebase';
@@ -31,6 +32,33 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [captchaCode, setCaptchaCode] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
+  const [resetFeedback, setResetFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [sendingReset, setSendingReset] = useState(false);
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please fill in your email address above first, then click "Forgot Password" to receive a password recovery email.');
+      return;
+    }
+    setError('');
+    setResetFeedback(null);
+    setSendingReset(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetFeedback({
+        type: 'success',
+        text: `Success! We have sent a password reset link to ${email}. Please check your inbox and spam folder.`
+      });
+    } catch (err: any) {
+      console.error('Password reset helper error:', err);
+      setResetFeedback({
+        type: 'error',
+        text: err.message?.replace('Firebase:', '').trim() || 'Failed to send password reset email. Please try again.'
+      });
+    } finally {
+      setSendingReset(false);
+    }
+  };
 
   const generateCaptcha = () => {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Avoid confusing chars like 1/I, 0/O
@@ -53,6 +81,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setPassword('');
     setError('');
     setLoading(false);
+    setResetFeedback(null);
   };
 
   const handleRoleSelect = (selectedRole: UserRole) => {
@@ -274,7 +303,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.5 }}
-            className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border-2 border-orange-100 z-10 m-auto self-center"
+            className="relative w-full max-w-md bg-white rounded-3xl max-h-[95vh] overflow-y-auto shadow-2xl border-2 border-orange-100 z-10 m-auto self-center"
           >
             {/* Header / Background Pattern */}
             <div className="bg-orange-600 px-6 py-6 text-white relative">
@@ -396,6 +425,33 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         />
                       </div>
                     </div>
+
+                    {mode === 'login' && (
+                      <div className="flex justify-end mt-1">
+                        <button
+                          type="button"
+                          onClick={handleForgotPassword}
+                          disabled={sendingReset}
+                          className="text-[11px] font-black uppercase tracking-wider text-orange-600 hover:text-orange-700 hover:underline transition-all cursor-pointer"
+                        >
+                          {sendingReset ? 'Sending Reset Mail...' : 'Forgot/Reset Password?'}
+                        </button>
+                      </div>
+                    )}
+
+                    {resetFeedback && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`p-3 text-[11px] font-bold rounded-xl border leading-relaxed ${
+                          resetFeedback.type === 'success'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                        }`}
+                      >
+                        {resetFeedback.text}
+                      </motion.div>
+                    )}
 
                     {/* Captcha challenge verification widget for Login Mode only */}
                     {mode === 'login' && (
