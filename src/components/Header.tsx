@@ -5,6 +5,7 @@ import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import AuthModal from './AuthModal';
+import { menuItems } from '../constants/menu';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,6 +20,20 @@ export default function Header() {
     }
     return '';
   });
+  const [suggestions, setSuggestions] = useState<typeof menuItems>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    const cleanQuery = searchQuery.toLowerCase().trim();
+    const matches = menuItems.filter(item => 
+      item.name.toLowerCase().includes(cleanQuery)
+    ).slice(0, 6);
+    setSuggestions(matches);
+  }, [searchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,19 +155,23 @@ export default function Header() {
             className="h-10 w-10 sm:h-12 sm:w-12 object-contain"
           />
           <div>
-            <h1 className="text-sm sm:text-lg font-black text-orange-850 leading-tight">Mithila Catering &</h1>
+            <h1 className="text-sm sm:text-lg font-black text-red-800 leading-tight">Mithila Catering &</h1>
             <p className="text-[9px] sm:text-xs font-bold text-orange-600 uppercase tracking-widest leading-none mt-0.5">Decoration Service</p>
           </div>
         </a>
 
         {/* Permanent Responsive Search Bar */}
-        <div className="w-full lg:max-w-xs xl:max-w-sm order-3 lg:order-2 mx-auto lg:mx-0">
+        <div className="w-full lg:max-w-xs xl:max-w-sm order-3 lg:order-2 mx-auto lg:mx-0 relative">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <input
               type="text"
               placeholder="Search authentic dishes..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
               className="w-full px-4 py-2 border border-orange-200 focus:border-orange-500 hover:border-orange-300 rounded-full text-xs font-semibold outline-none pr-10 bg-orange-50/25 text-stone-800 transition-colors"
             />
             <button type="submit" className="absolute right-3.5 text-orange-600 hover:text-orange-700 flex items-center justify-center p-1" aria-label="Search">
@@ -161,6 +180,53 @@ export default function Header() {
               </svg>
             </button>
           </form>
+
+          {/* Suggestions Dropdown */}
+          <AnimatePresence>
+            {showSuggestions && suggestions.length > 0 && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40 bg-transparent" 
+                  onClick={() => setShowSuggestions(false)} 
+                />
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                  className="absolute left-0 right-0 mt-2 bg-white border border-orange-200 rounded-2xl shadow-xl z-50 overflow-hidden divide-y divide-orange-50 max-h-72 overflow-y-auto"
+                >
+                  {suggestions.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(item.name);
+                        setShowSuggestions(false);
+                        window.location.href = `/order.html?search=${encodeURIComponent(item.name.trim())}`;
+                      }}
+                      className="w-full px-4 py-2.5 text-left hover:bg-orange-50 flex items-center justify-between gap-3 transition-colors group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 max-w-[70%] text-stone-900">
+                        <img 
+                          src={item.image} 
+                          alt={item.name} 
+                          className="w-7 h-7 object-cover rounded-md group-hover:scale-105 transition-transform" 
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="truncate text-xs font-bold text-stone-850">
+                          {item.name}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black text-orange-600 shrink-0 select-none">
+                        {item.price ? `₹${item.price}` : `₹${item.halfPrice}/Full`}
+                      </span>
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6 order-2 lg:order-3">
@@ -230,7 +296,7 @@ export default function Header() {
               className="lg:hidden text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
               id="mobile-header-login-btn"
             >
-              Login
+              Register/Login
             </button>
           )}
 

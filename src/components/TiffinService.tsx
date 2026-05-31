@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Info, CreditCard, Smartphone, Globe, ArrowRight, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { auth } from '../lib/firebase';
 
 interface TiffinPlan {
   id: string;
@@ -132,11 +133,15 @@ export default function TiffinService() {
                 </div>
                 <button
                   onClick={() => {
+                    if (!auth.currentUser) {
+                      window.dispatchEvent(new CustomEvent('open-mithila-auth'));
+                      return;
+                    }
                     setSelectedPlan(plan);
                     setShowBooking(true);
                     setStep(1);
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest"
+                  className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest cursor-pointer"
                 >
                   Book Now
                 </button>
