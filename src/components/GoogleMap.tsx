@@ -15,8 +15,8 @@ export default function GoogleMap() {
       ></iframe>
       <div className="absolute top-4 left-4 bg-white p-4 rounded-xl shadow-lg border border-orange-100 hidden md:block">
         <h4 className="font-bold text-orange-800">Head Office</h4>
-        <p className="text-sm text-gray-600">Pul Prahladpur, New Delhi</p>
-        <p className="text-xs text-orange-600 font-semibold mt-1">Delhi - 110044</p>
+        <p className="text-sm text-gray-600">Delhi, India</p>
+        <p className="text-xs text-orange-600 font-semibold mt-1">Serving Pan India</p>
       </div>
     </section>
   );

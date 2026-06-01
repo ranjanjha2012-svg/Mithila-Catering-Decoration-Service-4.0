@@ -40,7 +40,7 @@ export default function Footer() {
             <ul className="space-y-4 text-sm text-orange-200/70">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="text-orange-500 shrink-0" />
-                <span>Office Address: F-11A, Second Floor, Gali No-12, Pul Prahladpur, New Delhi - 110044</span>
+                <span>Office Address: Delhi, India</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-orange-500 shrink-0" />
