@@ -40,7 +40,7 @@ export default function Footer() {
             <ul className="space-y-4 text-sm text-orange-200/70">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="text-orange-500 shrink-0" />
-                <span>Office Address: Delhi, India (Serving Pan India)</span>
+                <span>Office Address: F-11A, Second Floor, Gali No-12, Pul Prahladpur, New Delhi - 110044</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-orange-500 shrink-0" />
@@ -91,9 +91,13 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-orange-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-orange-200/40">
-          <div className="flex flex-col gap-1 items-center md:items-start text-center md:text-left">
+          <div className="flex flex-col gap-1.5 items-center md:items-start text-center md:text-left">
             <p>© 2026 Mithila Catering & Decoration Service. All rights reserved.</p>
-            <p className="text-white font-semibold mt-1">Last Updated 29 May 2026 to 31 May 2026</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 items-center text-white/90">
+              <span className="font-semibold text-white">Last Updated 01 June 2026</span>
+              <span className="opacity-30">|</span>
+              <span className="font-bold text-amber-400">FSSAI Licence Number: 23322010000405</span>
+            </div>
           </div>
           <p className="flex items-center gap-1">
             Design & Maintained by <a href="https://waltdesignsstudio.in" target="_blank" rel="noopener noreferrer" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">Walt Designs & Studio</a>
