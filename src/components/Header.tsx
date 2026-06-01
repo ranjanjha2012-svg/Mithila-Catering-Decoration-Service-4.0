@@ -394,9 +394,12 @@ export default function Header() {
                   <Phone size={16} className="text-orange-600" />
                   <span>+91 9650254164</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Mail size={16} className="text-orange-600" />
-                  <span>ranjanjha2012@gmail.com</span>
+                <div className="flex items-start gap-3 text-xs sm:text-sm text-gray-600">
+                  <Mail size={16} className="text-orange-600 mt-0.5" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold">ranjanjha@mithilacatering.com</span>
+                    <span className="text-[11px] text-gray-500">mithilacateringservices@gmail.com</span>
+                  </div>
                 </div>
               </div>
             </div>

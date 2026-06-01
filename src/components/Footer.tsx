@@ -50,7 +50,7 @@ export default function Footer() {
                 <Mail size={18} className="text-orange-500 shrink-0" />
                 <div className="flex flex-col">
                   <span>ranjanjha@mithilacatering.com</span>
-                  <span className="text-xs">mithilacateringservice@gmail.com</span>
+                  <span className="text-xs">mithilacateringservices@gmail.com</span>
                 </div>
               </li>
               <li className="flex items-center gap-3">
@@ -90,16 +90,16 @@ export default function Footer() {
           ></iframe>
         </div>
 
-        <div className="border-t border-orange-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-orange-200/40">
-          <div className="flex flex-col gap-1.5 items-center md:items-start text-center md:text-left">
+        <div className="border-t border-orange-900 pt-8 flex flex-col items-center justify-center text-center gap-4 text-xs text-orange-200/40">
+          <div className="flex flex-col gap-1.5 items-center text-center">
             <p>© 2026 Mithila Catering & Decoration Service. All rights reserved.</p>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 items-center text-white/90">
+            <div className="flex flex-wrap justify-center items-center gap-x-2.5 gap-y-1 text-white/95">
               <span className="font-semibold text-white">Last Updated 01 June 2026</span>
-              <span className="opacity-30">|</span>
-              <span className="font-bold text-amber-400">FSSAI Licence Number: 23322010000405</span>
+              <span className="opacity-45">|</span>
+              <span className="font-bold text-amber-400">FSSAI Lic No- 23322010000405</span>
             </div>
           </div>
-          <p className="flex items-center gap-1">
+          <p className="flex items-center justify-center gap-1">
             Design & Maintained by <a href="https://waltdesignsstudio.in" target="_blank" rel="noopener noreferrer" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">Walt Designs & Studio</a>
           </p>
         </div>

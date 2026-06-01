@@ -167,17 +167,6 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
   return (
     <section id="ai-planner" className="py-20 bg-black/40 backdrop-blur-md min-h-screen">
       <div className="container mx-auto px-4 max-w-2xl">
-        {!hideBackToHome && (
-          <div className="mb-8">
-            <a
-              href="/"
-              className="inline-flex items-center gap-2 text-white/60 hover:text-white font-bold transition-colors group"
-            >
-              <ArrowRight size={20} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
-              Back to Home
-            </a>
-          </div>
-        )}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Mithila AI Planner</h2>
           <p className="text-orange-100/80">Chat with our AI to plan your perfect menu and event details.</p>
