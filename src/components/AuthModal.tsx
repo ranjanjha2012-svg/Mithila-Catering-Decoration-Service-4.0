@@ -19,7 +19,7 @@ interface AuthModalProps {
 
 type AuthMode = 'login' | 'signup';
 type UserRole = 'customer' | 'admin';
-type Screen = 'role-selection' | 'auth-form' | 'verification-sent' | 'otp-verification';
+type Screen = 'role-selection' | 'auth-form' | 'verification-sent';
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [screen, setScreen] = useState<Screen>('role-selection');
@@ -30,12 +30,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   
   // Custom Registration Fields
   const [name, setName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [dob, setDob] = useState('');
-
-  // OTP Verification States
-  const [generatedOtp, setGeneratedOtp] = useState('');
-  const [otpInput, setOtpInput] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -90,10 +85,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setEmail('');
     setPassword('');
     setName('');
-    setPhoneNumber('');
     setDob('');
-    setGeneratedOtp('');
-    setOtpInput('');
     setError('');
     setLoading(false);
     setResetFeedback(null);
@@ -196,140 +188,108 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   };
 
-  const handleInitiateSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!name.trim()) {
-      setError('Please enter your full name.');
-      return;
-    }
-    if (!phoneNumber.trim()) {
-      setError('Phone number is compulsory for registration.');
-      return;
-    }
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      setError('Please enter a valid 10-digit phone number (e.g. 9650254164).');
-      return;
-    }
-    if (!email.trim() || !password) {
-      setError('Email and Password are required.');
-      return;
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-
-    // Generate simulated dynamic 6-digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-    setOtpInput('');
-    setScreen('otp-verification');
-  };
-
-  const handleCompleteSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpInput.trim() !== generatedOtp) {
-      setError('Invalid OTP code. Please enter the correct 6-digit code shown in the helper block.');
-      return;
-    }
-
-    setError('');
-    setLoading(true);
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Save user profile state in Firestore including full name, phone number, and DOB
-      const userRef = doc(db, 'users', user.uid);
-      const targetRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : role;
-      await setDoc(userRef, {
-        uid: user.uid,
-        name: name.trim(),
-        phoneNumber: phoneNumber.trim(),
-        email: user.email,
-        dob: dob || null,
-        role: targetRole,
-        phoneVerified: true,
-        emailVerified: true,
-        createdAt: new Date().toISOString()
-      }, { merge: true });
-
-      // Automatically store role & close so login is active and instant
-      localStorage.setItem('userRole', targetRole);
-      await logUserActivity('User Registered via OTP validation', { email: user.email, role: targetRole });
-      
-      if (targetRole === 'admin') {
-        window.location.href = '/admin-dashboard';
-      } else {
-        onClose();
-      }
-    } catch (err: any) {
-      handleError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === 'signup') {
-      handleInitiateSignup(e);
-      return;
-    }
 
     if (!email || !password) {
       setError('Please fill in all fields.');
       return;
     }
 
-    const inputNorm = captchaInput.toUpperCase().trim();
-    const codeNorm = captchaCode.toUpperCase().trim();
-    if (!inputNorm || inputNorm !== codeNorm) {
-      setError('CAPTCHA verification mismatch. Please solve the code correctly.');
-      generateCaptcha();
+    if (mode === 'signup' && !name.trim()) {
+      setError('Please enter your full name.');
       return;
+    }
+
+    if (mode === 'login') {
+      const inputNorm = captchaInput.toUpperCase().trim();
+      const codeNorm = captchaCode.toUpperCase().trim();
+      if (!inputNorm || inputNorm !== codeNorm) {
+        setError('CAPTCHA verification mismatch. Please solve the code correctly.');
+        generateCaptcha();
+        return;
+      }
     }
 
     setError('');
     setLoading(true);
 
     try {
-      // Login mode
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      if (mode === 'signup') {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-      // Fetch user document from Firestore to find their real role
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      let finalRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : role; // fall back to chosen form role if profile not in DB
+        // Send email authorization link
+        await sendEmailVerification(user);
 
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        if (data && data.role) {
-          finalRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : data.role;
-        }
-      } else {
-        // Document doesn't exist, create it with fallback
+        // Save user profile state in Firestore including full name and DOB
+        const userRef = doc(db, 'users', user.uid);
+        const targetRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : role;
         await setDoc(userRef, {
           uid: user.uid,
-          name: user.displayName || email.split('@')[0],
+          name: name.trim(),
           email: user.email,
-          role: finalRole,
+          dob: dob || null,
+          role: targetRole,
           createdAt: new Date().toISOString()
         }, { merge: true });
-      }
 
-      // Store role & close or redirect
-      localStorage.setItem('userRole', finalRole);
-      await logUserActivity('User Logged In', { email: user.email, role: finalRole });
-      if (finalRole === 'admin') {
-        window.location.href = '/admin-dashboard';
+        // Sign the user out immediately so they cannot access pages as unverified logged-in users
+        if (email.toLowerCase() !== 'mithilacateringservices@gmail.com') {
+          await signOut(auth);
+          localStorage.removeItem('userRole');
+          setRegisteredEmail(user.email || email);
+          setScreen('verification-sent');
+        } else {
+          localStorage.setItem('userRole', 'admin');
+          onClose();
+          window.location.href = '/admin-dashboard';
+        }
+
+        await logUserActivity('User Registered - Email Verification Sent', { email: user.email, role: targetRole });
       } else {
-        onClose();
+        // Login mode
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Strict Email Authorization Check
+        if (!user.emailVerified && user.email?.toLowerCase() !== 'mithilacateringservices@gmail.com') {
+          // Resend email verification link for convenience
+          await sendEmailVerification(user);
+          await signOut(auth);
+          localStorage.removeItem('userRole');
+          throw new Error("Email unverified. We have sent an authorization approval link to your email. Please check your inbox and click the link to verify first!");
+        }
+
+        // Fetch user document from Firestore to find their real role
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        let finalRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : role; // fall back to chosen form role if profile not in DB
+
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data && data.role) {
+            finalRole = email.toLowerCase() === 'mithilacateringservices@gmail.com' ? 'admin' : data.role;
+          }
+        } else {
+          // Document doesn't exist, create it with fallback
+          await setDoc(userRef, {
+            uid: user.uid,
+            name: user.displayName || email.split('@')[0],
+            email: user.email,
+            role: finalRole,
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        }
+
+        // Store role & close or redirect
+        localStorage.setItem('userRole', finalRole);
+        await logUserActivity('User Logged In', { email: user.email, role: finalRole });
+        if (finalRole === 'admin') {
+          window.location.href = '/admin-dashboard';
+        } else {
+          onClose();
+        }
       }
     } catch (err: any) {
       handleError(err);
@@ -374,13 +334,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 {screen === 'role-selection' && 'Welcome to Mithila'}
                 {screen === 'auth-form' && (role === 'admin' ? 'Admin Portal' : 'Customer Portal')}
                 {screen === 'verification-sent' && 'Verify Your Email'}
-                {screen === 'otp-verification' && 'OTP Verification Request'}
               </h3>
               <p className="text-orange-100 text-sm mt-1">
                 {screen === 'role-selection' && 'Choose your account type to proceed'}
                 {screen === 'auth-form' && (mode === 'login' ? 'Please log in to continue' : 'Create an account to continue')}
                 {screen === 'verification-sent' && 'Action Required'}
-                {screen === 'otp-verification' && 'Compulsory OTP verification is active'}
               </p>
             </div>
 
@@ -465,21 +423,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                               value={name}
                               onChange={(e) => setName(e.target.value)}
                               placeholder="Ranjan Kumar Jha"
-                              className="w-full pl-11 pr-4 py-3 bg-neutral-50 border-2 border-neutral-100 focus:border-orange-500 focus:bg-white rounded-2xl text-sm transition-colors outline-none font-bold text-black placeholder-stone-400"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5">Phone Number (Compulsory for OTP)</label>
-                          <div className="relative">
-                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
-                            <input
-                              type="tel"
-                              required
-                              value={phoneNumber}
-                              onChange={(e) => setPhoneNumber(e.target.value)}
-                              placeholder="9650254164"
                               className="w-full pl-11 pr-4 py-3 bg-neutral-50 border-2 border-neutral-100 focus:border-orange-500 focus:bg-white rounded-2xl text-sm transition-colors outline-none font-bold text-black placeholder-stone-400"
                             />
                           </div>
@@ -665,80 +608,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         {mode === 'login' ? "Don't have an account? Sign Up" : 'Already have an account? Log In'}
                       </button>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* SCREEN 5: COMPULSORY OTP VERIFICATION */}
-              {screen === 'otp-verification' && (
-                <div className="space-y-6">
-                  <div className="text-center py-2">
-                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto text-amber-600 mb-4">
-                      <Smartphone size={32} />
-                    </div>
-                    <h4 className="text-xl font-black text-rose-950">Compulsory OTP Verification</h4>
-                    <p className="text-neutral-500 text-xs mt-2 leading-relaxed">
-                      To complete your registration, please input the 6-digit confirmation code sent to:
-                      <br />
-                      <strong className="text-orange-600">{phoneNumber}</strong> and <strong className="text-orange-600">{email}</strong>
-                    </p>
-                  </div>
-
-                  {/* Banner listing simulated OTP */}
-                  <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/60 text-center space-y-1">
-                    <span className="text-[10px] font-black uppercase text-amber-800 tracking-wider block">Simulated OTP Text Message</span>
-                    <p className="font-mono text-xs text-neutral-700 select-all font-bold">
-                      [Mithila SMS Gateway] Your OTP verification code is:{' '}
-                      <span className="text-sm font-black text-rose-700 tracking-widest">{generatedOtp}</span>
-                    </p>
-                  </div>
-
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-semibold"
-                    >
-                      {error}
-                    </motion.div>
-                  )}
-
-                  <form onSubmit={handleCompleteSignup} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest text-center mb-1.5 font-mono">
-                        6-Digit OTP Code
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={6}
-                        value={otpInput}
-                        onChange={(e) => setOtpInput(e.target.value)}
-                        placeholder="••••••"
-                        className="w-full text-center tracking-[12px] text-lg font-black py-3 bg-neutral-50 border-2 border-neutral-100 focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-colors"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold rounded-2xl transition-all disabled:opacity-50 shadow-lg shadow-orange-500/20 active:scale-[0.99] mt-6 cursor-pointer"
-                    >
-                      <CheckCircle size={18} />
-                      <span>{loading ? 'Registering Account...' : 'Verify OTP & Submit'}</span>
-                    </button>
-                  </form>
-
-                  <div className="flex justify-center pt-2">
-                    <button
-                      onClick={() => {
-                        setScreen('auth-form');
-                        setError('');
-                      }}
-                      className="text-neutral-500 hover:text-orange-600 font-bold text-sm transition-colors cursor-pointer"
-                    >
-                      ← Back to edit form
-                    </button>
                   </div>
                 </div>
               )}
