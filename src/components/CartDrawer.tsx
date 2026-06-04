@@ -19,7 +19,7 @@ const locations = ['NOIDA', 'FARIDABAD', 'DELHI'];
 export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDrawerProps) {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, placeOrder } = useCart();
   const [showCheckout, setShowCheckout] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'UPI' | 'PAYU'>('COD');
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'UPI'>('COD');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   
@@ -71,15 +71,6 @@ export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDraw
     });
   };
 
-  // Helper function to generate SHA-512 hashes natively in the browser as a lowercase hex string
-  const generateSha512 = async (str: string): Promise<string> => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(str);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-512', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  };
-
   const handlePlaceOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser) {
@@ -95,51 +86,6 @@ export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDraw
     try {
       const newOrderId = await placeOrder(formData, paymentMethod);
       setOrderId(newOrderId);
-
-      if (paymentMethod === 'PAYU') {
-        const payuKey = "Xu4Xc9";
-        const payuSalt = "ySIviBMeitterrHjVqR05JqqEYmaIIal";
-        const txnid = newOrderId || `TXN_${Date.now()}`;
-        const amountStr = totalAmount.toFixed(2);
-        const productinfo = "Mithila Catering Order";
-        const firstname = formData.name.trim() || "Customer";
-        const email = auth.currentUser?.email || "info@mithilacatering.com";
-        const phone = formData.number || "0000000000";
-
-        // Generate SHA-512 PayU sequence: key|txnid|amount|productinfo|firstname|email|||||||||||salt
-        const hashSequence = `${payuKey}|${txnid}|${amountStr}|${productinfo}|${firstname}|${email}|||||||||||${payuSalt}`;
-        const secureHash = await generateSha512(hashSequence);
-
-        // Build actual hidden form elements
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = "https://secure.payu.in/_payment";
-
-        const payload: Record<string, string> = {
-          key: payuKey,
-          txnid: txnid,
-          amount: amountStr,
-          productinfo: productinfo,
-          firstname: firstname,
-          email: email,
-          phone: phone,
-          surl: `${window.location.origin}/payment-success`,
-          furl: `${window.location.origin}/payment-failure`,
-          hash: secureHash,
-          service_provider: "payu_paisa"
-        };
-
-        Object.entries(payload).forEach(([k, val]) => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = k;
-          input.value = val;
-          form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
-      }
     } catch (err) {
       console.error(err);
       alert("Failed to place order. Please check connections or permissions.");
@@ -429,42 +375,30 @@ Please confirm my order immediately.`;
                           {/* Payment Modes selection */}
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest block">Payment Setup</label>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 gap-3">
                               <button
                                 type="button"
                                 onClick={() => setPaymentMethod('COD')}
-                                className={`p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 font-bold text-[10px] cursor-pointer transition-all ${
+                                className={`p-3 border rounded-xl flex items-center justify-center gap-2 font-bold text-xs cursor-pointer transition-all ${
                                   paymentMethod === 'COD'
                                     ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-sm'
-                                    : 'border-neutral-200 hover:bg-neutral-50 text-neutral-600'
+                                    : 'border-neutral-200 hover:bg-neutral-50'
                                 }`}
                               >
-                                <ClipboardCheck size={14} className="text-orange-600" />
-                                <span>Cash on Delivery</span>
+                                <ClipboardCheck size={14} />
+                                Cash on Delivery
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setPaymentMethod('UPI')}
-                                className={`p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 font-bold text-[10px] cursor-pointer transition-all ${
+                                className={`p-3 border rounded-xl flex items-center justify-center gap-2 font-bold text-xs cursor-pointer transition-all ${
                                   paymentMethod === 'UPI'
                                     ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-sm'
-                                    : 'border-neutral-200 hover:bg-neutral-50 text-neutral-600'
+                                    : 'border-neutral-200 hover:bg-neutral-50'
                                 }`}
                               >
-                                <CreditCard size={14} className="text-orange-600" />
-                                <span>UPI QR Book</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPaymentMethod('PAYU')}
-                                className={`p-2.5 border rounded-xl flex flex-col items-center justify-center gap-1 font-bold text-[10px] cursor-pointer transition-all ${
-                                  paymentMethod === 'PAYU'
-                                    ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-sm'
-                                    : 'border-neutral-200 hover:bg-neutral-50 text-neutral-600'
-                                }`}
-                              >
-                                <CreditCard size={14} className="text-orange-600" />
-                                <span>Online PayU</span>
+                                <CreditCard size={14} />
+                                Book Now (UPI QR)
                               </button>
                             </div>
                           </div>
@@ -479,10 +413,8 @@ Please confirm my order immediately.`;
                             <>Processing order... <Loader2 size={16} className="animate-spin" /></>
                           ) : paymentMethod === 'COD' ? (
                             <>Place COD Order (₹{totalAmount})</>
-                          ) : paymentMethod === 'UPI' ? (
-                            <>Generate UPI Booking (₹{totalAmount})</>
                           ) : (
-                            <>Pay via PayU Online (₹{totalAmount})</>
+                            <>Generate UPI Booking (₹{totalAmount})</>
                           )}
                         </button>
 

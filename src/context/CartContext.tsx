@@ -21,7 +21,7 @@ interface CartContextType {
   clearCart: () => void;
   cartTotal: number;
   cartCount: number;
-  placeOrder: (formData: any, paymentMethod: 'COD' | 'UPI' | 'PAYU') => Promise<string>;
+  placeOrder: (formData: any, paymentMethod: 'COD' | 'UPI') => Promise<string>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -160,7 +160,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
 
-  const placeOrder = async (formData: any, paymentMethod: 'COD' | 'UPI' | 'PAYU'): Promise<string> => {
+  const placeOrder = async (formData: any, paymentMethod: 'COD' | 'UPI'): Promise<string> => {
     if (!auth.currentUser) {
       throw new Error('Please log in to place your order.');
     }
