@@ -19,7 +19,7 @@ const locations = ['NOIDA', 'FARIDABAD', 'DELHI'];
 export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDrawerProps) {
   const { cart, removeFromCart, updateQuantity, cartTotal, cartCount, placeOrder } = useCart();
   const [showCheckout, setShowCheckout] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'UPI'>('COD');
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>('COD');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   
@@ -85,10 +85,68 @@ export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDraw
     setIsSubmitting(true);
     try {
       const newOrderId = await placeOrder(formData, paymentMethod);
-      setOrderId(newOrderId);
-    } catch (err) {
+      
+      if (paymentMethod === 'ONLINE') {
+        const configRes = await fetch('/api/payu/config');
+        const configData = await configRes.json();
+        const payuKey = configData.payuKey;
+
+        const hashRes = await fetch('/api/payu/hash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txnid: newOrderId,
+            amount: totalAmount.toFixed(2),
+            productinfo: "Mithila Catering Order",
+            firstname: formData.name,
+            email: auth.currentUser.email || "info@mithilacatering.com"
+          })
+        });
+
+        const hashData = await hashRes.json();
+        if (hashData.error) {
+          throw new Error(hashData.error);
+        }
+        const secureHash = hashData.hash;
+
+        const actionUrl = 'https://secure.payu.in/_payment';
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = actionUrl;
+
+        const surl = `${window.location.origin}/api/payu/success`;
+        const furl = `${window.location.origin}/api/payu/failure`;
+
+        const payload: Record<string, string> = {
+          key: payuKey,
+          txnid: newOrderId,
+          amount: totalAmount.toFixed(2),
+          productinfo: "Mithila Catering Order",
+          firstname: formData.name,
+          email: auth.currentUser.email || "info@mithilacatering.com",
+          phone: formData.number,
+          surl: surl,
+          furl: furl,
+          hash: secureHash,
+          service_provider: "payu_paisa"
+        };
+
+        Object.entries(payload).forEach(([k, v]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = k;
+          input.value = v;
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+      } else {
+        setOrderId(newOrderId);
+      }
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to place order. Please check connections or permissions.");
+      alert(`Failed to place order: ${err.message || err}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -390,15 +448,15 @@ Please confirm my order immediately.`;
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setPaymentMethod('UPI')}
+                                onClick={() => setPaymentMethod('ONLINE')}
                                 className={`p-3 border rounded-xl flex items-center justify-center gap-2 font-bold text-xs cursor-pointer transition-all ${
-                                  paymentMethod === 'UPI'
+                                  paymentMethod === 'ONLINE'
                                     ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-sm'
                                     : 'border-neutral-200 hover:bg-neutral-50'
                                 }`}
                               >
                                 <CreditCard size={14} />
-                                Book Now (UPI QR)
+                                Pay Online (PayU)
                               </button>
                             </div>
                           </div>
@@ -414,7 +472,7 @@ Please confirm my order immediately.`;
                           ) : paymentMethod === 'COD' ? (
                             <>Place COD Order (₹{totalAmount})</>
                           ) : (
-                            <>Generate UPI Booking (₹{totalAmount})</>
+                            <>Proceed To PayU (₹{totalAmount})</>
                           )}
                         </button>
 

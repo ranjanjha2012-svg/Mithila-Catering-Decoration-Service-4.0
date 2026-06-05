@@ -26,8 +26,8 @@
         "location": { "type": "string" },
         "items": { "type": "string", "description": "Serialized list of ordered items with details" },
         "totalAmount": { "type": "integer" },
-        "status": { "type": "string", "enum": ["Pending", "Contacted", "Approved", "Archived"] },
-        "paymentMethod": { "type": "string", "enum": ["COD", "UPI"] },
+        "status": { "type": "string", "enum": ["Pending", "Contacted", "Approved", "Archived", "Placed", "COD Pending", "Pending Payment", "Paid", "Cancelled"] },
+        "paymentMethod": { "type": "string", "enum": ["COD", "UPI", "ONLINE"] },
         "orderDate": { "type": "string" },
         "orderTime": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }

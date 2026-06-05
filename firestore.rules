@@ -43,7 +43,10 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isSignedIn() && (
         isAdmin() || 
-        (resource.data.userId == request.auth.uid && request.resource.data.status == 'Cancelled' && resource.data.status != 'Approved')
+        (resource.data.userId == request.auth.uid && 
+          (request.resource.data.status == 'Cancelled' || request.resource.data.status == 'Paid') && 
+          resource.data.status != 'Approved'
+        )
       );
       allow delete: if isAdmin();
     }

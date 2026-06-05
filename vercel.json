@@ -9,6 +9,8 @@
     { "source": "/order", "destination": "/order.html" },
     { "source": "/profile", "destination": "/profile.html" },
     { "source": "/admin-dashboard", "destination": "/admin-dashboard.html" },
-    { "source": "/dashboard", "destination": "/dashboard.html" }
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/payment-success", "destination": "/payment-success.html" },
+    { "source": "/payment-failure", "destination": "/payment-failure.html" }
   ]
 }

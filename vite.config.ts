@@ -12,6 +12,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
+        'payment-success': path.resolve(__dirname, 'payment-success.html'),
+        'payment-failure': path.resolve(__dirname, 'payment-failure.html'),
         profile: path.resolve(__dirname, 'profile.html'),
         'admin-dashboard': path.resolve(__dirname, 'admin-dashboard.html'),
         dashboard: path.resolve(__dirname, 'dashboard.html'),

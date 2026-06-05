@@ -160,9 +160,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartCount = cart.reduce((count, item) => count + item.quantity, 0);
 
-  const placeOrder = async (formData: any, paymentMethod: 'COD' | 'UPI'): Promise<string> => {
+  const placeOrder = async (formData: any, paymentMethod: 'COD' | 'UPI' | 'ONLINE'): Promise<string> => {
     if (!auth.currentUser) {
       throw new Error('Please log in to place your order.');
+    }
+
+    let defaultStatus = 'Placed';
+    if (paymentMethod === 'COD') {
+      defaultStatus = 'COD Pending';
+    } else if (paymentMethod === 'ONLINE') {
+      defaultStatus = 'Pending Payment';
     }
 
     const orderPayload = {
@@ -187,7 +194,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       packingCharge: 12,
       deliveryCharge: 40,
       totalAmount: cartTotal + 12 + 40, // packing + delivery charges
-      status: 'Placed',
+      status: defaultStatus,
       paymentMethod,
       orderDate: formData.orderDate || new Date().toISOString().split('T')[0],
       orderTime: formData.orderTime || new Date().toTimeString().split(' ')[0],
@@ -198,7 +205,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const docRef = await addDoc(collection(db, pathForWrite), orderPayload);
       await logUserActivity('Placed Order', { orderId: docRef.id, totalAmount: orderPayload.totalAmount, itemsCount: orderPayload.items.length, items: orderPayload.items.map(it => `${it.name} (${it.size}) x${it.quantity}`) });
-      clearCart();
+      
+      if (paymentMethod !== 'ONLINE') {
+        clearCart();
+      }
       return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, pathForWrite);
