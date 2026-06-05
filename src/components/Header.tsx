@@ -133,7 +133,9 @@ export default function Header() {
     { name: 'Contact Us', href: '/contact.html' },
   ];
 
-  const displayNavItems = user ? [...navItems, { name: 'My Profile', href: '/profile.html' }] : navItems;
+  const displayNavItems = user 
+    ? [...navItems, { name: 'My Orders', href: '/my-orders.html' }, { name: 'My Profile', href: '/profile.html' }] 
+    : navItems;
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-[#e0f7fa]/95 backdrop-blur-md z-40 border-b border-cyan-200/50 shadow-sm">

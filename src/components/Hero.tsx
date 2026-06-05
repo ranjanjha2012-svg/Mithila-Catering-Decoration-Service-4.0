@@ -1,9 +1,20 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Users, Utensils, Star, Globe, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { menuItems } from '../constants/menu';
 
 export default function Hero() {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const stats = [
     { icon: <Users size={24} />, value: '4000+', label: 'Happy Customers' },
     { icon: <Utensils size={24} />, value: '600+', label: 'Caterings Done' },
@@ -63,6 +74,12 @@ export default function Hero() {
               <a href="/contact" className="px-8 py-4 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition-all">
                 Book Now
               </a>
+              {user && (
+                <a href="/my-orders.html" className="px-6 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl shadow-lg flex items-center gap-2 transition-all cursor-pointer">
+                  <ShoppingBag size={15} />
+                  My Orders Portal
+                </a>
+              )}
               <a href="/gallery" className="px-8 py-4 bg-white/10 backdrop-blur-md text-white font-bold rounded-xl border-2 border-white/20 hover:bg-white/20 transition-all">
                 Our Gallery
               </a>

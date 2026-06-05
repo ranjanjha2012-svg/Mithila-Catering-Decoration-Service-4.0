@@ -21,7 +21,7 @@ interface CartContextType {
   clearCart: () => void;
   cartTotal: number;
   cartCount: number;
-  placeOrder: (formData: any, paymentMethod: 'COD' | 'UPI') => Promise<string>;
+  placeOrder: (formData: any, paymentMethod: 'COD' | 'UPI' | 'ONLINE') => Promise<string>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);

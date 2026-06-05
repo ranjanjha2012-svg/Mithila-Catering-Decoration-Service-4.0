@@ -15,6 +15,7 @@ export default defineConfig({
         'payment-success': path.resolve(__dirname, 'payment-success.html'),
         'payment-failure': path.resolve(__dirname, 'payment-failure.html'),
         profile: path.resolve(__dirname, 'profile.html'),
+        'my-orders': path.resolve(__dirname, 'my-orders.html'),
         'admin-dashboard': path.resolve(__dirname, 'admin-dashboard.html'),
         dashboard: path.resolve(__dirname, 'dashboard.html'),
         tiffin: path.resolve(__dirname, 'tiffin.html'),

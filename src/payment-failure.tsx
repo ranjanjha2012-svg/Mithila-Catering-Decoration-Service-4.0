@@ -30,22 +30,22 @@ function PaymentFailureScreen() {
           const orderData = docSnap.data();
           setOrder(orderData);
 
-          // Update the order's status to Cancelled if it was Pending Payment
+          // Update the order's status to Cancelled by Payment Failure if it was Pending Payment
           if (orderData.status === 'Pending Payment') {
             await updateDoc(orderRef, {
-              status: 'Cancelled',
+              status: 'Cancelled by Payment Failure',
               paymentFailureReason: gatewayMsg,
               cancelledAt: new Date().toISOString()
             });
 
             await logUserActivity('Order Payment Failed', {
               orderId,
-              status: 'Cancelled',
+              status: 'Cancelled by Payment Failure',
               error: gatewayMsg
             });
             
             // Sync status to state
-            setOrder((prev: any) => prev ? { ...prev, status: 'Cancelled' } : null);
+            setOrder((prev: any) => prev ? { ...prev, status: 'Cancelled by Payment Failure' } : null);
           }
         }
         setLoading(false);
@@ -105,7 +105,7 @@ function PaymentFailureScreen() {
               </div>
               <div className="flex justify-between">
                 <span>Order Status update</span>
-                <span className="text-red-600 uppercase font-extrabold">Cancelled</span>
+                <span className="text-red-600 uppercase font-extrabold text-[10px]">Permanently Cancelled - Payment Failed</span>
               </div>
             </div>
           )}

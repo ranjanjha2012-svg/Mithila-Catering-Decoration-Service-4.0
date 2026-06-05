@@ -575,144 +575,32 @@ export default function ProfilePage() {
           </motion.div>
         </div>
 
-        {/* Past Orders History Column */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Past Orders History Column replaced with My Orders CTA */}
+        <div className="lg:col-span-2">
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-3xl border border-stone-200/60 p-6 shadow-sm"
+            className="bg-white rounded-3xl border border-stone-200/60 p-8 shadow-sm flex flex-col justify-center items-center text-center space-y-5 h-full min-h-[350px]"
           >
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-lg font-black text-rose-955 flex items-center gap-2">
-                  <Package size={18} className="text-orange-600" />
-                  <span>Catering Orders History</span>
-                </h3>
-                <p className="text-xs text-stone-400 mt-1">Real-time status of your food deliveries.</p>
-              </div>
-              <span className="text-[10px] bg-stone-150 px-2 py-1 font-bold text-stone-600 rounded">
-                Total Placed: {pastOrders.length}
-              </span>
+            <div className="w-16 h-16 bg-orange-50 border border-orange-100 rounded-full flex items-center justify-center">
+              <ShoppingBag className="text-orange-600 animate-pulse" size={28} />
             </div>
-
-            {loadingOrders ? (
-              <div className="py-12 text-center">
-                <Loader2 className="w-8 h-8 text-orange-600 animate-spin mx-auto mb-3" />
-                <p className="text-stone-400 text-xs font-bold uppercase tracking-wider">Syncing ledger records...</p>
-              </div>
-            ) : pastOrders.length === 0 ? (
-              <div className="text-center py-16 border rounded-2xl border-stone-100 bg-stone-50/50">
-                <ShoppingBag className="mx-auto text-stone-300 mb-2" size={36} />
-                <p className="text-stone-500 text-sm font-bold">No orders placed under this account.</p>
-                <p className="text-stone-400 text-xs mt-1">Order your first delicious package today!</p>
-                <a 
-                  href="/order.html" 
-                  className="mt-6 inline-flex items-center gap-1.5 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-colors"
-                >
-                  Explore Catering Menu <ArrowRight size={14} />
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pastOrders.map((order) => {
-                  const currentMappedStatus = order.status === 'Pending' ? 'Placed' : order.status === 'Approved' ? 'Processing' : order.status;
-                  return (
-                    <div 
-                      key={order.id}
-                      className="border border-stone-200/60 rounded-2xl p-5 hover:bg-neutral-50/30 transition-all duration-300"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 pb-3.5 mb-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold font-mono uppercase text-stone-500">Order #{order.id.slice(-6)}</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-black border uppercase ${
-                              currentMappedStatus === 'Placed' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              currentMappedStatus === 'Processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                              currentMappedStatus === 'On the way' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                              currentMappedStatus === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
-                              'bg-green-50 text-green-700 border-green-200'
-                            }`}>
-                              {currentMappedStatus}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                            <span>Pay Type: {order.paymentMethod}</span>
-                            <span>•</span>
-                            <span className="font-mono">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ''}</span>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="text-[10px] font-bold text-stone-400 block uppercase">Total Amount</span>
-                          <span className="text-lg font-black text-orange-600">₹{order.totalAmount}</span>
-                        </div>
-                      </div>
-
-                      {/* Ordered Items loop */}
-                      <div className="bg-stone-50/60 rounded-xl p-3 border border-stone-100/50 space-y-1.5 mb-3">
-                        {order.items.map((item, id) => (
-                          <div key={id} className="flex justify-between items-center text-xs text-stone-600 font-semibold">
-                            <span>{item.quantity}x {item.name} {item.size && item.size !== 'single' ? `(${item.size})` : ''}</span>
-                            <span className="font-bold text-stone-800">₹{item.price * item.quantity}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="space-y-3.5">
-                        <p className="text-[10px] text-stone-500 font-semibold">
-                          <Clock size={11} className="inline mr-1 text-stone-400" />
-                          Delivery Site: <strong className="text-stone-700 font-bold">{order.address}, {order.location}</strong>
-                        </p>
-
-                        {/* Dynamic Stepper Progress Visual Line */}
-                        <div className="bg-stone-50/50 rounded-xl p-4 border border-stone-150 relative">
-                          <div className="absolute top-[26px] left-[12.5%] right-[12.5%] h-1 bg-stone-200 rounded-full z-0">
-                            <div 
-                              className="h-full bg-orange-600 rounded-full transition-all duration-500"
-                              style={{
-                                width: 
-                                  currentMappedStatus === 'Placed' ? '0%' :
-                                  currentMappedStatus === 'Processing' ? '33.33%' :
-                                  currentMappedStatus === 'On the way' ? '66.66%' :
-                                  '100%'
-                              }}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-4 gap-1 relative z-10">
-                            {['Placed', 'Processing', 'On the way', 'Delivered'].map((stepName, stepIdx) => {
-                              const steps = ['Placed', 'Processing', 'On the way', 'Delivered'];
-                              const activeIndex = steps.indexOf(currentMappedStatus);
-                              const isFinished = stepIdx < activeIndex;
-                              const isCurrent = stepIdx === activeIndex;
-
-                              return (
-                                <div key={stepIdx} className="flex flex-col items-center">
-                                  <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center font-black text-[9px] transition-all border ${
-                                    isCurrent ? 'bg-orange-600 border-orange-600 text-white scale-110 shadow-sm shadow-orange-500/20' :
-                                    isFinished ? 'bg-green-600 border-green-600 text-white' :
-                                    'bg-white border-stone-250 text-stone-400'
-                                  }`}>
-                                    {isFinished ? '✓' : stepIdx + 1}
-                                  </div>
-                                  <span className={`text-[8px] font-black mt-1.5 uppercase tracking-wide text-center block ${
-                                    isCurrent ? 'text-orange-600 font-black' :
-                                    isFinished ? 'text-green-600' :
-                                    'text-stone-400'
-                                  }`}>
-                                    {stepName}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div>
+              <h3 className="text-xl font-black text-stone-900 tracking-tight">My Active Catering Orders</h3>
+              <p className="text-xs text-stone-400 mt-1 uppercase font-bold tracking-wider">Dedicated Customer Orders Portal</p>
+            </div>
+            <p className="text-xs text-stone-500 leading-relaxed max-w-sm">
+              We have upgraded your bookings manager! Check real-time tracking progress indicators, review food item details, and chat with our new AI support agent in your dedicated orders room.
+            </p>
+            <div className="pt-2">
+              <a 
+                href="/my-orders.html"
+                className="px-6 py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+              >
+                <ShoppingBag size={14} />
+                Access My Orders Room &rarr;
+              </a>
+            </div>
           </motion.div>
         </div>
       </div>

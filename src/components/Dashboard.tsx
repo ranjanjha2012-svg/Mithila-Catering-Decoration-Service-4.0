@@ -48,7 +48,7 @@ interface FirestoreOrder {
   orderDate?: string;
   orderTime?: string;
   paymentMethod: string;
-  status: 'Placed' | 'Processing' | 'On the way' | 'Delivered' | 'Pending' | 'Approved' | 'Archived' | 'Cancelled';
+  status: 'Placed' | 'Processing' | 'On the way' | 'Delivered' | 'Pending' | 'Approved' | 'Archived' | 'Cancelled' | 'Cancelled by Payment Failure' | 'Cancelled by Customer' | 'Pending Payment' | 'COD Pending';
   createdAt: string;
   userId: string;
 }
@@ -91,7 +91,7 @@ export default function Dashboard() {
   const [loadingDb, setLoadingDb] = useState(false);
 
   // Filters and Builders state
-  const [orderFilter, setOrderFilter] = useState<'All' | 'Placed' | 'Processing' | 'On the way' | 'Delivered' | 'Pending' | 'Approved' | 'Archived' | 'Cancelled'>('All');
+  const [orderFilter, setOrderFilter] = useState<string>('All');
   const [showJobModal, setShowJobModal] = useState(false);
   const [submittingJob, setSubmittingJob] = useState(false);
 
@@ -249,6 +249,11 @@ export default function Dashboard() {
   // Status updates for orders
   const handleUpdateOrderStatus = async (orderId: string, nextStatus: FirestoreOrder['status']) => {
     try {
+      const existing = orders.find(o => o.id === orderId);
+      if (existing && (existing.status === 'Cancelled by Payment Failure' || existing.status === 'Cancelled by Customer')) {
+        alert("Error: This order is permanently locked and cannot be modified.");
+        return;
+      }
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, { status: nextStatus });
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
@@ -550,34 +555,48 @@ export default function Dashboard() {
                                 <div className="col-span-1 text-left md:text-center">
                                   <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Total Amount:</span>
                                   <span className="text-sm font-black text-stone-850 md:text-orange-600">₹{order.totalAmount}</span>
-                                                             {/* Col 5: Status State Dropdown */}
+                                  {/* Col 5: Status State Dropdown */}
                                   <div className="col-span-2 text-left md:text-right space-y-2">
-                                  <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Set Status:</span>
-                                  <div className="inline-flex flex-col gap-1.5 w-full md:w-auto">
-                                    <select
-                                      value={currentMappedStatus}
-                                      onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value as any)}
-                                      className="w-full md:w-auto text-xs font-bold border-2 border-stone-300 hover:border-orange-500 rounded-xl px-2.5 py-1.5 !bg-white !text-neutral-900 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-sm transition-all"
-                                    >
-                                      <option value="Placed" className="!text-neutral-900 !bg-white font-bold">Placed</option>
-                                      <option value="Processing" className="!text-neutral-900 !bg-white font-bold">Processing</option>
-                                      <option value="On the way" className="!text-neutral-900 !bg-white font-bold">On the way</option>
-                                      <option value="Delivered" className="!text-neutral-900 !bg-white font-bold">Delivered</option>
-                                      <option value="Cancelled" className="!text-neutral-900 !bg-white font-bold">Cancelled</option>
-                                    </select>
-                                    
-                                    {/* Small visual accent pill */}
-                                    <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider text-center block ${
-                                      currentMappedStatus === 'Placed' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                                      currentMappedStatus === 'Processing' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-                                      currentMappedStatus === 'On the way' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
-                                      currentMappedStatus === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-200' :
-                                      'bg-green-50 text-green-600 border border-green-200'
-                                    }`}>
-                                      {currentMappedStatus}
-                                    </span>
-                                  </div>
-                                </div>      </div>
+                                    <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Set Status:</span>
+                                    <div className="inline-flex flex-col gap-1.5 w-full md:w-auto">
+                                      {order.status === 'Cancelled by Payment Failure' || order.status === 'Cancelled by Customer' ? (
+                                        <div className="space-y-1 md:text-right text-left">
+                                          <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-xl border border-red-200 text-[10px] font-black uppercase tracking-wider">
+                                            <Shield size={11} className="text-red-700 shrink-0" />
+                                            {order.status === 'Cancelled by Payment Failure' ? 'Permanently Cancelled - Payment Failed' : 'Cancelled by Customer'}
+                                          </span>
+                                          <p className="text-[10px] text-red-600 font-extrabold max-w-[200px] leading-snug">
+                                            ⚠️ This order is permanently locked and cannot be modified.
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <select
+                                            value={currentMappedStatus}
+                                            onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value as any)}
+                                            className="w-full md:w-auto text-xs font-bold border-2 border-stone-300 hover:border-orange-500 rounded-xl px-2.5 py-1.5 !bg-white !text-neutral-900 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-sm transition-all"
+                                          >
+                                            <option value="Placed" className="!text-neutral-900 !bg-white font-bold">Placed</option>
+                                            <option value="Processing" className="!text-neutral-900 !bg-white font-bold">Processing</option>
+                                            <option value="On the way" className="!text-neutral-900 !bg-white font-bold">On the way</option>
+                                            <option value="Delivered" className="!text-neutral-900 !bg-white font-bold">Delivered</option>
+                                            <option value="Cancelled" className="!text-neutral-900 !bg-white font-bold">Cancelled</option>
+                                          </select>
+                                          
+                                          {/* Small visual accent pill */}
+                                          <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider text-center block ${
+                                            currentMappedStatus === 'Placed' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                                            currentMappedStatus === 'Processing' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                                            currentMappedStatus === 'On the way' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
+                                            currentMappedStatus === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-200' :
+                                            'bg-green-50 text-green-600 border border-green-200'
+                                          }`}>
+                                            {currentMappedStatus}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>      </div>
                               </div>
                             </div>
                           );
