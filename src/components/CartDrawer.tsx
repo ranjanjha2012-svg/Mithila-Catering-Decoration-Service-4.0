@@ -60,8 +60,9 @@ export default function CartDrawer({ isOpen, onClose, onLoginRequest }: CartDraw
     }
   }, [isOpen]);
 
-  const packingCharge = cart.length > 0 ? 12 : 0;
-  const deliveryCharge = cart.length > 0 ? 40 : 0;
+  const eligibleItemsForCharges = cart.filter(item => item.name !== 'Chicken Curry (4 Piece)');
+  const packingCharge = eligibleItemsForCharges.length > 0 ? 12 : 0;
+  const deliveryCharge = eligibleItemsForCharges.length > 0 ? 40 : 0;
   const totalAmount = cartTotal + packingCharge + deliveryCharge;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

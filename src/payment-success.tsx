@@ -193,11 +193,11 @@ Please initiate the kitchen preparation immediately.`;
             </div>
             <div className="flex justify-between">
               <span>Packing & Sanitation charges</span>
-              <span className="text-stone-800">₹{order.packingCharge || 12}</span>
+              <span className="text-stone-800">₹{order.packingCharge !== undefined ? order.packingCharge : 12}</span>
             </div>
             <div className="flex justify-between">
               <span>Doorstep Delivery charges</span>
-              <span className="text-stone-800">₹{order.deliveryCharge || 40}</span>
+              <span className="text-stone-800">₹{order.deliveryCharge !== undefined ? order.deliveryCharge : 40}</span>
             </div>
             <div className="pt-3 border-t border-stone-100 flex justify-between font-black text-stone-800 text-sm">
               <span className="uppercase tracking-wider">Total Paid</span>

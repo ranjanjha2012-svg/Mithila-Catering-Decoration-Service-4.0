@@ -172,6 +172,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       defaultStatus = 'Pending Payment';
     }
 
+    const eligibleItemsForCharges = cart.filter(item => item.name !== 'Chicken Curry (4 Piece)');
+    const packing = eligibleItemsForCharges.length > 0 ? 12 : 0;
+    const delivery = eligibleItemsForCharges.length > 0 ? 40 : 0;
+
     const orderPayload = {
       userId: auth.currentUser.uid,
       customerName: formData.name,
@@ -191,9 +195,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         total: i.price * i.quantity
       })),
       subtotal: cartTotal,
-      packingCharge: 12,
-      deliveryCharge: 40,
-      totalAmount: cartTotal + 12 + 40, // packing + delivery charges
+      packingCharge: packing,
+      deliveryCharge: delivery,
+      totalAmount: cartTotal + packing + delivery, // packing + delivery charges
       status: defaultStatus,
       paymentMethod,
       orderDate: formData.orderDate || new Date().toISOString().split('T')[0],
