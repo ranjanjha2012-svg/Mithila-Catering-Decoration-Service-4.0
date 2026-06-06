@@ -433,31 +433,43 @@ Please confirm my order immediately.`;
 
                           {/* Payment Modes selection */}
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest block">Payment Setup</label>
-                            <div className="grid grid-cols-2 gap-3">
+                            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block">Payment Setup</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 text-black">
                               <button
                                 type="button"
                                 onClick={() => setPaymentMethod('COD')}
-                                className={`p-3 border rounded-xl flex items-center justify-center gap-2 font-bold text-xs cursor-pointer transition-all ${
+                                className={`p-3 border-2 rounded-xl flex items-center justify-start gap-2.5 font-bold text-xs cursor-pointer transition-all ${
                                   paymentMethod === 'COD'
-                                    ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-sm'
-                                    : 'border-neutral-200 hover:bg-neutral-50'
+                                    ? 'border-orange-500 bg-orange-50 text-black shadow-sm'
+                                    : 'border-neutral-200 bg-white hover:bg-neutral-50 text-black'
                                 }`}
                               >
-                                <ClipboardCheck size={14} />
-                                Cash on Delivery
+                                <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                  paymentMethod === 'COD' ? 'border-orange-500' : 'border-neutral-300'
+                                }`}>
+                                  {paymentMethod === 'COD' && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                  )}
+                                </div>
+                                <span className="text-[#000000] font-bold text-xs">Cash on Delivery</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setPaymentMethod('ONLINE')}
-                                className={`p-3 border rounded-xl flex items-center justify-center gap-2 font-bold text-xs cursor-pointer transition-all ${
+                                className={`p-3 border-2 rounded-xl flex items-center justify-start gap-2.5 font-bold text-xs cursor-pointer transition-all ${
                                   paymentMethod === 'ONLINE'
-                                    ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-sm'
-                                    : 'border-neutral-200 hover:bg-neutral-50'
+                                    ? 'border-orange-500 bg-orange-50 text-black shadow-sm'
+                                    : 'border-neutral-200 bg-white hover:bg-neutral-50 text-black'
                                 }`}
                               >
-                                <CreditCard size={14} />
-                                Pay Online (PayU)
+                                <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                  paymentMethod === 'ONLINE' ? 'border-orange-500' : 'border-neutral-300'
+                                }`}>
+                                  {paymentMethod === 'ONLINE' && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                  )}
+                                </div>
+                                <span className="text-[#000000] font-bold text-xs">Pay Online</span>
                               </button>
                             </div>
                           </div>
@@ -473,7 +485,7 @@ Please confirm my order immediately.`;
                           ) : paymentMethod === 'COD' ? (
                             <>Place COD Order (₹{totalAmount})</>
                           ) : (
-                            <>Proceed To PayU (₹{totalAmount})</>
+                            <>Proceed to Pay Online (₹{totalAmount})</>
                           )}
                         </button>
 

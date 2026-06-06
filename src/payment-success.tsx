@@ -39,6 +39,7 @@ function PaymentSuccessScreen() {
         setOrder(orderData);
 
         // If order status is pending payment, update it to Paid and status to Placed
+        let updatedOrderData = orderData;
         if (orderData.status === 'Pending Payment') {
           await updateDoc(orderRef, {
             status: 'Placed',
@@ -53,8 +54,52 @@ function PaymentSuccessScreen() {
             amount: orderData.totalAmount 
           });
 
+          updatedOrderData = { ...orderData, status: 'Placed', paymentStatus: 'Paid' };
           // Refresh order status in state
-          setOrder((prev: any) => prev ? { ...prev, status: 'Placed', paymentStatus: 'Paid' } : null);
+          setOrder(updatedOrderData);
+        }
+
+        // Send Formspree email notification for successful Online Payment placement
+        if (
+          (updatedOrderData.status === 'Placed' || updatedOrderData.paymentStatus === 'Paid') &&
+          updatedOrderData.isNotificationSent !== true
+        ) {
+          try {
+            const itemsText = (updatedOrderData.items || []).map((i: any, index: number) => 
+              `${index + 1}. ${i.name} (${i.size}) x${i.quantity} [₹${i.total || i.price * i.quantity}]`
+            ).join('\n');
+            const totalQty = (updatedOrderData.items || []).reduce((sum: number, i: any) => sum + i.quantity, 0);
+
+            await fetch('https://formspree.io/f/mbdedvab', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({
+                subject: `New Online Paid Order - #${orderId}`,
+                customerName: updatedOrderData.customerName || updatedOrderData.userName || 'Customer',
+                phoneNumber: updatedOrderData.customerPhone || updatedOrderData.userPhone || 'N/A',
+                address: updatedOrderData.address || 'N/A',
+                area: updatedOrderData.location || updatedOrderData.state || 'N/A',
+                orderedItems: itemsText,
+                quantity: totalQty,
+                totalAmount: `₹${updatedOrderData.totalAmount}`,
+                paymentMethod: 'Pay Online',
+                paymentStatus: 'Paid Successfully',
+                orderDate: updatedOrderData.orderDate || new Date().toISOString().split('T')[0],
+                orderTime: updatedOrderData.orderTime || new Date().toTimeString().split(' ')[0]
+              })
+            });
+
+            await updateDoc(orderRef, {
+              isNotificationSent: true
+            });
+
+            setOrder((prev: any) => prev ? { ...prev, isNotificationSent: true } : null);
+          } catch (emailErr) {
+            console.error("Error sending PayU success Formspree email:", emailErr);
+          }
         }
 
         // Execution of cart clearing on payment completion

@@ -30,7 +30,6 @@ export default function Footer() {
               <li><a href="/tiffin.html" className="hover:text-white transition-colors">Tiffin Service</a></li>
               <li><a href="/order.html" className="hover:text-white transition-colors">Order Online</a></li>
               <li><a href="/gallery.html" className="hover:text-white transition-colors">Event Gallery</a></li>
-              <li><a href="/planner.html" className="hover:text-white transition-colors">AI Planner</a></li>
               <li><a href="/contact.html" className="hover:text-white transition-colors">Enquiry Form</a></li>
             </ul>
           </div>

@@ -129,7 +129,6 @@ export default function Header() {
     { name: 'Tiffin Service', href: '/tiffin.html' },
     { name: 'Order Online', href: '/order.html' },
     { name: 'Event Gallery & Schemes', href: '/gallery.html' },
-    { name: 'AI Planner', href: '/planner.html' },
     { name: 'Contact Us', href: '/contact.html' },
   ];
 

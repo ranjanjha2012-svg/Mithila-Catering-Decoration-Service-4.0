@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { collection, addDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType, logUserActivity } from '../lib/firebase';
 
@@ -210,6 +210,43 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const docRef = await addDoc(collection(db, pathForWrite), orderPayload);
       await logUserActivity('Placed Order', { orderId: docRef.id, totalAmount: orderPayload.totalAmount, itemsCount: orderPayload.items.length, items: orderPayload.items.map(it => `${it.name} (${it.size}) x${it.quantity}`) });
       
+      if (paymentMethod === 'COD') {
+        const itemsText = orderPayload.items.map((i: any, index: number) => 
+          `${index + 1}. ${i.name} (${i.size}) x${i.quantity} [₹${i.total}]`
+        ).join('\n');
+        const totalQty = orderPayload.items.reduce((sum, i) => sum + i.quantity, 0);
+
+        try {
+          await fetch('https://formspree.io/f/mbdedvab', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              subject: `New COD Order - #${docRef.id}`,
+              customerName: orderPayload.customerName,
+              phoneNumber: orderPayload.customerPhone,
+              address: orderPayload.address,
+              area: formData.state || orderPayload.location || 'N/A',
+              orderedItems: itemsText,
+              quantity: totalQty,
+              totalAmount: `₹${orderPayload.totalAmount}`,
+              paymentMethod: 'Cash on Delivery (COD)',
+              paymentStatus: 'COD Pending',
+              orderDate: orderPayload.orderDate,
+              orderTime: orderPayload.orderTime
+            })
+          });
+
+          await updateDoc(doc(db, pathForWrite, docRef.id), {
+            isNotificationSent: true
+          });
+        } catch (emailErr) {
+          console.error("Error sending COD order Formspree email:", emailErr);
+        }
+      }
+
       if (paymentMethod !== 'ONLINE') {
         clearCart();
       }

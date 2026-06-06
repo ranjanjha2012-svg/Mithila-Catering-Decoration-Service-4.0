@@ -20,7 +20,6 @@ export default defineConfig({
         dashboard: path.resolve(__dirname, 'dashboard.html'),
         tiffin: path.resolve(__dirname, 'tiffin.html'),
         gallery: path.resolve(__dirname, 'gallery.html'),
-        planner: path.resolve(__dirname, 'planner.html'),
         careers: path.resolve(__dirname, 'careers.html'),
         contact: path.resolve(__dirname, 'contact.html'),
         order: path.resolve(__dirname, 'order.html'),
