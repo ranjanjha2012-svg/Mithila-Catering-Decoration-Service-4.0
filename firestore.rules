@@ -44,8 +44,10 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         isAdmin() || 
         (resource.data.userId == request.auth.uid && 
-          (request.resource.data.status == 'Cancelled' || request.resource.data.status == 'Paid') && 
-          resource.data.status != 'Approved'
+          (
+            ((request.resource.data.status == 'Cancelled' || request.resource.data.status == 'Paid') && resource.data.status != 'Approved') ||
+            (request.resource.data.status == 'Cancelled by Customer' && (resource.data.status == 'Approved' || resource.data.status == 'Placed' || resource.data.status == 'Pending' || resource.data.status == 'Pending Payment' || resource.data.status == 'COD Pending'))
+          )
         )
       );
       allow delete: if isAdmin();

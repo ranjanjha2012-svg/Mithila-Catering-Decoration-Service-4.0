@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { 
   ShoppingBag, Clock, Package, HelpCircle, Loader2, ArrowRight, CheckCircle2,
@@ -153,7 +153,7 @@ export default function MyOrdersPage() {
 
   const handleSendMessage = async (customText?: string) => {
     const textToSend = customText || inputValue;
-    if (!textToSend.trim() || !selectedOrderForHelp) return;
+    if (!textToSend.trim() || !selectedOrderForHelp || !user) return;
 
     // Add user message to state
     const updatedMessages = [...chatMessages, { role: 'user', content: textToSend } as const];
@@ -167,19 +167,63 @@ export default function MyOrdersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: selectedOrderForHelp.id,
-          messages: updatedMessages
+          messages: updatedMessages,
+          orderData: selectedOrderForHelp,
+          userId: user.uid
         })
       });
 
       const data = await response.json();
       if (response.ok) {
         setChatMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+        
+        // Handle cancel state synchronization directly from authenticated client
+        if (data.statusUpdated && data.newStatus === 'Cancelled by Customer') {
+          try {
+            const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
+            await updateDoc(orderRef, {
+              status: 'Cancelled by Customer',
+              cancellationReason: data.reason || 'Requested by customer via AI Support',
+              cancelledAt: new Date().toISOString()
+            });
+            console.log("[AI Help Center] Successfully synchronized cancellation status on client.");
+          } catch (writeErr) {
+            console.error("[AI Help Center] Failed to set status to Cancelled by Customer on client:", writeErr);
+          }
+        }
+
+        // Keep chat logs saved in database using authenticated customer request permissions
+        try {
+          const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
+          await updateDoc(orderRef, {
+            aiChatLogs: arrayUnion({
+              userQuery: textToSend,
+              aiReply: data.message,
+              timestamp: new Date().toISOString()
+            })
+          });
+        } catch (logErr) {
+          console.warn("[AI Help Center] Local client logging skipped:", logErr);
+        }
+
       } else {
-        setChatMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${data.error || 'Server request failed. Please try again.'}` }]);
+        let friendlyError = '';
+        if (response.status === 404 || data.error?.includes('404') || data.error?.includes('Not Found')) {
+          friendlyError = 'Support service is temporarily unavailable.';
+        } else if (response.status === 403 || data.error?.toLowerCase().includes('permission') || data.error?.toLowerCase().includes('insufficient')) {
+          friendlyError = 'Unable to access this order. Please sign in again.';
+        } else {
+          friendlyError = data.error || 'Support service is temporarily unavailable.';
+        }
+        setChatMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${friendlyError}` }]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("AI client connection failed: ", err);
-      setChatMessages(prev => [...prev, { role: 'assistant', content: "⚠️ I had trouble connecting to the Mithila database server. Please check your network and try again." }]);
+      let friendlyError = 'Support service is temporarily unavailable.';
+      if (err?.message?.toLowerCase().includes('permission') || err?.message?.toLowerCase().includes('insufficient')) {
+        friendlyError = 'Unable to access this order. Please sign in again.';
+      }
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${friendlyError}` }]);
     } finally {
       setIsAiTyping(false);
     }

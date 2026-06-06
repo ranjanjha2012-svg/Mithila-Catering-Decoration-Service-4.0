@@ -73,45 +73,61 @@ async function startServer() {
   // AI Support Chat Assistant on order
   app.post('/api/ai/chat', async (req, res) => {
     try {
-      const { orderId, messages } = req.body;
+      const { orderId, messages, orderData: clientOrderData, userId } = req.body;
+      
+      console.info(`[DEBUG] Local AI Chat Request. User UID: "${userId || 'anon'}", Order ID: "${orderId || 'none'}"`);
+
       if (!orderId || !messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: 'Missing required orderId or messages parameter' });
       }
 
-      const orderRef = doc(db, 'orders', orderId);
-      const orderSnap = await getDoc(orderRef);
-      if (!orderSnap.exists()) {
-        return res.status(404).json({ error: 'Order reference not registered in database' });
+      let orderData = clientOrderData;
+
+      // Try local Firestore retrieve, or fall back to clientOrderData
+      if (!orderData) {
+        try {
+          const orderRef = doc(db, 'orders', orderId);
+          const orderSnap = await getDoc(orderRef);
+          if (orderSnap.exists()) {
+            orderData = orderSnap.data();
+          } else {
+            return res.status(404).json({ error: 'Order reference not registered in database' });
+          }
+        } catch (fsError: any) {
+          console.error(`[AI Chat Dev] Local Firestore query failed: ${fsError.message}`);
+          return res.status(403).json({ 
+            error: 'Unable to access this order. Please sign in again.', 
+            details: fsError.message 
+          });
+        }
       }
 
-      const orderData = orderSnap.data();
-
-      // Lock checks - admin-like lock for Cancelled by Payment Failure or any locked cancellations
-      const currentStatus = orderData.status;
+      const statusState = orderData.status || 'Placed';
+      const displayStatus = statusState === 'Approved' ? 'Processing' : statusState;
 
       // Systemprompt to guide agent through response limits and cancellation rules
-      const systemInstruction = `You are the empathetic, expert AI Support Agent for Mithila Catering & Decoration Service.
+      const systemInstruction = `You are the helpful, empathetic, and expert Live AI Support Agent for Mithila Catering & Decoration Service.
 You are assisting a customer regarding event order reference #${orderId}.
 
 Here are the authentic live order details retrieved from our secure Firestore ledger:
 - Reference ID: ${orderId}
-- Customer Name: ${orderData.customerName || orderData.userName}
-- Customer Email: ${orderData.customerEmail}
-- Customer Phone: ${orderData.customerPhone || orderData.userPhone}
-- Items Listed: ${JSON.stringify(orderData.items)}
-- Financial Total: ₹${orderData.totalAmount}
-- Payment Gateway Method: ${orderData.paymentMethod}
-- Status State: ${currentStatus}
-- Delivery Address: ${orderData.address}, ${orderData.location}
-- Event Schedule: Date ${orderData.orderDate} at Time ${orderData.orderTime}
+- Customer Name: ${orderData.customerName || orderData.userName || 'Valued Guest'}
+- Customer Email: ${orderData.customerEmail || 'N/A'}
+- Customer Phone: ${orderData.customerPhone || orderData.userPhone || 'N/A'}
+- Items Listed (What items were purchased): ${JSON.stringify(orderData.items || [])}
+- Financial Total: ₹${orderData.totalAmount || orderData.subtotal || 0}
+- Payment Gateway Method: ${orderData.paymentMethod || 'COD'}
+- Status State: ${statusState} (also referred to as ${displayStatus})
+- Delivery Address: ${orderData.address || 'N/A'}, ${orderData.location || 'N/A'}
+- Event Schedule: Date ${orderData.orderDate || 'N/A'} at Time ${orderData.orderTime || 'N/A'}
 
 CRITICAL OPERATIONAL RULES:
-1. Handle queries about: Order Status, Delivery Updates, Returns, Refunds, Cancellations, and Payment Issues.
+1. Handle queries about: Which items were purchased, Delivery status, Order status, Payment status, Order amount, Delivery address, and Event date. Directly answer based on the real ledger values.
 2. Order Cancellation Protocol:
    - Customers may request to cancel their order.
-   - You can cancel the order IF AND ONLY IF the current status is EXACTLY 'Processing'.
-   - If the current status is EXACTLY 'Processing', you MUST declare that you are cancelling the order, and call the custom function utility \`cancelOrder(reason)\` right now. Do not promise cancellation without calling this function first.
-   - If the current status is NOT 'Processing' (for example: Placed, Shipped, Out For Delivery, Delivered, Returned, Refunded, Cancelled, Cancelled by Payment Failure, Cancelled by Customer, or Pending Payment), you are STRICTLY FORBIDDEN from performing or initiating cancellation. You must explain politely and clearly:
+   - You can cancel the order IF AND ONLY IF the current status is EXACTLY 'Processing' or 'Approved'.
+   - If the current status is indeed 'Approved' or 'Processing', you MUST declare that you are initiating cancellation, and call the custom function utility \`cancelOrder(reason)\` right now. Do not promise cancellation without calling this function first.
+   - If the current status is anything else (for example: Shipped, Out For Delivery, Delivered, Returned, Refunded, Cancelled, Cancelled by Payment Failure, or Cancelled by Customer), you are STRICTLY FORBIDDEN from performing or initiating cancellation. You must explain politely and clearly:
      "This order can no longer be cancelled because it has already moved beyond the Processing stage."
    - If the status is already 'Cancelled by Payment Failure' or 'Cancelled by Customer', explain that the order is already permanently cancelled.
 3. Be professional and humble. Do not print system variables, telemetry strings, or logs. Always reply with clean Markdown format.`;
@@ -168,19 +184,27 @@ CRITICAL OPERATIONAL RULES:
           const args = (call.args || {}) as any;
           const reason = args.reason || 'Requested by customer';
 
-          if (currentStatus === 'Processing') {
+          const isCancelable = statusState === 'Processing' || statusState === 'Approved';
+
+          if (isCancelable) {
             const cancellationTime = new Date().toISOString();
-            await updateDoc(orderRef, {
-              status: 'Cancelled by Customer',
-              cancellationReason: reason,
-              cancelledAt: cancellationTime,
-              aiChatLogs: arrayUnion({
-                type: 'system',
-                action: 'Cancelled by Customer',
-                reason,
-                timestamp: cancellationTime
-              })
-            });
+            
+            try {
+              const orderRef = doc(db, 'orders', orderId);
+              await updateDoc(orderRef, {
+                status: 'Cancelled by Customer',
+                cancellationReason: reason,
+                cancelledAt: cancellationTime,
+                aiChatLogs: arrayUnion({
+                  type: 'system',
+                  action: 'Cancelled by Customer',
+                  reason,
+                  timestamp: cancellationTime
+                })
+              });
+            } catch (writeErr: any) {
+              console.warn(`[AI Chat Dev] Local write permissions warning: ${writeErr.message}`);
+            }
 
             // Resume content generation to confirm cancellation to user
             const confirmedResponse = await ai.models.generateContent({
@@ -207,11 +231,12 @@ CRITICAL OPERATIONAL RULES:
             return res.json({
               message: confirmedResponse.text,
               statusUpdated: true,
-              newStatus: 'Cancelled by Customer'
+              newStatus: 'Cancelled by Customer',
+              reason: reason
             });
           } else {
             return res.json({
-              message: `This order can no longer be cancelled because its current status is "${currentStatus}", which is beyond the Processing stage.`,
+              message: `This order can no longer be cancelled because its current status is "${displayStatus}", which is beyond the Processing stage.`,
               statusUpdated: false
             });
           }
@@ -219,14 +244,19 @@ CRITICAL OPERATIONAL RULES:
       }
 
       // Log regular conversation activity
-      const lastMsg = messages[messages.length - 1]?.content || '';
-      await updateDoc(orderRef, {
-        aiChatLogs: arrayUnion({
-          userQuery: lastMsg,
-          aiReply: response.text,
-          timestamp: new Date().toISOString()
-        })
-      });
+      try {
+        const orderRef = doc(db, 'orders', orderId);
+        const lastMsg = messages[messages.length - 1]?.content || '';
+        await updateDoc(orderRef, {
+          aiChatLogs: arrayUnion({
+            userQuery: lastMsg,
+            aiReply: response.text,
+            timestamp: new Date().toISOString()
+          })
+        });
+      } catch (logError: any) {
+        console.warn(`[AI Chat Dev] Local logs write skipped: ${logError.message}`);
+      }
 
       res.status(200).json({
         message: response.text,
@@ -235,7 +265,7 @@ CRITICAL OPERATIONAL RULES:
 
     } catch (error: any) {
       console.error('AI support request error:', error);
-      res.status(500).json({ error: error.message || 'Error occurred handling assistant query' });
+      res.status(500).json({ error: 'Support service is temporarily unavailable.' });
     }
   });
 
