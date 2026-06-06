@@ -434,6 +434,8 @@ export default function MyOrdersPage() {
               order.status === 'COD Pending' ? 'Placed' :
               order.status === 'Pending' ? 'Placed' : 
               order.status === 'Approved' ? 'Processing' : 
+              order.status === 'Ready' ? 'Processing' : 
+              order.status === 'Out For Delivery' ? 'On the way' : 
               order.status;
 
             return (

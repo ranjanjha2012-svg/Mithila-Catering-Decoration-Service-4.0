@@ -9,7 +9,7 @@ import {
   User as UserIcon, Shield, LogOut, CheckCircle, Clock, Search, ListFilter,
   DollarSign, FileText, Settings, UserCheck, Calendar, MapPin, Sparkles, Send, Phone,
   Coffee, ChevronRight, Calculator, CheckSquare, Plus, Trash2, Mail, ShoppingBag, Layers,
-  Activity, Tag, ExternalLink, Loader2, X
+  Activity, Tag, ExternalLink, Loader2, X, Star
 } from 'lucide-react';
 
 interface Inquiry {
@@ -256,18 +256,52 @@ export default function Dashboard() {
   const handleUpdateOrderStatus = async (orderId: string, nextStatus: FirestoreOrder['status']) => {
     try {
       const existing = orders.find(o => o.id === orderId);
-      if (existing && (
-        existing.status === 'Cancelled by Payment Failure' || 
-        existing.status === 'Cancelled by Customer' || 
-        (existing as any).locked || 
-        (existing as any).isPermanentCancellation
-      )) {
+      if (!existing) return;
+      
+      const isFailedPay = existing.status === 'Cancelled by Payment Failure';
+      const isCustCancel = existing.status === 'Cancelled by Customer';
+      const isLocked = (existing as any).locked || (existing as any).isPermanentCancellation;
+
+      if (isFailedPay || isCustCancel || isLocked) {
         alert("Error: This order is permanently locked and cannot be modified.");
         return;
       }
+
+      // Sequential Status Checker (Placed -> Processing -> Ready -> Out For Delivery -> Delivered)
+      // Normalize existing statuses
+      let current = existing.status || 'Placed';
+      if (current === 'Pending' || current === 'Pending Payment' || current === 'COD Pending') {
+        current = 'Placed';
+      } else if (current === 'Approved') {
+        current = 'Processing';
+      } else if (current === 'On the way') {
+        current = 'Out For Delivery';
+      }
+
+      const ns = nextStatus as any;
+      const allowed = 
+        (current === 'Placed' && (ns === 'Processing' || ns === 'Cancelled')) ||
+        (current === 'Processing' && ns === 'Ready') ||
+        (current === 'Ready' && ns === 'Out For Delivery') ||
+        (current === 'Out For Delivery' && ns === 'Delivered');
+
+      if (!allowed && current !== nextStatus) {
+        alert(`Rule Violation: Cannot transition status from "${current}" directly to "${nextStatus}". Updates must progress sequentially in order: Placed ↓ Processing ↓ Ready ↓ Out For Delivery ↓ Delivered.`);
+        return;
+      }
+
       const orderRef = doc(db, 'orders', orderId);
-      await updateDoc(orderRef, { status: nextStatus });
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
+      const timestamp = new Date().toISOString();
+      const updatedHistory = existing.statusHistory 
+        ? [...existing.statusHistory, { status: nextStatus, timestamp }]
+        : [{ status: existing.status || 'Placed', timestamp: existing.createdAt || timestamp }, { status: nextStatus, timestamp }];
+
+      await updateDoc(orderRef, { 
+        status: nextStatus,
+        statusHistory: updatedHistory
+      });
+
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus, statusHistory: updatedHistory } : o));
     } catch (err) {
       console.error("Error updating order status:", err);
       alert("Failed to update status. Please try again.");
@@ -389,8 +423,12 @@ export default function Dashboard() {
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
         
         <div className="flex items-center gap-4 z-10">
-          <div className="w-14 h-14 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-600/30 text-white font-black">
-            MT
+          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-orange-600/30 overflow-hidden p-1 border border-stone-800">
+            <img 
+              src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
+              alt="Mithila Catering Corporate Brand Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -449,6 +487,19 @@ export default function Dashboard() {
                 <Calendar size={16} />
                 <span>Event Inquiries</span>
               </button>
+
+              <button
+                onClick={() => setActiveTab('reviews')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'reviews' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
+              >
+                <Star size={16} />
+                <span>Customer Reviews</span>
+                {orders.filter(o => (o as any).rating > 0).length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center text-[10px] font-black border border-yellow-200">
+                    {orders.filter(o => (o as any).rating > 0).length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -487,150 +538,216 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Modern Orders List Table/Layout */}
-                  <div className="overflow-hidden border border-stone-200/60 rounded-2xl bg-white shadow-sm">
-                    <div className="hidden md:grid grid-cols-12 gap-2 bg-stone-50 p-4 border-b border-stone-200 text-[10px] font-black text-stone-400 uppercase tracking-wider">
-                      <div className="col-span-3">Customer & Contact</div>
-                      <div className="col-span-3">Purchased Items</div>
-                      <div className="col-span-3">Delivery Site & Time</div>
-                      <div className="col-span-1 text-center">Amount</div>
-                      <div className="col-span-2 text-right">Status State</div>
-                    </div>
+                  {/* Redefined Magenta Order Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {orders
+                      .filter((order) => {
+                        let mapped = order.status || 'Placed';
+                        if (mapped === 'Pending' || mapped === 'Pending Payment' || mapped === 'COD Pending') {
+                          mapped = 'Placed';
+                        } else if (mapped === 'Approved') {
+                          mapped = 'Processing';
+                        } else if (mapped === 'On the way') {
+                          mapped = 'Out For Delivery';
+                        }
+                        if (orderFilter === 'All') return true;
+                        return mapped === orderFilter;
+                      })
+                      .map((order) => {
+                        let currentMappedStatus = order.status || 'Placed';
+                        if (currentMappedStatus === 'Pending' || currentMappedStatus === 'Pending Payment' || currentMappedStatus === 'COD Pending') {
+                          currentMappedStatus = 'Placed';
+                        } else if (currentMappedStatus === 'Approved') {
+                          currentMappedStatus = 'Processing';
+                        } else if (currentMappedStatus === 'On the way') {
+                          currentMappedStatus = 'Out For Delivery';
+                        }
 
-                    <div className="divide-y divide-stone-150">
-                      {orders
-                        .filter((order) => {
-                          const mapped = order.status === 'Pending' ? 'Placed' : order.status === 'Approved' ? 'Processing' : order.status;
-                          if (orderFilter === 'All') return true;
-                          return mapped === orderFilter;
-                        })
-                        .map((order) => {
-                          const currentMappedStatus = order.status === 'Pending' ? 'Placed' : order.status === 'Approved' ? 'Processing' : order.status;
-                          return (
-                            <div 
-                              key={order.id}
-                              className="p-4 md:p-6 hover:bg-neutral-50/50 transition-all duration-200"
-                            >
-                              {/* Responsive Mobile Header / Tablet Layout */}
-                              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                                {/* Col 1: Customer details */}
-                                <div className="col-span-3 space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-black text-stone-900 block">{order.customerName || 'Mithila Guest'}</span>
-                                    <span className="text-[9px] font-mono font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">#{order.id.slice(-6).toUpperCase()}</span>
-                                  </div>
-                                  <p className="text-[11px] font-semibold text-stone-600 block">{order.customerEmail}</p>
-                                  <p className="text-[11px] font-extrabold text-orange-600 block">{order.customerPhone}</p>
-                                  {order.paymentMethod && (
-                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                      <span className="inline-block text-[9px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-black uppercase tracking-wider border border-stone-200">
-                                        Pay: {order.paymentMethod}
-                                      </span>
-                                      {(order as any).paymentStatus && (
-                                        <span className={`inline-block text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider border ${
-                                          (order as any).paymentStatus === 'Paid' 
-                                            ? 'bg-green-100 text-green-700 border-green-200' 
-                                            : 'bg-red-100 text-red-700 border-red-200'
-                                        }`}>
-                                          {(order as any).paymentStatus}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
+                        const isFailedPay = order.status === 'Cancelled by Payment Failure';
+                        const isCustCancel = order.status === 'Cancelled by Customer';
+                        const isPermanentLock = (order as any).locked || (order as any).isPermanentCancellation || isFailedPay || isCustCancel;
+
+                        // Calculate available next statuses sequentially
+                        const allowedStatuses: string[] = [];
+                        if (currentMappedStatus === 'Placed') {
+                          allowedStatuses.push('Placed', 'Processing', 'Cancelled');
+                        } else if (currentMappedStatus === 'Processing') {
+                          allowedStatuses.push('Processing', 'Ready');
+                        } else if (currentMappedStatus === 'Ready') {
+                          allowedStatuses.push('Ready', 'Out For Delivery');
+                        } else if (currentMappedStatus === 'Out For Delivery') {
+                          allowedStatuses.push('Out For Delivery', 'Delivered');
+                        } else {
+                          allowedStatuses.push(currentMappedStatus);
+                        }
+
+                        return (
+                          <div 
+                            key={order.id}
+                            className="bg-[#C2185B] text-white rounded-3xl p-6 shadow-xl border border-rose-300/10 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-2xl duration-200"
+                          >
+                            <div>
+                              {/* Order Header / Invoice Info */}
+                              <div className="flex justify-between items-start gap-3 border-b border-white/20 pb-4 mb-4">
+                                <div>
+                                  <span className="text-[10px] font-black uppercase text-rose-200 tracking-wider block">Reference Ticket</span>
+                                  <h4 className="text-sm font-black font-mono tracking-tight text-white mt-1">#{order.id.slice(-8).toUpperCase()}</h4>
                                 </div>
+                                <div className="text-right">
+                                  <span className="text-[10px] font-black uppercase text-rose-200 tracking-wider block">Received At</span>
+                                  <span className="text-[10px] font-bold text-white mt-1 block">
+                                    {order.orderDate ? `${order.orderDate} @ ${order.orderTime}` : new Date(order.createdAt || '').toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
 
-                                {/* Col 2: Items Purchased details */}
-                                <div className="col-span-3 space-y-1.5 bg-stone-50 md:bg-transparent p-3 md:p-0 rounded-xl border border-stone-200/55 md:border-none">
-                                  <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Purchased List:</span>
-                                  <div className="space-y-1">
-                                    {(order.items || []).map((it, idx) => (
-                                      <div key={idx} className="flex justify-between md:justify-start items-center gap-2 text-xs font-semibold text-stone-700">
-                                        <span className="font-extrabold text-orange-600">{it.quantity}x</span>
-                                        <span className="truncate max-w-[150px]">{it.name} {it.size && it.size !== 'single' ? `(${it.size})` : ''}</span>
-                                        <span className="text-[10px] text-stone-400 font-mono ml-auto md:ml-1">₹{it.price * it.quantity}</span>
-                                      </div>
+                              {/* Customer / Client Contact Card */}
+                              <div className="space-y-1 bg-black/10 rounded-2xl p-3.5 mb-4 border border-white/5 font-sans">
+                                <span className="text-[9px] font-black uppercase text-rose-200 tracking-widest block">Client Contact</span>
+                                <p className="text-sm font-black leading-tight text-white mt-0.5">{order.customerName || 'Mithila Guest'}</p>
+                                <p className="text-xs font-medium text-rose-100 block truncate">{order.customerEmail || 'No Email Registered'}</p>
+                                <p className="text-xs font-bold text-yellow-300 block font-mono mt-1">☎ {order.customerPhone}</p>
+                                {order.whatsapp && <p className="text-[10px] text-green-300 font-bold block">💬 Whatsapp: {order.whatsapp}</p>}
+                                <p className="text-xs font-semibold text-rose-50 leading-snug mt-1.5 border-t border-white/10 pt-1.5">
+                                  📍 <strong className="text-white font-black">{order.location}:</strong> {order.address}
+                                </p>
+                              </div>
+
+                              {/* Order Items Purchased */}
+                              <div className="mb-4">
+                                <span className="text-[9px] font-black uppercase text-rose-200 tracking-widest block mb-2">Purchased Items</span>
+                                <div className="space-y-1.5 bg-black/10 rounded-2xl p-3.5 border border-white/5">
+                                  {(order.items || []).map((it, idx) => (
+                                    <div key={idx} className="flex justify-between items-center text-xs font-semibold text-rose-50">
+                                      <span className="truncate max-w-[200px]"><strong className="text-yellow-300 pr-1">{it.quantity}x</strong> {it.name} {it.size && it.size !== 'single' ? `(${it.size})` : ''}</span>
+                                      <span className="font-mono text-white text-[11px]">₹{it.price * it.quantity}</span>
+                                    </div>
+                                  ))}
+                                  <div className="flex justify-between items-center text-xs font-black text-white pt-2 border-t border-white/10 mt-2">
+                                    <span className="uppercase text-[9px] text-rose-200">Total Invoice Receipt</span>
+                                    <span className="text-yellow-300 text-sm">₹{order.totalAmount}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Financial Details (Payment Options) */}
+                              <div className="flex justify-between items-center gap-2 mb-4 bg-black/10 rounded-xl p-2.5 text-[10.5px] font-black border border-white/5 font-mono uppercase">
+                                <span className="text-rose-100">Pay Mode: <strong className="text-white">{order.paymentMethod || 'COD'}</strong></span>
+                                <span className={`px-2 py-0.5 rounded font-bold ${
+                                  (order as any).paymentStatus === 'Paid' ? 'bg-green-500/30 text-green-200 border border-green-500/40' : 'bg-yellow-500/20 text-yellow-200 border border-yellow-500/40'
+                                }`}>
+                                  {(order as any).paymentStatus || 'COD Pending'}
+                                </span>
+                              </div>
+
+                              {/* Status History Steps Logger */}
+                              {order.statusHistory && order.statusHistory.length > 0 && (
+                                <div className="mb-4 bg-black/15 p-3 rounded-2xl border border-white/5 text-[10px] space-y-1">
+                                  <span className="text-[8px] font-black text-rose-200 uppercase tracking-widest block mb-1">State Progress History Logs</span>
+                                  {order.statusHistory.map((h: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between text-rose-100">
+                                      <span className="font-bold">✓ {h.status}</span>
+                                      <span className="font-mono text-[9px] text-rose-200 opacity-80">{new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Sequential Dropdown Controller */}
+                            <div className="border-t border-white/20 pt-4 mt-2">
+                              {isPermanentLock ? (
+                                <div className="space-y-1 text-center bg-black/25 p-2.5 rounded-xl border border-red-500/30">
+                                  <span className="inline-flex items-center gap-1.5 text-red-300 text-[10px] font-black uppercase tracking-wider">
+                                    <Shield size={12} className="shrink-0 text-red-400" />
+                                    Permanently Locked
+                                  </span>
+                                  <p className="text-[10px] text-rose-200 font-bold leading-normal">
+                                    {isFailedPay ? 'Transaction failed at PayU gateway.' : 'This order has been finalized.'}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[9px] font-black uppercase text-rose-200 tracking-wider">Admin Status Action</span>
+                                    <span className="text-[9px] px-2 py-0.5 rounded bg-white/20 text-white font-extrabold uppercase">
+                                      {currentMappedStatus}
+                                    </span>
+                                  </div>
+
+                                  <select
+                                    value={currentMappedStatus}
+                                    onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value as any)}
+                                    className="w-full text-xs font-extrabold bg-[#880d3e] hover:bg-[#6b0930] text-white border border-rose-300/30 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-white cursor-pointer transition-colors shadow-inner"
+                                  >
+                                    {allowedStatuses.map((s) => (
+                                      <option key={s} value={s} className="bg-[#880d3e] text-white font-bold">
+                                        {s === currentMappedStatus ? `✓ Current: ${s}` : `→ Move to: ${s}`}
+                                      </option>
                                     ))}
-                                  </div>
+                                  </select>
+                                  <p className="text-[9px] text-rose-200 italic font-semibold text-center mt-1 progress-guidetext">
+                                    * Progressive linear pipeline prevents status jumps.
+                                  </p>
                                 </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
 
-                                {/* Col 3: Delivery Site/Time details */}
-                                <div className="col-span-3 text-xs text-stone-600 font-semibold space-y-1.5">
-                                  <div>
-                                    <span className="text-[9px] font-black uppercase text-stone-400 block">Deliver Site:</span>
-                                    <p className="text-stone-700 font-bold leading-tight mt-0.5">{order.address}, {order.location}</p>
-                                    {order.instructions && (
-                                      <div className="mt-1.5 p-1.5 bg-orange-50 border border-orange-100 text-orange-850 rounded text-[10px] font-bold">
-                                        <span className="text-[8px] font-extrabold uppercase text-orange-600 block tracking-wider">Instructions:</span>
-                                        {order.instructions}
-                                      </div>
-                                    )}
-                                  </div>
-                                  {order.orderDate && (
-                                    <div>
-                                      <span className="text-[9px] font-black uppercase text-stone-400 block">Scheduled:</span>
-                                      <p className="text-orange-600 font-extrabold mt-0.5">{order.orderDate} at {order.orderTime}</p>
-                                    </div>
-                                  )}
-                                </div>
+                    {orders.length === 0 && (
+                      <div className="col-span-3 text-center py-16 bg-stone-50/50 rounded-3xl border border-stone-200">
+                        <ShoppingBag className="mx-auto text-stone-300 mb-2" size={36} />
+                        <p className="text-stone-500 text-sm font-bold uppercase">No active customer orders matching criteria.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-                                {/* Col 4: Amount */}
-                                <div className="col-span-1 text-left md:text-center">
-                                  <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Total Amount:</span>
-                                  <span className="text-sm font-black text-stone-850 md:text-orange-600">₹{order.totalAmount}</span>
-                                  {/* Col 5: Status State Dropdown */}
-                                  <div className="col-span-2 text-left md:text-right space-y-2">
-                                    <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Set Status:</span>
-                                    <div className="inline-flex flex-col gap-1.5 w-full md:w-auto">
-                                      {order.status === 'Cancelled by Payment Failure' || order.status === 'Cancelled by Customer' || (order as any).locked || (order as any).isPermanentCancellation ? (
-                                        <div className="space-y-1 md:text-right text-left">
-                                          <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-xl border border-red-200 text-[10px] font-black uppercase tracking-wider">
-                                            <Shield size={11} className="text-red-700 shrink-0" />
-                                            {order.status === 'Cancelled by Payment Failure' ? 'Permanently Cancelled - Payment Failed' : 'Permanently Cancelled'}
-                                          </span>
-                                          <p className="text-[10px] text-red-600 font-extrabold max-w-[200px] leading-snug font-sans">
-                                            ⚠️ This order is permanently locked and cannot be modified.
-                                          </p>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <select
-                                            value={currentMappedStatus}
-                                            onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value as any)}
-                                            className="w-full md:w-auto text-xs font-bold border-2 border-stone-300 hover:border-orange-500 rounded-xl px-2.5 py-1.5 !bg-white !text-neutral-900 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-sm transition-all"
-                                          >
-                                            <option value="Placed" className="!text-neutral-900 !bg-white font-bold">Placed</option>
-                                            <option value="Processing" className="!text-neutral-900 !bg-white font-bold">Processing</option>
-                                            <option value="On the way" className="!text-neutral-900 !bg-white font-bold">On the way</option>
-                                            <option value="Delivered" className="!text-neutral-900 !bg-white font-bold">Delivered</option>
-                                            <option value="Cancelled" className="!text-neutral-900 !bg-white font-bold">Cancelled</option>
-                                          </select>
-                                          
-                                          {/* Small visual accent pill */}
-                                          <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider text-center block ${
-                                            currentMappedStatus === 'Placed' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                                            currentMappedStatus === 'Processing' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-                                            currentMappedStatus === 'On the way' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
-                                            currentMappedStatus === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-200' :
-                                            'bg-green-50 text-green-600 border border-green-200'
-                                          }`}>
-                                            {currentMappedStatus}
-                                          </span>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>      </div>
+              {/*Customer reviews & live ratings tab view */}
+              {activeTab === 'reviews' && (
+                <div className="bg-white border border-stone-200/55 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="text-xl font-black text-rose-950 tracking-tight">Real-time Customer Ratings & Reviews</h3>
+                    <p className="text-xs text-stone-400 font-bold uppercase mt-1">Real-time Feedback from Placed Orders</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {orders
+                      .filter(o => (o as any).rating > 0)
+                      .map((o) => (
+                        <div key={o.id} className="bg-stone-50 border border-stone-250 p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                          <div>
+                            <div className="flex justify-between items-start gap-4 mb-3">
+                              <div>
+                                <span className="text-xs font-black text-stone-900 block">{o.customerName || 'Mithila Guest'}</span>
+                                <span className="text-[9px] font-mono font-bold text-stone-500 bg-stone-200 px-1.5 py-0.5 rounded">Order ID: {o.id.toUpperCase()}</span>
+                              </div>
+                              <div className="flex items-center gap-0.5 text-yellow-500">
+                                {Array.from({ length: 5 }).map((_, idx) => (
+                                  <Star key={idx} size={14} fill={idx < (o as any).rating ? 'currentColor' : 'none'} className={idx < (o as any).rating ? 'text-yellow-500' : 'text-stone-300'} />
+                                ))}
                               </div>
                             </div>
-                          );
-                        })}
-
-                      {orders.length === 0 && (
-                        <div className="text-center py-16 bg-stone-50/50">
-                          <ShoppingBag className="mx-auto text-stone-300 mb-2" size={36} />
-                          <p className="text-stone-500 text-sm font-bold uppercase">No active customer orders placed.</p>
+                            <p className="text-xs text-stone-700 italic font-medium leading-relaxed mb-4">
+                              "{o.review || 'No written review text provided.'}"
+                            </p>
+                          </div>
+                          <p className="text-[10px] text-stone-400 font-bold border-t border-stone-200 pt-2 flex justify-between font-mono">
+                            <span>Scheduled: {o.orderDate}</span>
+                            <span>Review Date: {(o as any).reviewDate ? new Date((o as any).reviewDate).toLocaleDateString() : 'N/A'}</span>
+                          </p>
                         </div>
-                      )}
-                    </div>
+                      ))}
+
+                    {orders.filter(o => (o as any).rating > 0).length === 0 && (
+                      <div className="col-span-2 text-center py-16 bg-stone-50/50 rounded-2xl border border-stone-150">
+                        <Star className="mx-auto text-stone-300 mb-2" size={36} />
+                        <p className="text-stone-500 text-sm font-bold uppercase">No reviews or ratings received yet.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
