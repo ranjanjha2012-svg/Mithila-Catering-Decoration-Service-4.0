@@ -195,18 +195,10 @@ CRITICAL OPERATIONAL RULES:
               const orderRef = doc(db, 'orders', orderId);
               await updateDoc(orderRef, {
                 status: 'Cancelled by Customer',
-                orderStatus: 'Cancelled by Customer',
-                cancellationReason: reason,
-                cancelledAt: serverTimestamp(),
-                cancelledBy: 'Customer AI Request',
                 locked: true,
                 isPermanentCancellation: true,
-                aiChatLogs: arrayUnion({
-                  type: 'system',
-                  action: 'Cancelled by Customer',
-                  reason,
-                  timestamp: cancellationTime
-                })
+                cancelledAt: serverTimestamp(),
+                cancellationReason: reason
               });
               writeSucceeded = true;
             } catch (writeErr: any) {

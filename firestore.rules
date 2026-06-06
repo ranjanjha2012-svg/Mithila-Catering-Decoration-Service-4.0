@@ -45,8 +45,16 @@ service cloud.firestore {
         isAdmin() || 
         (resource.data.userId == request.auth.uid && 
           (
-            ((request.resource.data.status == 'Cancelled' || request.resource.data.status == 'Paid') && resource.data.status != 'Approved') ||
-            (request.resource.data.status == 'Cancelled by Customer' && (resource.data.status == 'Approved' || resource.data.status == 'Processing' || resource.data.status == 'Placed' || resource.data.status == 'Pending' || resource.data.status == 'Pending Payment' || resource.data.status == 'COD Pending'))
+            request.resource.data.status == resource.data.status ||
+            (request.resource.data.status == 'Cancelled by Customer' && (
+              resource.data.status == 'Placed' || 
+              resource.data.status == 'Processing' || 
+              resource.data.status == 'Approved' || 
+              resource.data.status == 'Pending' || 
+              resource.data.status == 'Pending Payment' || 
+              resource.data.status == 'COD Pending'
+            )) ||
+            ((request.resource.data.status == 'Cancelled' || request.resource.data.status == 'Paid') && resource.data.status != 'Approved')
           )
         )
       );

@@ -53,6 +53,8 @@ export default function MyOrdersPage() {
   const [inputValue, setInputValue] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancellationReasonInput, setCancellationReasonInput] = useState('');
 
   const ordersUnsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -159,128 +161,155 @@ export default function MyOrdersPage() {
     ]);
   };
 
+  const proceedWithCancellation = async (reason: string) => {
+    if (!selectedOrderForHelp || !user) return;
+    setIsAiTyping(true);
+
+    const textToSend = "Please cancel my order.";
+    const updatedMessages = [...chatMessages, { role: 'user', content: textToSend } as const];
+    setChatMessages(prev => {
+      if (prev.length > 0 && prev[prev.length - 1].content === textToSend) {
+        return prev;
+      }
+      return [...prev, { role: 'user', content: textToSend }];
+    });
+    setInputValue('');
+
+    console.info(`[AI Help Center] Triggering cancellation with reason: "${reason}"`);
+    try {
+      const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
+      const orderSnap = await getDoc(orderRef);
+      if (!orderSnap.exists()) {
+        setChatMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: "⚠️ Error: This order reference was not found in the database system."
+        }]);
+        setIsAiTyping(false);
+        return;
+      }
+
+      const freshDBData = orderSnap.data();
+      const dbStatus = freshDBData.status || 'Placed';
+
+      // Normalize status to match standard Placed/Processing check
+      const normalizedStatus = 
+        dbStatus === 'Pending Payment' ? 'Placed' : 
+        dbStatus === 'COD Pending' ? 'Placed' :
+        dbStatus === 'Pending' ? 'Placed' : 
+        dbStatus === 'Approved' ? 'Processing' : 
+        dbStatus;
+
+      // Rule 3: Allow cancellation ONLY check Placed or Processing
+      const isCancelable = normalizedStatus === 'Placed' || normalizedStatus === 'Processing';
+
+      if (!isCancelable) {
+        setChatMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "This order cannot be cancelled because it has already been delivered or moved beyond the Processing stage."
+        }]);
+        setIsAiTyping(false);
+        return;
+      }
+
+      // Rule 4: Firestore update
+      try {
+        await updateDoc(orderRef, {
+          status: 'Cancelled by Customer',
+          locked: true,
+          isPermanentCancellation: true,
+          cancelledAt: serverTimestamp(),
+          cancellationReason: reason
+        });
+        console.log("[AI Help Center] Success! Firestore document has been updated & locked with reason.");
+      } catch (dbWriteErr: any) {
+        // Rule 6: Log exact Firestore update error in console
+        console.error("Firestore update error:", dbWriteErr);
+        // Rule 5: User verification failover
+        const authFailed = !auth.currentUser;
+        const errorMessage = authFailed 
+          ? "⚠️ Failed to execute cancellation database transactions. Please sign in again."
+          : `⚠️ Failed to execute cancellation database transactions. Details: ${dbWriteErr.message}`;
+        setChatMessages(prev => [...prev, {
+          role: 'assistant',
+          content: errorMessage
+        }]);
+        setIsAiTyping(false);
+        return;
+      }
+
+      // Call the AI chat API to format confirmation
+      const systemPromptOverride = `System Notice: Customer selected to cancel this order with reason: "${reason}". The client has successfully updated the order status in Firestore to 'Cancelled by Customer' with locked=true, isPermanentCancellation=true, and cancelledAt=serverTimestamp(). Please generate the final cancellation confirmation response. Answer with: 'Cancellation completed. Reason: ${reason}. Refund processing will be handled manually.'`;
+
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: selectedOrderForHelp.id,
+          messages: [...updatedMessages, { role: 'user', content: systemPromptOverride }],
+          orderData: {
+            ...selectedOrderForHelp,
+            status: 'Cancelled by Customer',
+            locked: true,
+            isPermanentCancellation: true,
+            cancellationReason: reason
+          },
+          userId: user.uid
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setChatMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+      } else {
+        setChatMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Cancellation completed. Reason: ${reason}. Refund processing will be handled manually.`
+        }]);
+      }
+
+      // Log conversation activity inside Firestore order
+      try {
+        const finishedRef = doc(db, 'orders', selectedOrderForHelp.id);
+        await updateDoc(finishedRef, {
+          aiChatLogs: arrayUnion({
+            userQuery: "Customer AI Cancellation Request",
+            aiReply: data.message || `Cancellation completed. Reason: ${reason}.`,
+            timestamp: new Date().toISOString()
+          })
+        });
+      } catch (logErr) {
+        console.warn("[AI Help Center] Client chat log update skipped:", logErr);
+      }
+
+    } catch (err: any) {
+      console.error("AI connection exceptions: ", err);
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `Cancellation completed. Reason: ${reason}. Refund processing will be handled manually.` 
+      }]);
+    } finally {
+      setIsAiTyping(false);
+    }
+  };
+
   const handleSendMessage = async (customText?: string) => {
     const textToSend = customText || inputValue;
     if (!textToSend.trim() || !selectedOrderForHelp || !user) return;
+
+    // Check cancellation interception path
+    const normalizedLower = textToSend.toLowerCase();
+    const isCancelRequest = normalizedLower.includes('cancel') && !normalizedLower.includes('cannot cancel') && !normalizedLower.includes('why was');
+
+    if (isCancelRequest) {
+      setIsCancelModalOpen(true);
+      return;
+    }
 
     // Add user message to state
     const updatedMessages = [...chatMessages, { role: 'user', content: textToSend } as const];
     setChatMessages(prev => [...prev, { role: 'user', content: textToSend }]);
     setInputValue('');
     setIsAiTyping(true);
-
-    const normalizedLower = textToSend.toLowerCase();
-    const isCancelRequest = normalizedLower.includes('cancel') && !normalizedLower.includes('cannot cancel') && !normalizedLower.includes('why was');
-
-    if (isCancelRequest) {
-      console.log("[AI Help Center] Intercepted cancellation query. Fetching direct Firestore state...");
-      try {
-        const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
-        const orderSnap = await getDoc(orderRef);
-        if (!orderSnap.exists()) {
-          setChatMessages(prev => [...prev, { 
-            role: 'assistant', 
-            content: "⚠️ Error: This order reference was not found in the database system."
-          }]);
-          setIsAiTyping(false);
-          return;
-        }
-
-        const freshDBData = orderSnap.data();
-        const currentDBStatus = freshDBData.status || 'Placed';
-
-        const allowedCheckStatuses = ['Placed', 'Processing', 'Approved', 'Pending', 'COD Pending', 'Pending Payment'];
-        const isCancelable = allowedCheckStatuses.includes(currentDBStatus);
-
-        if (!isCancelable) {
-          // Cancellation must be rejected with the exact message
-          setChatMessages(prev => [...prev, {
-            role: 'assistant',
-            content: "This order cannot be cancelled because it has already been delivered or moved beyond the Processing stage."
-          }]);
-          setIsAiTyping(false);
-          return;
-        }
-
-        // Real Firestore Update - must succeed before generating cancellation confirmation
-        try {
-          const cancellationReason = "Requested by customer via AI Support";
-          await updateDoc(orderRef, {
-            status: 'Cancelled by Customer',
-            orderStatus: 'Cancelled by Customer',
-            cancellationReason: cancellationReason,
-            cancelledAt: serverTimestamp(),
-            cancelledBy: 'Customer AI Request',
-            locked: true,
-            isPermanentCancellation: true
-          });
-          console.log("[AI Help Center] Success! Firestore document has been permanently locked & updated to Cancelled by Customer.");
-        } catch (dbWriteErr: any) {
-          console.error("[AI Help Center] Crucial Firestore update failed:", dbWriteErr);
-          setChatMessages(prev => [...prev, {
-            role: 'assistant',
-            content: `⚠️ Failed to execute cancellation database transactions. Please sign in again. Details: ${dbWriteErr.message}`
-          }]);
-          setIsAiTyping(false);
-          return;
-        }
-
-        // Call the AI chat API with a direct notice that cancellation succeeded in DB,
-        // and instruct the LLM to format the manual refund message correctly.
-        const systemPromptOverride = `System Notice: Customer selected to cancel this order. The client has successfully updated the order status in Firestore to 'Cancelled by Customer' with locked=true, isPermanentCancellation=true, and cancelledAt=serverTimestamp(). Please generate the final cancellation confirmation response. Answer with: 'Cancellation completed. Refund processing will be handled manually.'`;
-
-        const response = await fetch('/api/ai/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: selectedOrderForHelp.id,
-            messages: [...updatedMessages, { role: 'user', content: systemPromptOverride }],
-            orderData: {
-              ...selectedOrderForHelp,
-              status: 'Cancelled by Customer',
-              orderStatus: 'Cancelled by Customer',
-              locked: true,
-              isPermanentCancellation: true
-            },
-            userId: user.uid
-          })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          setChatMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
-        } else {
-          setChatMessages(prev => [...prev, { 
-            role: 'assistant', 
-            content: "Cancellation completed. Refund processing will be handled manually."
-          }]);
-        }
-
-        // Log final conversation activity on the client
-        try {
-          const finishedRef = doc(db, 'orders', selectedOrderForHelp.id);
-          await updateDoc(finishedRef, {
-            aiChatLogs: arrayUnion({
-              userQuery: textToSend,
-              aiReply: data.message || "Cancellation completed. Refund processing will be handled manually.",
-              timestamp: new Date().toISOString()
-            })
-          });
-        } catch (logErr) {
-          console.warn("[AI Help Center] Client log update failed:", logErr);
-        }
-
-      } catch (err: any) {
-        console.error("AI connection exception: ", err);
-        setChatMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: "Cancellation completed. Refund processing will be handled manually." 
-        }]);
-      } finally {
-        setIsAiTyping(false);
-      }
-      return;
-    }
 
     // Regular conversation flow
     try {
@@ -692,7 +721,7 @@ export default function MyOrdersPage() {
                 </button>
                 {['Placed', 'Processing', 'Approved', 'Pending', 'COD Pending', 'Pending Payment'].includes(selectedOrderForHelp.status) ? (
                   <button
-                    onClick={() => handleSendMessage("Please cancel my order.")}
+                    onClick={() => setIsCancelModalOpen(true)}
                     className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl text-[10.5px] font-black text-red-700 transition-colors shadow-xs"
                   >
                     🚫 Cancel Order
@@ -731,6 +760,77 @@ export default function MyOrdersPage() {
                   <Send size={15} />
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Cancellation Reason Modal Dialog */}
+      <AnimatePresence>
+        {isCancelModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-x-hidden overflow-y-auto outline-none focus:outline-none">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCancelModalOpen(false)}
+              className="fixed inset-0 bg-[#0c0a09]/80 backdrop-blur-xs cursor-pointer"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="relative w-full max-w-md bg-white border border-stone-200 shadow-2xl rounded-3xl overflow-hidden p-6 text-left flex flex-col z-10"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-50 text-red-650 rounded-2xl flex items-center justify-center">
+                  <X size={20} className="stroke-[3] text-red-650" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-stone-900 tracking-tight">Confirm Cancellation</h3>
+                  <p className="text-[10.5px] font-bold text-stone-400 uppercase tracking-widest font-mono mt-0.5">Order Ref: #{selectedOrderForHelp?.id.slice(-6).toUpperCase()}</p>
+                </div>
+              </div>
+              
+              <p className="text-xs text-stone-500 leading-relaxed mb-4">
+                Please provide a brief reason for cancelling your catering order. This helps Mithila Catering improve our premium services.
+              </p>
+
+              <textarea
+                required
+                rows={3}
+                value={cancellationReasonInput}
+                onChange={(e) => setCancellationReasonInput(e.target.value)}
+                placeholder="e.g., Change of plans, entered incorrect details, ordered by accident..."
+                className="w-full px-4 py-3 border border-stone-250 focus:border-red-500 rounded-2xl text-xs font-semibold bg-stone-50/50 text-stone-900 outline-none transition-colors mb-5 resize-none"
+              />
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCancelModalOpen(false);
+                    setCancellationReasonInput('');
+                  }}
+                  className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                >
+                  Go Back
+                </button>
+                <button
+                  type="button"
+                  disabled={!cancellationReasonInput.trim()}
+                  onClick={() => {
+                    const reason = cancellationReasonInput.trim();
+                    setIsCancelModalOpen(false);
+                    setCancellationReasonInput('');
+                    proceedWithCancellation(reason);
+                  }}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-widest rounded-xl transition-colors shadow-md shadow-red-200 cursor-pointer"
+                >
+                  Confirm Cancellation
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
