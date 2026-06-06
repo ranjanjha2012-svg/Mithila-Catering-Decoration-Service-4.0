@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { 
   ShoppingBag, Clock, Package, HelpCircle, Loader2, ArrowRight, CheckCircle2,
@@ -34,7 +34,11 @@ interface FirestoreOrder {
   userId: string;
   paymentFailureReason?: string;
   cancellationReason?: string;
-  cancelledAt?: string;
+  cancelledAt?: any;
+  cancelledBy?: string;
+  orderStatus?: string;
+  locked?: boolean;
+  isPermanentCancellation?: boolean;
 }
 
 export default function MyOrdersPage() {
@@ -108,7 +112,11 @@ export default function MyOrdersPage() {
             userId: data.userId || '',
             paymentFailureReason: data.paymentFailureReason || '',
             cancellationReason: data.cancellationReason || '',
-            cancelledAt: data.cancelledAt || ''
+            cancelledAt: data.cancelledAt || null,
+            cancelledBy: data.cancelledBy || '',
+            orderStatus: data.orderStatus || '',
+            locked: data.locked || false,
+            isPermanentCancellation: data.isPermanentCancellation || false
           });
         });
         // Sort newest first
@@ -183,8 +191,12 @@ export default function MyOrdersPage() {
             const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
             await updateDoc(orderRef, {
               status: 'Cancelled by Customer',
+              orderStatus: 'Cancelled by Customer',
               cancellationReason: data.reason || 'Requested by customer via AI Support',
-              cancelledAt: new Date().toISOString()
+              cancelledAt: serverTimestamp(),
+              cancelledBy: 'Customer AI Request',
+              locked: true,
+              isPermanentCancellation: true
             });
             console.log("[AI Help Center] Successfully synchronized cancellation status on client.");
           } catch (writeErr) {
@@ -392,7 +404,7 @@ export default function MyOrdersPage() {
                         {/* Dynamic Top Badge */}
                         <span className={`text-[10px] px-2.5 py-0.5 font-black uppercase tracking-wider rounded-lg border ${
                           isFailureCancelled ? 'bg-red-50 text-red-700 border-red-200' :
-                          isCustomerCancelled ? 'bg-zinc-100 text-zinc-700 border-zinc-300' :
+                          isCustomerCancelled ? 'bg-red-50 text-red-700 border-red-250' :
                           order.status === 'Placed' ? 'bg-yellow-50 text-yellow-700 border-yellow-250' :
                           order.status === 'Processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                           order.status === 'On the way' ? 'bg-purple-50 text-purple-700 border-purple-200' :
@@ -400,7 +412,7 @@ export default function MyOrdersPage() {
                           order.status === 'Pending Payment' ? 'bg-amber-50 text-amber-600 border-amber-200' :
                           'bg-indigo-50 text-indigo-700 border-indigo-200'
                         }`}>
-                          {isFailureCancelled ? 'Payment Failed' : order.status}
+                          {isFailureCancelled ? 'Payment Failed' : isCustomerCancelled ? 'Permanently Cancelled' : order.status}
                         </span>
                       </div>
 
@@ -419,12 +431,12 @@ export default function MyOrdersPage() {
 
                       {/* Display cancellation info if cancelled by customer */}
                       {isCustomerCancelled && (
-                        <div className="bg-zinc-50 border border-zinc-200 p-3.5 rounded-2xl flex items-start gap-2 text-zinc-805">
-                          <AlertCircle size={16} className="text-zinc-600 shrink-0 mt-0.5" />
+                        <div className="bg-red-50/70 border border-red-100 p-3.5 rounded-2xl flex items-start gap-2 text-red-900 mb-2">
+                          <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
                           <div className="text-xs">
-                            <span className="font-extrabold block uppercase tracking-wider">Cancelled by Customer</span>
-                            <p className="text-[10.5px] text-zinc-600 leading-relaxed mt-0.5">
-                              This order was successfully cancelled at your request. {order.cancellationReason && `Reason: "${order.cancellationReason}"`}
+                            <span className="font-extrabold block uppercase tracking-wider text-red-700">Permanently Cancelled</span>
+                            <p className="text-[10.5px] text-red-800 leading-relaxed mt-0.5 font-semibold font-sans">
+                              This order has been permanently cancelled. {order.cancellationReason && `Reason: "${order.cancellationReason}"`}
                             </p>
                           </div>
                         </div>
@@ -548,7 +560,7 @@ export default function MyOrdersPage() {
                   >
                     <div className={`max-w-[85%] rounded-2xl p-3.5 text-xs inline-block leading-relaxed border ${
                       msg.role === 'user'
-                        ? 'bg-neutral-900 text-white border-neutral-800 rounded-br-none shadow-sm font-sans'
+                        ? 'bg-stone-200 text-stone-900 border-stone-300 rounded-br-none shadow-sm font-sans'
                         : 'bg-white text-stone-850 border-stone-200 rounded-bl-none shadow-xs font-serif whitespace-pre-line'
                     }`}>
                       {msg.content}

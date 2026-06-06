@@ -250,7 +250,12 @@ export default function Dashboard() {
   const handleUpdateOrderStatus = async (orderId: string, nextStatus: FirestoreOrder['status']) => {
     try {
       const existing = orders.find(o => o.id === orderId);
-      if (existing && (existing.status === 'Cancelled by Payment Failure' || existing.status === 'Cancelled by Customer')) {
+      if (existing && (
+        existing.status === 'Cancelled by Payment Failure' || 
+        existing.status === 'Cancelled by Customer' || 
+        (existing as any).locked || 
+        (existing as any).isPermanentCancellation
+      )) {
         alert("Error: This order is permanently locked and cannot be modified.");
         return;
       }
@@ -559,13 +564,13 @@ export default function Dashboard() {
                                   <div className="col-span-2 text-left md:text-right space-y-2">
                                     <span className="text-[9px] font-black uppercase text-stone-400 block md:hidden">Set Status:</span>
                                     <div className="inline-flex flex-col gap-1.5 w-full md:w-auto">
-                                      {order.status === 'Cancelled by Payment Failure' || order.status === 'Cancelled by Customer' ? (
+                                      {order.status === 'Cancelled by Payment Failure' || order.status === 'Cancelled by Customer' || (order as any).locked || (order as any).isPermanentCancellation ? (
                                         <div className="space-y-1 md:text-right text-left">
                                           <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-xl border border-red-200 text-[10px] font-black uppercase tracking-wider">
                                             <Shield size={11} className="text-red-700 shrink-0" />
-                                            {order.status === 'Cancelled by Payment Failure' ? 'Permanently Cancelled - Payment Failed' : 'Cancelled by Customer'}
+                                            {order.status === 'Cancelled by Payment Failure' ? 'Permanently Cancelled - Payment Failed' : 'Order Permanently Cancelled'}
                                           </span>
-                                          <p className="text-[10px] text-red-600 font-extrabold max-w-[200px] leading-snug">
+                                          <p className="text-[10px] text-red-600 font-extrabold max-w-[200px] leading-snug font-sans">
                                             ⚠️ This order is permanently locked and cannot be modified.
                                           </p>
                                         </div>

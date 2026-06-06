@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { GoogleGenAI, Type } from '@google/genai';
 
 const firebaseConfig = {
@@ -174,8 +174,12 @@ CRITICAL OPERATIONAL RULES:
             const orderRef = doc(db, 'orders', orderId);
             await updateDoc(orderRef, {
               status: 'Cancelled by Customer',
+              orderStatus: 'Cancelled by Customer',
               cancellationReason: reason,
-              cancelledAt: cancellationTime,
+              cancelledAt: serverTimestamp(),
+              cancelledBy: 'Customer AI Request',
+              locked: true,
+              isPermanentCancellation: true,
               aiChatLogs: arrayUnion({
                 type: 'system',
                 action: 'Cancelled by Customer',
