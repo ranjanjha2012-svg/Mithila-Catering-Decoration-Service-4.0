@@ -164,7 +164,8 @@ CRITICAL OPERATIONAL RULES:
 
         console.info(`[AI Chat API] Gemini triggered cancelOrder with reason: "${reason}"`);
 
-        const isCancelable = statusState === 'Processing' || statusState === 'Approved';
+        const disallowedStatuses = ['Delivered', 'Shipped', 'Out For Delivery', 'On the way', 'Returned', 'Refunded', 'Cancelled', 'Cancelled by Customer', 'Cancelled by Payment Failure'];
+        const isCancelable = !disallowedStatuses.includes(statusState);
 
         if (isCancelable) {
           const cancellationTime = new Date().toISOString();
@@ -209,7 +210,7 @@ CRITICAL OPERATIONAL RULES:
               },
               {
                 role: 'user',
-                parts: [{ text: `System action handled: The order was successfully updated to 'Cancelled by Customer' with reason "${reason}" at timestamp ${cancellationTime}. Deliver this confirmation text gracefully.` }]
+                parts: [{ text: `System action handled: The order was successfully updated to 'Cancelled by Customer' with reason "${reason}" at timestamp ${cancellationTime}. Deliver this confirmation text gracefully. Make sure you inform the customer that: 'Cancellation completed. Refund processing will be handled manually.'` }]
               }
             ]
           });
@@ -222,7 +223,7 @@ CRITICAL OPERATIONAL RULES:
           });
         } else {
           return res.status(200).json({
-            message: `This order can no longer be cancelled because its current status is "${displayStatus}", which is beyond the Processing stage.`,
+            message: "This order cannot be cancelled because it has already been delivered or moved beyond the Processing stage.",
             statusUpdated: false
           });
         }

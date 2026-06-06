@@ -169,6 +169,121 @@ export default function MyOrdersPage() {
     setInputValue('');
     setIsAiTyping(true);
 
+    const normalizedLower = textToSend.toLowerCase();
+    const isCancelRequest = normalizedLower.includes('cancel') && !normalizedLower.includes('cannot cancel') && !normalizedLower.includes('why was');
+
+    if (isCancelRequest) {
+      console.log("[AI Help Center] Intercepted cancellation query. Fetching direct Firestore state...");
+      try {
+        const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
+        const orderSnap = await getDoc(orderRef);
+        if (!orderSnap.exists()) {
+          setChatMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: "⚠️ Error: This order reference was not found in the database system."
+          }]);
+          setIsAiTyping(false);
+          return;
+        }
+
+        const freshDBData = orderSnap.data();
+        const currentDBStatus = freshDBData.status || 'Placed';
+
+        // Check if the order status is in our disallowed list
+        const disallowedStatuses = ['Delivered', 'Shipped', 'Out For Delivery', 'On the way', 'Returned', 'Refunded', 'Cancelled', 'Cancelled by Customer', 'Cancelled by Payment Failure'];
+        const isCancelable = !disallowedStatuses.includes(currentDBStatus);
+
+        if (!isCancelable) {
+          // Cancellation must be rejected with the exact message
+          setChatMessages(prev => [...prev, {
+            role: 'assistant',
+            content: "This order cannot be cancelled because it has already been delivered or moved beyond the Processing stage."
+          }]);
+          setIsAiTyping(false);
+          return;
+        }
+
+        // Real Firestore Update - must succeed before generating cancellation confirmation
+        try {
+          const cancellationReason = "Requested by customer via AI Support";
+          await updateDoc(orderRef, {
+            status: 'Cancelled by Customer',
+            orderStatus: 'Cancelled by Customer',
+            cancellationReason: cancellationReason,
+            cancelledAt: serverTimestamp(),
+            cancelledBy: 'Customer AI Request',
+            locked: true,
+            isPermanentCancellation: true
+          });
+          console.log("[AI Help Center] Success! Firestore document has been permanently locked & updated to Cancelled by Customer.");
+        } catch (dbWriteErr: any) {
+          console.error("[AI Help Center] Crucial Firestore update failed:", dbWriteErr);
+          setChatMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `⚠️ Failed to execute cancellation database transactions. Please sign in again. Details: ${dbWriteErr.message}`
+          }]);
+          setIsAiTyping(false);
+          return;
+        }
+
+        // Call the AI chat API with a direct notice that cancellation succeeded in DB,
+        // and instruct the LLM to format the manual refund message correctly.
+        const systemPromptOverride = `System Notice: Customer selected to cancel this order. The client has successfully updated the order status in Firestore to 'Cancelled by Customer' with locked=true, isPermanentCancellation=true, and cancelledAt=serverTimestamp(). Please generate the final cancellation confirmation response. Answer with: 'Cancellation completed. Refund processing will be handled manually.'`;
+
+        const response = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: selectedOrderForHelp.id,
+            messages: [...updatedMessages, { role: 'user', content: systemPromptOverride }],
+            orderData: {
+              ...selectedOrderForHelp,
+              status: 'Cancelled by Customer',
+              orderStatus: 'Cancelled by Customer',
+              locked: true,
+              isPermanentCancellation: true
+            },
+            userId: user.uid
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          setChatMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+        } else {
+          setChatMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: "Cancellation completed. Refund processing will be handled manually."
+          }]);
+        }
+
+        // Log final conversation activity on the client
+        try {
+          const finishedRef = doc(db, 'orders', selectedOrderForHelp.id);
+          await updateDoc(finishedRef, {
+            aiChatLogs: arrayUnion({
+              userQuery: textToSend,
+              aiReply: data.message || "Cancellation completed. Refund processing will be handled manually.",
+              timestamp: new Date().toISOString()
+            })
+          });
+        } catch (logErr) {
+          console.warn("[AI Help Center] Client log update failed:", logErr);
+        }
+
+      } catch (err: any) {
+        console.error("AI connection exception: ", err);
+        setChatMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: "Cancellation completed. Refund processing will be handled manually." 
+        }]);
+      } finally {
+        setIsAiTyping(false);
+      }
+      return;
+    }
+
+    // Regular conversation flow
     try {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -185,26 +300,7 @@ export default function MyOrdersPage() {
       if (response.ok) {
         setChatMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
         
-        // Handle cancel state synchronization directly from authenticated client
-        if (data.statusUpdated && data.newStatus === 'Cancelled by Customer') {
-          try {
-            const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
-            await updateDoc(orderRef, {
-              status: 'Cancelled by Customer',
-              orderStatus: 'Cancelled by Customer',
-              cancellationReason: data.reason || 'Requested by customer via AI Support',
-              cancelledAt: serverTimestamp(),
-              cancelledBy: 'Customer AI Request',
-              locked: true,
-              isPermanentCancellation: true
-            });
-            console.log("[AI Help Center] Successfully synchronized cancellation status on client.");
-          } catch (writeErr) {
-            console.error("[AI Help Center] Failed to set status to Cancelled by Customer on client:", writeErr);
-          }
-        }
-
-        // Keep chat logs saved in database using authenticated customer request permissions
+        // Keep logs saved inside database using authenticated customer request permissions
         try {
           const orderRef = doc(db, 'orders', selectedOrderForHelp.id);
           await updateDoc(orderRef, {
@@ -552,17 +648,19 @@ export default function MyOrdersPage() {
               </div>
 
               {/* Chat conversations area */}
-              <div className="flex-1 overflow-y-auto px-6 py-5 bg-[#faf9f8] space-y-4">
+              <div className="flex-1 overflow-y-auto px-4 md:px-6 py-5 bg-[#F9FAFB] space-y-4">
                 {chatMessages.map((msg, index) => (
                   <div
                     key={index}
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`max-w-[85%] rounded-2xl p-3.5 text-xs inline-block leading-relaxed border ${
-                      msg.role === 'user'
-                        ? 'bg-stone-200 text-stone-900 border-stone-300 rounded-br-none shadow-sm font-sans'
-                        : 'bg-white text-stone-850 border-stone-200 rounded-bl-none shadow-xs font-serif whitespace-pre-line'
-                    }`}>
+                    <div 
+                      className={`max-w-[85%] md:max-w-[75%] rounded-[1.25rem] p-3.5 text-xs inline-block leading-relaxed shadow-sm font-sans divide-y divide-transparent ${
+                        msg.role === 'user'
+                          ? 'bg-[#DC2626] text-white rounded-br-none border border-transparent'
+                          : 'bg-white text-[#111827] border border-stone-200 rounded-bl-none font-medium'
+                      }`}
+                    >
                       {msg.content}
                     </div>
                   </div>
@@ -570,9 +668,9 @@ export default function MyOrdersPage() {
 
                 {isAiTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-white text-stone-450 border border-stone-200 rounded-2xl rounded-bl-none p-3.5 flex items-center gap-1.5 text-xs shadow-xs">
-                      <Loader2 className="w-4.5 h-4.5 text-orange-600 animate-spin" />
-                      <span className="font-bold text-[10px] uppercase tracking-wider">AI is auditing order logs...</span>
+                    <div className="bg-white text-[#111827] border border-stone-200 rounded-[1.25rem] rounded-bl-none p-3.5 flex items-center gap-1.5 text-xs shadow-xs max-w-[85%] md:max-w-[75%]">
+                      <Loader2 className="w-4 h-4 text-orange-600 animate-spin shrink-0" />
+                      <span className="font-semibold text-[10px] uppercase tracking-wider text-stone-500">AI is auditing order logs...</span>
                     </div>
                   </div>
                 )}

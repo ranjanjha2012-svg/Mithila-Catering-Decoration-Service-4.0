@@ -568,7 +568,7 @@ export default function Dashboard() {
                                         <div className="space-y-1 md:text-right text-left">
                                           <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-xl border border-red-200 text-[10px] font-black uppercase tracking-wider">
                                             <Shield size={11} className="text-red-700 shrink-0" />
-                                            {order.status === 'Cancelled by Payment Failure' ? 'Permanently Cancelled - Payment Failed' : 'Order Permanently Cancelled'}
+                                            {order.status === 'Cancelled by Payment Failure' ? 'Permanently Cancelled - Payment Failed' : 'Permanently Cancelled'}
                                           </span>
                                           <p className="text-[10px] text-red-600 font-extrabold max-w-[200px] leading-snug font-sans">
                                             ⚠️ This order is permanently locked and cannot be modified.
