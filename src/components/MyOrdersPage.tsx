@@ -189,9 +189,8 @@ export default function MyOrdersPage() {
         const freshDBData = orderSnap.data();
         const currentDBStatus = freshDBData.status || 'Placed';
 
-        // Check if the order status is in our disallowed list
-        const disallowedStatuses = ['Delivered', 'Shipped', 'Out For Delivery', 'On the way', 'Returned', 'Refunded', 'Cancelled', 'Cancelled by Customer', 'Cancelled by Payment Failure'];
-        const isCancelable = !disallowedStatuses.includes(currentDBStatus);
+        const allowedCheckStatuses = ['Placed', 'Processing', 'Approved', 'Pending', 'COD Pending', 'Pending Payment'];
+        const isCancelable = allowedCheckStatuses.includes(currentDBStatus);
 
         if (!isCancelable) {
           // Cancellation must be rejected with the exact message
@@ -640,7 +639,7 @@ export default function MyOrdersPage() {
               {/* Order Status Ribbon indicators */}
               <div className="px-6 py-2.5 bg-stone-100/90 border-b border-stone-200 text-[10.5px] font-semibold text-stone-605 flex justify-between items-center">
                 <span>Database Status: <strong className="text-stone-900 uppercase font-bold">{selectedOrderForHelp.status}</strong></span>
-                {selectedOrderForHelp.status === 'Processing' && (
+                {['Placed', 'Processing', 'Approved', 'Pending', 'COD Pending', 'Pending Payment'].includes(selectedOrderForHelp.status) && (
                   <span className="text-orange-600 font-black flex items-center gap-1 animate-pulse">
                     ● Cancelable
                   </span>
@@ -691,7 +690,7 @@ export default function MyOrdersPage() {
                 >
                   📋 Summary of Items
                 </button>
-                {selectedOrderForHelp.status === 'Processing' ? (
+                {['Placed', 'Processing', 'Approved', 'Pending', 'COD Pending', 'Pending Payment'].includes(selectedOrderForHelp.status) ? (
                   <button
                     onClick={() => handleSendMessage("Please cancel my order.")}
                     className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl text-[10.5px] font-black text-red-700 transition-colors shadow-xs"
@@ -700,7 +699,7 @@ export default function MyOrdersPage() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setChatMessages(prev => [...prev, { role: 'user', content: 'Can I cancel this order?' }, { role: 'assistant', content: 'This order can no longer be cancelled because it has already moved beyond the Processing stage.' }])}
+                    onClick={() => setChatMessages(prev => [...prev, { role: 'user', content: 'Can I cancel this order?' }, { role: 'assistant', content: 'This order cannot be cancelled because it has already been delivered or moved beyond the Processing stage.' }])}
                     className="px-2.5 py-1.5 bg-stone-200 opacity-60 rounded-xl text-[10.5px] font-bold text-stone-500 cursor-not-allowed select-none"
                     title="Cancelled permanently or moved past processing check"
                   >

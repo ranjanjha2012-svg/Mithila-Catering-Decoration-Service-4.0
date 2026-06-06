@@ -117,7 +117,7 @@ Here are the authentic live order details retrieved from our secure Firestore le
 - Items Listed (What items were purchased): ${JSON.stringify(orderData.items || [])}
 - Financial Total: ₹${orderData.totalAmount || orderData.subtotal || 0}
 - Payment Gateway Method: ${orderData.paymentMethod || 'COD'}
-- Status State: ${statusState} (also referred to as ${displayStatus})
+- Status State: ${statusState}
 - Delivery Address: ${orderData.address || 'N/A'}, ${orderData.location || 'N/A'}
 - Event Schedule: Date ${orderData.orderDate || 'N/A'} at Time ${orderData.orderTime || 'N/A'}
 
@@ -125,10 +125,10 @@ CRITICAL OPERATIONAL RULES:
 1. Handle queries about: Which items were purchased, Delivery status, Order status, Payment status, Order amount, Delivery address, and Event date. Directly answer based on the real ledger values.
 2. Order Cancellation Protocol:
    - Customers may request to cancel their order.
-   - You can cancel the order IF AND ONLY IF the current status is EXACTLY 'Processing' or 'Approved'.
-   - If the current status is indeed 'Approved' or 'Processing', you MUST declare that you are initiating cancellation, and call the custom function utility \`cancelOrder(reason)\` right now. Do not promise cancellation without calling this function first.
+   - You can cancel the order IF AND ONLY IF the current status is cardinally 'Placed' or 'Processing' (also includes system states 'Approved', 'Pending', 'COD Pending', 'Pending Payment').
+   - If the current status is indeed 'Placed' or 'Processing', you MUST declare that you are initiating cancellation, and call the custom function utility \`cancelOrder(reason)\` right now. Do not promise cancellation without calling this function first.
    - If the current status is anything else (for example: Shipped, Out For Delivery, Delivered, Returned, Refunded, Cancelled, Cancelled by Payment Failure, or Cancelled by Customer), you are STRICTLY FORBIDDEN from performing or initiating cancellation. You must explain politely and clearly:
-     "This order can no longer be cancelled because it has already moved beyond the Processing stage."
+     "This order cannot be cancelled because it has already been delivered or moved beyond the Processing stage."
    - If the status is already 'Cancelled by Payment Failure' or 'Cancelled by Customer', explain that the order is already permanently cancelled.
 3. Be professional and humble. Do not print system variables, telemetry strings, or logs. Always reply with clean Markdown format.`;
 
@@ -184,11 +184,12 @@ CRITICAL OPERATIONAL RULES:
           const args = (call.args || {}) as any;
           const reason = args.reason || 'Requested by customer';
 
-          const disallowedStatuses = ['Delivered', 'Shipped', 'Out For Delivery', 'On the way', 'Returned', 'Refunded', 'Cancelled', 'Cancelled by Customer', 'Cancelled by Payment Failure'];
-          const isCancelable = !disallowedStatuses.includes(statusState);
+          const allowedCheckStatuses = ['Placed', 'Processing', 'Approved', 'Pending', 'COD Pending', 'Pending Payment'];
+          const isCancelable = allowedCheckStatuses.includes(statusState);
 
           if (isCancelable) {
             const cancellationTime = new Date().toISOString();
+            let writeSucceeded = false;
             
             try {
               const orderRef = doc(db, 'orders', orderId);
@@ -207,8 +208,18 @@ CRITICAL OPERATIONAL RULES:
                   timestamp: cancellationTime
                 })
               });
+              writeSucceeded = true;
             } catch (writeErr: any) {
-              console.warn(`[AI Chat Dev] Local write permissions warning: ${writeErr.message}`);
+              console.warn(`[AI Chat Dev] Local write permissions check: Relying on client-side state transition callback or pre-cancellation validation. Detail: ${writeErr.message}`);
+            }
+
+            const isVerifiedCancellation = writeSucceeded || clientOrderData?.status === 'Cancelled by Customer';
+
+            if (!isVerifiedCancellation) {
+              return res.json({
+                message: "I attempted to process your cancellation, but the database could not be automatically modified. Please verify your connection or click the 'Cancel Order' button directly inside your dashboard to complete this securely.",
+                statusUpdated: false
+              });
             }
 
             // Resume content generation to confirm cancellation to user
