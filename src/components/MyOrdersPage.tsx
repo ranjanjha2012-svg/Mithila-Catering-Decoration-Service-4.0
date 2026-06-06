@@ -39,6 +39,7 @@ interface FirestoreOrder {
   orderStatus?: string;
   locked?: boolean;
   isPermanentCancellation?: boolean;
+  paymentStatus?: string;
 }
 
 export default function MyOrdersPage() {
@@ -118,17 +119,26 @@ export default function MyOrdersPage() {
             cancelledBy: data.cancelledBy || '',
             orderStatus: data.orderStatus || '',
             locked: data.locked || false,
-            isPermanentCancellation: data.isPermanentCancellation || false
+            isPermanentCancellation: data.isPermanentCancellation || false,
+            paymentStatus: data.paymentStatus || ''
           });
         });
         // Sort newest first
         list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        setOrders(list);
+        
+        // CUSTOMER: Cannot see failed payment orders as active orders. Hide these orders from active order lists.
+        const filteredList = list.filter(order => 
+          order.status !== 'Pending Payment' && 
+          order.status !== 'Cancelled by Payment Failure' &&
+          order.paymentStatus !== 'Failed'
+        );
+        
+        setOrders(filteredList);
         setLoadingOrders(false);
 
         // Update selected order in help modal in real-time to reflect state changes
         if (selectedOrderForHelp) {
-          const updated = list.find(o => o.id === selectedOrderForHelp.id);
+          const updated = filteredList.find(o => o.id === selectedOrderForHelp.id);
           if (updated && updated.status !== selectedOrderForHelp.status) {
             setSelectedOrderForHelp(updated);
           }

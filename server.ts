@@ -56,17 +56,48 @@ async function startServer() {
   });
 
   // PayU SURL Callback (POST -> redirect to success page)
-  app.post('/api/payu/success', (req, res) => {
+  app.post('/api/payu/success', async (req, res) => {
     const txnid = req.body?.txnid || req.query?.txnid || '';
     const amount = req.body?.amount || req.query?.amount || '';
     const mode = req.body?.mode || '';
+    
+    if (txnid) {
+      try {
+        const orderRef = doc(db, 'orders', txnid);
+        await updateDoc(orderRef, {
+          status: 'Placed',
+          paymentStatus: 'Paid',
+          paymentVerifiedAt: new Date().toISOString()
+        });
+        console.info(`[PayU Webhook] Success: Order #${txnid} updated to Placed/Paid.`);
+      } catch (err: any) {
+        console.warn(`[PayU Webhook Warning] Firestore backend update skipped or deferred to client success screen. Details: ${err.message}`);
+      }
+    }
     res.redirect(`/payment-success.html?orderId=${txnid}&amount=${amount}&status=success&mode=${mode}`);
   });
 
   // PayU FURL Callback (POST -> redirect to failure page)
-  app.post('/api/payu/failure', (req, res) => {
+  app.post('/api/payu/failure', async (req, res) => {
     const txnid = req.body?.txnid || req.query?.txnid || '';
-    const msg = req.body?.field9999_error_message || req.body?.error_Message || '';
+    const msg = req.body?.field9999_error_message || req.body?.error_Message || 'Transaction declined/aborted by user or gateway.';
+    
+    if (txnid) {
+      try {
+        const orderRef = doc(db, 'orders', txnid);
+        await updateDoc(orderRef, {
+          status: 'Cancelled by Payment Failure',
+          paymentStatus: 'Failed',
+          locked: true,
+          isPermanentCancellation: true,
+          paymentFailureReason: msg,
+          cancelledAt: new Date().toISOString()
+        });
+        console.info(`[PayU Webhook] Failure: Order #${txnid} updated to Cancelled by Payment Failure.`);
+      } catch (err: any) {
+        console.warn(`[PayU Webhook Warning] Firestore backend failure update skipped or deferred to client failure screen. Details: ${err.message}`);
+      }
+    }
     res.redirect(`/payment-failure.html?orderId=${txnid}&status=failed&msg=${encodeURIComponent(msg)}`);
   });
 

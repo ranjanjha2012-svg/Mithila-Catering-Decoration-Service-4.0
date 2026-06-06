@@ -51,6 +51,9 @@ interface FirestoreOrder {
   status: 'Placed' | 'Processing' | 'On the way' | 'Delivered' | 'Pending' | 'Approved' | 'Archived' | 'Cancelled' | 'Cancelled by Payment Failure' | 'Cancelled by Customer' | 'Pending Payment' | 'COD Pending';
   createdAt: string;
   userId: string;
+  paymentStatus?: string;
+  locked?: boolean;
+  isPermanentCancellation?: boolean;
 }
 
 interface JobPost {
@@ -176,7 +179,10 @@ export default function Dashboard() {
             paymentMethod: data.paymentMethod || 'COD',
             status: data.status || 'Pending',
             createdAt: data.createdAt || '',
-            userId: data.userId || ''
+            userId: data.userId || '',
+            paymentStatus: data.paymentStatus || '',
+            locked: data.locked || false,
+            isPermanentCancellation: data.isPermanentCancellation || false
           });
         });
         // Sort orders by creation date descending
@@ -516,9 +522,20 @@ export default function Dashboard() {
                                   <p className="text-[11px] font-semibold text-stone-600 block">{order.customerEmail}</p>
                                   <p className="text-[11px] font-extrabold text-orange-600 block">{order.customerPhone}</p>
                                   {order.paymentMethod && (
-                                    <span className="inline-block text-[9px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-black uppercase tracking-wider mt-1 border border-stone-200">
-                                      Pay: {order.paymentMethod}
-                                    </span>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                      <span className="inline-block text-[9px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-black uppercase tracking-wider border border-stone-200">
+                                        Pay: {order.paymentMethod}
+                                      </span>
+                                      {(order as any).paymentStatus && (
+                                        <span className={`inline-block text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider border ${
+                                          (order as any).paymentStatus === 'Paid' 
+                                            ? 'bg-green-100 text-green-700 border-green-200' 
+                                            : 'bg-red-100 text-red-700 border-red-200'
+                                        }`}>
+                                          {(order as any).paymentStatus}
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
 

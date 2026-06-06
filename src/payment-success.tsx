@@ -38,21 +38,23 @@ function PaymentSuccessScreen() {
         const orderData = docSnap.data();
         setOrder(orderData);
 
-        // If order status is pending payment, update it to Paid
+        // If order status is pending payment, update it to Paid and status to Placed
         if (orderData.status === 'Pending Payment') {
           await updateDoc(orderRef, {
-            status: 'Paid',
+            status: 'Placed',
+            paymentStatus: 'Paid',
             paymentVerifiedAt: new Date().toISOString()
           });
           
           await logUserActivity('Order Payment Verified', { 
             orderId, 
-            status: 'Paid', 
+            status: 'Placed',
+            paymentStatus: 'Paid', 
             amount: orderData.totalAmount 
           });
 
           // Refresh order status in state
-          setOrder((prev: any) => prev ? { ...prev, status: 'Paid' } : null);
+          setOrder((prev: any) => prev ? { ...prev, status: 'Placed', paymentStatus: 'Paid' } : null);
         }
 
         // Execution of cart clearing on payment completion

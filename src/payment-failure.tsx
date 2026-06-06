@@ -34,6 +34,9 @@ function PaymentFailureScreen() {
           if (orderData.status === 'Pending Payment') {
             await updateDoc(orderRef, {
               status: 'Cancelled by Payment Failure',
+              paymentStatus: 'Failed',
+              locked: true,
+              isPermanentCancellation: true,
               paymentFailureReason: gatewayMsg,
               cancelledAt: new Date().toISOString()
             });
@@ -41,11 +44,18 @@ function PaymentFailureScreen() {
             await logUserActivity('Order Payment Failed', {
               orderId,
               status: 'Cancelled by Payment Failure',
+              paymentStatus: 'Failed',
               error: gatewayMsg
             });
             
             // Sync status to state
-            setOrder((prev: any) => prev ? { ...prev, status: 'Cancelled by Payment Failure' } : null);
+            setOrder((prev: any) => prev ? { 
+              ...prev, 
+              status: 'Cancelled by Payment Failure',
+              paymentStatus: 'Failed',
+              locked: true,
+              isPermanentCancellation: true
+            } : null);
           }
         }
         setLoading(false);

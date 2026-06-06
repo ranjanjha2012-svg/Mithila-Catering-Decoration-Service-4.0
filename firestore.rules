@@ -46,6 +46,8 @@ service cloud.firestore {
         (resource.data.userId == request.auth.uid && 
           (
             request.resource.data.status == resource.data.status ||
+            (request.resource.data.status == 'Placed' && resource.data.status == 'Pending Payment') ||
+            (request.resource.data.status == 'Cancelled by Payment Failure' && resource.data.status == 'Pending Payment') ||
             (request.resource.data.status == 'Cancelled by Customer' && (
               resource.data.status == 'Placed' || 
               resource.data.status == 'Processing' || 
