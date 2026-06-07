@@ -57,7 +57,7 @@ export default function TiffinService() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Tiffin Tracking system states
-  const [viewMode, setViewMode] = useState<'plans' | 'tracker'>('plans');
+  const [showTrackerModal, setShowTrackerModal] = useState(false);
   const [trackerRefId, setTrackerRefId] = useState('');
   const [captchaCode, setCaptchaCode] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
@@ -76,10 +76,10 @@ export default function TiffinService() {
   };
 
   useEffect(() => {
-    if (viewMode === 'tracker' && !captchaCode) {
+    if (!captchaCode) {
       generateCaptcha();
     }
-  }, [viewMode]);
+  }, []);
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -300,40 +300,25 @@ export default function TiffinService() {
           </motion.a>
         </div>
 
-        {/* Premium Selection Tabs */}
-        <div className="flex justify-center mb-10 gap-4">
+        {/* Already having Tiffin Service Track It Button */}
+        <div className="flex flex-col items-center justify-center mb-10">
           <button
             onClick={() => {
-              setViewMode('plans');
+              setShowTrackerModal(true);
+              generateCaptcha();
               setTrackerResult(null);
+              setTrackerRefId('');
+              setCaptchaInput('');
               setTrackerError('');
             }}
-            className={`px-5 py-2.5 rounded-xl font-black uppercase text-xs tracking-wider transition-all cursor-pointer shadow-md select-none ${
-              viewMode === 'plans'
-                ? 'bg-yellow-500 text-stone-950 border border-yellow-400'
-                : 'bg-green-800 hover:bg-green-750 text-green-100 border border-green-700'
-            }`}
+            className="px-6 py-3.5 bg-yellow-500 hover:bg-yellow-400 text-stone-950 font-black uppercase text-xs tracking-wider rounded-2xl transition-all cursor-pointer shadow-md select-none flex items-center gap-2"
           >
-            Subscription Plans
-          </button>
-          <button
-            onClick={() => {
-              setViewMode('tracker');
-              generateCaptcha();
-            }}
-            className={`px-5 py-2.5 rounded-xl font-black uppercase text-xs tracking-wider transition-all cursor-pointer shadow-md select-none ${
-              viewMode === 'tracker'
-                ? 'bg-yellow-500 text-stone-950 border border-yellow-400'
-                : 'bg-green-800 hover:bg-green-750 text-green-100 border border-green-700'
-            }`}
-          >
-            Track Your Tiffin
+            Already having Tiffin Service? Track It
           </button>
         </div>
 
         {/* 1. PLANS VIEW */}
-        {viewMode === 'plans' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {plans.map((plan, i) => (
               <motion.div
                 key={plan.id}
@@ -370,89 +355,9 @@ export default function TiffinService() {
               </motion.div>
             ))}
           </div>
-        )}
 
-        {/* 2. DYNAMIC READ-ONLY TIFFIN TRACKER */}
-        {viewMode === 'tracker' && (
-          <div className="max-w-2xl mx-auto">
-            {!trackerResult ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-stone-200"
-              >
-                <h3 className="text-lg font-black text-[#C2185B] uppercase mb-1 font-sans">Mithila Live Tiffin Tracker</h3>
-                <p className="text-xs text-stone-400 font-bold uppercase mb-6 font-sans">Enter Reference ID below to see status</p>
-
-                <form onSubmit={handleTrackerSubmit} className="space-y-4">
-                  <div className="space-y-1 flex flex-col text-left">
-                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider font-sans">Reference Key *</label>
-                    <input
-                      type="text"
-                      required
-                      value={trackerRefId}
-                      onChange={(e) => setTrackerRefId(e.target.value)}
-                      placeholder="e.g. MTS-TF-839274"
-                      className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-1 focus:ring-green-600 outline-none text-xs font-bold text-black placeholder-stone-400 uppercase font-sans"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1 flex flex-col text-left">
-                      <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider font-sans">Human Security CAPTCHA *</label>
-                      <input
-                        type="text"
-                        required
-                        value={captchaInput}
-                        onChange={(e) => setCaptchaInput(e.target.value)}
-                        placeholder="Verify code here..."
-                        className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-1 focus:ring-green-600 outline-none text-xs font-bold text-black placeholder-stone-400 uppercase font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1 flex flex-col text-left justify-end">
-                      <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider sm:mb-1 font-sans">CAPTCHA Indicator</label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="select-none font-mono text-lg font-black tracking-widest text-[#C2185B] bg-amber-50 py-2 px-5 rounded-xl border border-amber-200 italic shadow-inner relative overflow-hidden flex items-center justify-center min-w-[125px] h-11"
-                          style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.12)" }}
-                        >
-                          <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,rgba(194,24,91,0.08)_6px,rgba(194,24,91,0.08)_12px)] pointer-events-none" />
-                          <span className="relative z-10">{captchaCode}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={generateCaptcha}
-                          title="Generate New Code"
-                          className="p-3 bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-850 rounded-xl transition-all h-11 flex items-center justify-center cursor-pointer"
-                        >
-                          <RefreshCw size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {trackerError && (
-                    <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-[10px] sm:text-xs font-bold text-red-705 uppercase tracking-wide flex items-start gap-2 leading-relaxed">
-                      <Info size={14} className="shrink-0 mt-0.5" />
-                      <span>{trackerError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={isTracking}
-                    className="w-full mt-2 py-4 bg-[#C2185B] hover:bg-[#a0134b] text-white font-black rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md select-none flex items-center justify-center gap-2 font-sans"
-                  >
-                    {isTracking ? (
-                      <>Searching Customer File... <Loader2 size={14} className="animate-spin" /></>
-                    ) : (
-                      <>Verify & Track Tiffin <Search size={14} /></>
-                    )}
-                  </button>
-                </form>
-              </motion.div>
-            ) : (
+          {false && (
+            <>
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -631,9 +536,287 @@ export default function TiffinService() {
                   </button>
                 </div>
               </motion.div>
-            )}
-          </div>
-        )}
+            </>
+          )}
+
+        <AnimatePresence>
+          {showTrackerModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-white rounded-[2rem] max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative border border-stone-200 shadow-2xl text-stone-900"
+              >
+                <button 
+                  onClick={() => {
+                    setShowTrackerModal(false);
+                    setTrackerResult(null);
+                    setTrackerRefId('');
+                    setCaptchaInput('');
+                    setTrackerError('');
+                  }}
+                  className="absolute top-6 right-6 p-2 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors text-stone-500 hover:text-stone-700 cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+
+                {!trackerResult ? (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <h3 className="text-xl font-black text-[#C2185B] uppercase mb-1 font-sans">Mithila Live Tiffin Tracker</h3>
+                      <p className="text-xs text-stone-400 font-bold uppercase font-sans">Enter Reference ID below to see status</p>
+                    </div>
+
+                    <form onSubmit={handleTrackerSubmit} className="space-y-4">
+                      <div className="space-y-1 flex flex-col text-left">
+                        <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider font-sans">Reference Key *</label>
+                        <input
+                          type="text"
+                          required
+                          value={trackerRefId}
+                          onChange={(e) => setTrackerRefId(e.target.value)}
+                          placeholder="e.g. MTS-TF-839274"
+                          className="w-full px-4 py-3 bg-white border border-stone-200 hover:border-stone-300 rounded-xl outline-none text-xs font-bold text-black placeholder-stone-400"
+                        />
+                      </div>
+
+                      <div className="bg-stone-50 border border-stone-200 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 items-end">
+                        <div className="space-y-1 flex flex-col text-left flex-1">
+                          <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider font-sans">Human Security CAPTCHA *</label>
+                          <input
+                            type="text"
+                            required
+                            value={captchaInput}
+                            onChange={(e) => setCaptchaInput(e.target.value)}
+                            placeholder="Verify visually..."
+                            className="w-full px-4 py-3 bg-white border border-stone-200 hover:border-stone-300 rounded-xl outline-none text-xs font-bold text-black placeholder-stone-450 font-mono uppercase"
+                          />
+                        </div>
+
+                        <div className="flex flex-col text-left font-sans">
+                          <label className="text-[10px] font-black text-stone-400 uppercase tracking-wider sm:mb-1">CAPTCHA Indicator</label>
+                          <div className="flex items-center gap-1.5">
+                            <div className="select-none font-mono text-lg font-black tracking-widest text-[#C2185B] bg-amber-50 py-2 px-5 rounded-xl border border-amber-200 italic shadow-inner relative overflow-hidden flex items-center justify-center min-w-[125px] h-11">
+                              {captchaCode}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={generateCaptcha}
+                              className="p-3 bg-stone-100 hover:bg-stone-200 rounded-xl transition text-stone-600 hover:text-[#C2185B] cursor-pointer"
+                              title="Refresh visual Captcha code"
+                            >
+                              <RefreshCw size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {trackerError && (
+                        <div className="p-3.5 bg-red-55 border border-red-200 rounded-xl text-[10px] sm:text-xs font-semibold text-red-600 uppercase tracking-wide flex items-center gap-2 leading-relaxed">
+                          <span>{trackerError}</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={isTracking}
+                        className="w-full mt-2 py-4 bg-[#C2185B] hover:bg-[#a0134b] text-white font-black rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md select-none flex items-center justify-center gap-2 font-sans"
+                      >
+                        {isTracking ? (
+                          <>Searching Customer File... <Loader2 size={14} className="animate-spin" /></>
+                        ) : (
+                          <>Verify & Track Tiffin <Search size={14} /></>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-stone-100 pb-5 text-left">
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-[#C2185B] tracking-widest block mb-1 font-sans">Mithila Customer Panel (Read Only)</span>
+                        <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight font-sans">{trackerResult.name}</h3>
+                        <p className="text-xs text-stone-400 font-bold font-mono mt-0.5">ID: {trackerResult.referenceId}</p>
+                      </div>
+                      <span className={`text-xs font-black uppercase px-3 py-1.5 rounded-full border ${
+                        trackerResult.status === 'Active' 
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : trackerResult.status === 'Paused'
+                          ? 'bg-amber-50 text-amber-800 border-amber-150'
+                          : 'bg-rose-50 text-[#C2185B] border-rose-150'
+                      }`}>
+                        {trackerResult.status} Status
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left font-sans text-xs">
+                      <div className="bg-stone-50 border border-stone-150 p-4 rounded-2xl text-[11px] sm:text-xs space-y-2 text-stone-600 leading-relaxed font-semibold">
+                        <p className="font-sans">☎ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Primary Mobile:</strong> {trackerResult.phone}</p>
+                        {trackerResult.email && <p className="truncate font-sans font-semibold">✉ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Email Address:</strong> {trackerResult.email}</p>}
+                        <p className="font-sans">📍 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Delivery Address:</strong> {trackerResult.address}</p>
+                        <p className="font-sans font-semibold">🥬 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Plan Preference:</strong> {trackerResult.preference === 'Veg' ? 'Vegetarian Meals (Pure Veg)' : 'Non-Vegetarian Meals (Fish & Curry styled)'}</p>
+                      </div>
+
+                      <div className="bg-stone-50 border border-stone-150 p-4 rounded-2xl text-[11px] sm:text-xs space-y-2 text-stone-600 leading-relaxed font-semibold font-sans">
+                        <p className="font-sans">📅 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Registered Date:</strong> {trackerResult.createdAt ? new Date(trackerResult.createdAt).toLocaleDateString() : 'N/A'}</p>
+                        <p className="font-sans font-semibold">💎 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Plan Name:</strong> {trackerResult.planName || (trackerResult.preference === 'Veg' ? 'Pure Veg Tiffin Plan' : 'Non-Veg Tiffin Plan')}</p>
+                        <p className="font-sans">💰 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Amount Paid:</strong> ₹{trackerResult.monthlyPrice}</p>
+                        <p className="text-stone-900 font-sans font-semibold">⚖ <strong className="uppercase text-[9px] tracking-wider font-extrabold text-stone-900 font-sans">Remaining Balance:</strong> <strong className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-150 font-bold">₹{trackerResult.balanceAmount}</strong></p>
+                        {trackerResult.activatedAt ? (
+                          <p className="font-sans font-semibold">✨ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Activation Date:</strong> {new Date(trackerResult.activatedAt).toLocaleDateString()}</p>
+                        ) : (
+                          trackerResult.createdAt && <p className="font-sans font-semibold">✨ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans font-sans">Activation Date:</strong> {new Date(trackerResult.createdAt).toLocaleDateString()}</p>
+                        )}
+                        <p className="font-sans font-semibold">🕒 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Last Updated Date:</strong> {trackerResult.activatedAt ? new Date(trackerResult.activatedAt).toLocaleDateString() : trackerResult.createdAt ? new Date(trackerResult.createdAt).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    {/* Stepper tracking progress timeline */}
+                    <div className="border-t border-stone-100 pt-6 space-y-5 text-left font-sans">
+                      <h4 className="text-xs font-black uppercase text-stone-400 tracking-wider font-sans">Operational Tracking Stepper (Live status)</h4>
+                      
+                      <div className="relative pl-6 space-y-6 border-l-2 border-stone-200">
+                        {/* STEP 1 */}
+                        <div className="relative font-sans">
+                          <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                            <Check size={10} className="font-black" />
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Client Registration Logged</h5>
+                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Reference credentials and profile registered in database.</p>
+                          </div>
+                        </div>
+
+                        {/* STEP 2 */}
+                        <div className="relative">
+                          {trackerResult.status !== 'Registered' ? (
+                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                              <Check size={10} className="font-black" />
+                            </div>
+                          ) : (
+                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                          )}
+                          <div>
+                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Service Activation Status</h5>
+                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">
+                              {trackerResult.status !== 'Registered' 
+                                ? 'Subscription verified and service scheduled/operational.' 
+                                : 'Awaiting administrator activation process.'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* STEP 3 */}
+                        <div className="relative">
+                          {['Preparing', 'Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
+                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                              <Check size={10} className="font-black" />
+                            </div>
+                          ) : trackerResult.todayDeliveryStatus === 'Not Started' && trackerResult.status === 'Active' ? (
+                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                          ) : (
+                            <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                          )}
+                          <div>
+                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Daily Meal Kitchen Prep</h5>
+                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Chef packaging of hot pure home-cooked recipes styled to your details.</p>
+                          </div>
+                        </div>
+
+                        {/* STEP 4 */}
+                        <div className="relative font-sans">
+                          {['Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
+                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                              <Check size={10} className="font-black" />
+                            </div>
+                          ) : trackerResult.todayDeliveryStatus === 'Preparing' && trackerResult.status === 'Active' ? (
+                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                          ) : (
+                            <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                          )}
+                          <div>
+                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Out For Daily Delivery Flow</h5>
+                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Tiffin carrier dispatched to destination doorstep.</p>
+                          </div>
+                        </div>
+
+                        {/* STEP 5 */}
+                        <div className="relative font-sans">
+                          {trackerResult.todayDeliveryStatus === 'Delivered' && trackerResult.status === 'Active' ? (
+                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                              <Check size={10} className="font-black" />
+                            </div>
+                          ) : trackerResult.todayDeliveryStatus === 'Out For Delivery' && trackerResult.status === 'Active' ? (
+                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                          ) : (
+                            <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                          )}
+                          <div>
+                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Doorstep Service Complete</h5>
+                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Nutritious hot food handed over successfully.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4 font-sans">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!trackerResult.referenceId) return;
+                          setIsTracking(true);
+                          try {
+                            const directRef = doc(db, 'tiffinCustomers', trackerResult.referenceId);
+                            const snap = await getDoc(directRef);
+                            if (snap.exists()) {
+                              setTrackerResult({ id: snap.id, ...snap.data() });
+                            } else {
+                              const q = query(
+                                collection(db, 'tiffinCustomers'),
+                                where('referenceId', '==', trackerResult.referenceId)
+                              );
+                              const querySnap = await getDocs(q);
+                              if (!querySnap.empty) {
+                                setTrackerResult({ id: querySnap.docs[0].id, ...querySnap.docs[0].data() });
+                              }
+                            }
+                          } catch (e) {
+                            console.error(e);
+                          } finally {
+                            setIsTracking(false);
+                          }
+                        }}
+                        disabled={isTracking}
+                        className="w-1/2 py-3 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 select-none h-11 cursor-pointer font-sans"
+                      >
+                        <RefreshCw size={12} className={isTracking ? "animate-spin" : ""} /> Refresh Live Status
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTrackerResult(null);
+                          setTrackerRefId('');
+                          setCaptchaInput('');
+                          generateCaptcha();
+                        }}
+                        className="w-1/2 py-3 bg-stone-900 hover:bg-black text-white text-xs font-bold rounded-xl transition select-none h-11 cursor-pointer font-sans"
+                      >
+                        Track another number
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {showBooking && (
