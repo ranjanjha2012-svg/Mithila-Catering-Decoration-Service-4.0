@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, collection } from 'firebase/firestore';
 import { CheckCircle2, Send, Calendar, MapPin, Phone, ShoppingBag, Loader2 } from 'lucide-react';
 import { db, auth, logUserActivity, OperationType, handleFirestoreError } from './lib/firebase';
 import CateringRoot from './components/CateringRoot';
@@ -57,6 +57,49 @@ function PaymentSuccessScreen() {
           updatedOrderData = { ...orderData, status: 'Placed', paymentStatus: 'Paid' };
           // Refresh order status in state
           setOrder(updatedOrderData);
+        }
+
+        // Handle automated Tiffin service database creation on payment validation
+        if (updatedOrderData.isTiffinOrder === true) {
+          const tiffinOrderRef = doc(db, 'tiffinOrders', orderId);
+          const tiffinOrderSnap = await getDoc(tiffinOrderRef);
+          if (!tiffinOrderSnap.exists()) {
+            const randomDigits = Math.floor(100000 + Math.random() * 900000);
+            const refId = `MTS-TF-${randomDigits}`;
+
+            await setDoc(tiffinOrderRef, {
+              id: orderId,
+              orderId: orderId,
+              userId: updatedOrderData.userId || '',
+              customerName: updatedOrderData.customerName || 'Customer',
+              phone: updatedOrderData.customerPhone || updatedOrderData.userPhone || '',
+              address: updatedOrderData.address || '',
+              plan: updatedOrderData.items?.[0]?.name || 'Tiffin Subscription',
+              amount: updatedOrderData.totalAmount || 0,
+              orderDate: updatedOrderData.orderDate || new Date().toISOString().split('T')[0],
+              createdAt: updatedOrderData.createdAt || new Date().toISOString(),
+              referenceId: refId
+            });
+
+            const prefStr = (updatedOrderData.items?.[0]?.name || '').toLowerCase().includes('non') ? 'Non-Veg' : 'Veg';
+            await setDoc(doc(db, 'tiffinCustomers', refId), {
+              referenceId: refId,
+              name: updatedOrderData.customerName || 'Customer',
+              phone: updatedOrderData.customerPhone || updatedOrderData.userPhone || '',
+              email: updatedOrderData.customerEmail || '',
+              address: updatedOrderData.address || '',
+              preference: prefStr,
+              monthlyPrice: Number(updatedOrderData.totalAmount) || 0,
+              balanceAmount: 0,
+              status: 'Active',
+              createdAt: new Date().toISOString(),
+              todayDeliveryStatus: 'Not Started',
+              nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+              userId: updatedOrderData.userId || '',
+              orderId: orderId,
+              planName: updatedOrderData.items?.[0]?.name || 'Tiffin Subscription'
+            });
+          }
         }
 
         // Send Formspree email notification for successful Online Payment placement

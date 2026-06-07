@@ -38,6 +38,11 @@ export default function ProfilePage() {
   const [pastOrders, setPastOrders] = useState<FirestoreOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
+  // Tiffin history and tracker states
+  const [tiffinOrders, setTiffinOrders] = useState<any[]>([]);
+  const [tiffinCustomer, setTiffinCustomer] = useState<any | null>(null);
+  const [loadingTiffin, setLoadingTiffin] = useState(false);
+
   // Profile Edit Mode
   const [isEditing, setIsEditing] = useState(false);
 
@@ -58,6 +63,7 @@ export default function ProfilePage() {
   });
 
   const ordersUnsubscribeRef = React.useRef<(() => void) | null>(null);
+  const tiffinUnsubRef = React.useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -72,6 +78,7 @@ export default function ProfilePage() {
         setUser(currentUser);
         await fetchUserProfile(currentUser);
         fetchUserOrders(currentUser.uid);
+        fetchUserTiffinData(currentUser.uid);
       } else {
         // If not logged in, boot back to main website
         setUser(null);
@@ -84,6 +91,9 @@ export default function ProfilePage() {
       unsubscribe();
       if (ordersUnsubscribeRef.current) {
         ordersUnsubscribeRef.current();
+      }
+      if (tiffinUnsubRef.current) {
+        tiffinUnsubRef.current();
       }
     };
   }, []);
@@ -154,6 +164,43 @@ export default function ProfilePage() {
       console.error('Error fetching past orders:', err);
       setLoadingOrders(false);
     }
+  };
+
+  const fetchUserTiffinData = (userId: string) => {
+    setLoadingTiffin(true);
+    // Realtime query for tiffinOrders
+    const qOrders = query(collection(db, 'tiffinOrders'), where('userId', '==', userId));
+    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setTiffinOrders(list);
+    });
+
+    // Realtime query for active tiffinCustomers
+    const qCust = query(collection(db, 'tiffinCustomers'), where('userId', '==', userId));
+    const unsubCust = onSnapshot(qCust, (snapshot) => {
+      if (!snapshot.empty) {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          list.push({ id: doc.id, ...doc.data() });
+        });
+        setTiffinCustomer(list[0]);
+      } else {
+        setTiffinCustomer(null);
+      }
+      setLoadingTiffin(false);
+    }, (err) => {
+      console.error(err);
+      setLoadingTiffin(false);
+    });
+
+    tiffinUnsubRef.current = () => {
+      unsubOrders();
+      unsubCust();
+    };
   };
 
   // Levenshtein helper for spelling mistake solver in food search
@@ -602,6 +649,102 @@ export default function ProfilePage() {
               </a>
             </div>
           </motion.div>
+
+          {/* Tiffin Subscription History & Live Tracker section */}
+          <div className="mt-8 space-y-6">
+            <h3 className="text-xl font-black text-[#C2185B] tracking-tight">Mithila Tiffin Active Subscriptions</h3>
+            
+            {tiffinCustomer && (
+              <div className="bg-[#C2185B] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10" />
+                <div className="flex justify-between items-start border-b border-white/20 pb-4 mb-4">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-rose-200 tracking-wider block">Live Status Tracker</span>
+                    <h4 className="text-lg font-black tracking-tight mt-1">{tiffinCustomer.planName || 'Active Tiffin Plan'}</h4>
+                  </div>
+                  <span className="text-[10px] bg-white text-[#C2185B] font-black px-3 py-1 rounded-md uppercase">
+                    Ref ID: {tiffinCustomer.referenceId}
+                  </span>
+                </div>
+
+                {/* Sub Properties */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-black/10 rounded-2xl p-4 border border-white/5 text-xs mb-4">
+                  <div>
+                    <span className="text-rose-200 block text-[9px] uppercase font-black">Daily Status</span>
+                    <span className="font-extrabold text-sm text-yellow-300 mt-0.5 block">{tiffinCustomer.todayDeliveryStatus || 'Not Started'}</span>
+                  </div>
+                  <div>
+                    <span className="text-rose-200 block text-[9px] uppercase font-black">Subscription Status</span>
+                    <span className="font-extrabold text-sm text-white mt-0.5 block">{tiffinCustomer.status}</span>
+                  </div>
+                  <div>
+                    <span className="text-rose-200 block text-[9px] uppercase font-black">Next Delivery</span>
+                    <span className="font-extrabold text-sm text-white mt-0.5 block">{tiffinCustomer.nextDeliveryDate || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-rose-200 block text-[9px] uppercase font-black">Pending Balance</span>
+                    <span className="font-extrabold text-sm text-yellow-300 mt-0.5 block">₹{tiffinCustomer.balanceAmount || 0}</span>
+                  </div>
+                </div>
+
+                <div className="text-xs text-rose-100 flex flex-col gap-1 inline-block border-t border-white/10 pt-3 w-full font-bold">
+                  <p>📍 <strong>Delivery Address:</strong> {tiffinCustomer.address}</p>
+                  <p>🥦 <strong>Dietary:</strong> {tiffinCustomer.preference === 'Veg' ? 'Vegetarian Pure Delight' : 'Non-Vegetarian Curry Delicacy'}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Offline-registered customer prompt block */}
+            {!tiffinCustomer && (
+              <div className="bg-stone-50 border border-stone-200 rounded-3xl p-6 text-center space-y-4">
+                <HelpCircle className="mx-auto text-stone-400" size={32} />
+                <div>
+                  <h4 className="text-sm font-black text-stone-850">Connecting offline/verbal registrations?</h4>
+                  <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto font-bold">
+                    If you subscribed with us offline or have a Reference ID (format <code className="font-mono bg-stone-200 px-1 py-0.5 rounded font-black text-[#C2185B]">MTS-TF-XXXXXX</code>), you can view real-time tracking from our homepage tracker or ask customer support to link your registered account UID.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Tiffin orders purchased history list */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-black text-stone-405 uppercase tracking-widest">Tiffin Subscription Orders History ({tiffinOrders.length})</h4>
+              
+              {tiffinOrders.map((ord) => (
+                <div key={ord.id} className="bg-stone-50 border border-stone-200 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-stone-900">{ord.plan}</span>
+                      <span className="text-[10px] font-mono bg-stone-200 font-bold px-1.5 py-0.5 rounded text-stone-600">ID: {ord.id.toUpperCase()}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-stone-500 font-bold mt-1.5 font-mono">
+                      <span>Date: {ord.orderDate || ord.createdAt?.split('T')[0]}</span>
+                      <span>•</span>
+                      <span>Amount: ₹{ord.amount}</span>
+                      {ord.referenceId && (
+                        <>
+                          <span>•</span>
+                          <span className="text-[#C2185B]">Ref Key: {ord.referenceId}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] bg-emerald-600/10 border border-emerald-500/20 text-emerald-700 font-extrabold px-3 py-1 rounded-md uppercase">
+                    PAID SUCCESS
+                  </span>
+                </div>
+              ))}
+
+              {tiffinOrders.length === 0 && (
+                <div className="text-center py-8 bg-neutral-50/50 rounded-2xl border border-stone-150">
+                  <Clock className="mx-auto text-stone-350 mb-1" size={24} />
+                  <p className="text-[10px] uppercase font-black text-stone-400">No tiffin purchase tickets recorded yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

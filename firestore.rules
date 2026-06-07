@@ -85,5 +85,13 @@ service cloud.firestore {
       allow create: if isSignedIn() || isAdmin();
       allow update, delete: if isAdmin();
     }
+
+    // 6. Tiffin Orders collection
+    match /tiffinOrders/{orderId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
   }
 }

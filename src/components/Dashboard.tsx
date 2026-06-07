@@ -101,6 +101,146 @@ export interface TiffinCustomer {
   todayDeliveryStatus?: string;
 }
 
+interface TiffinCardProps {
+  key?: string;
+  customer: TiffinCustomer;
+  onUpdate: (id: string, fields: Partial<TiffinCustomer>) => any;
+}
+
+function TiffinCustomerCard({ customer, onUpdate }: TiffinCardProps) {
+  const [localPrice, setLocalPrice] = useState(customer.monthlyPrice);
+  const [localBalance, setLocalBalance] = useState(customer.balanceAmount);
+  const [localNextDate, setLocalNextDate] = useState(customer.nextDeliveryDate || '');
+  const [localTodayStatus, setLocalTodayStatus] = useState(customer.todayDeliveryStatus || 'Not Started');
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    setLocalPrice(customer.monthlyPrice);
+    setLocalBalance(customer.balanceAmount);
+    setLocalNextDate(customer.nextDeliveryDate || '');
+    setLocalTodayStatus(customer.todayDeliveryStatus || 'Not Started');
+  }, [customer]);
+
+  const handleUpdateClick = async () => {
+    setUpdating(true);
+    try {
+      await onUpdate(customer.id, {
+        monthlyPrice: Number(localPrice) || 0,
+        balanceAmount: Number(localBalance) || 0,
+        nextDeliveryDate: localNextDate,
+        todayDeliveryStatus: localTodayStatus as any
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleStatusChange = async (nextStatus: string) => {
+    await onUpdate(customer.id, { status: nextStatus as any });
+  };
+
+  return (
+    <div className="bg-stone-50 border border-stone-200 rounded-3xl p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow">
+      <div>
+        <div className="flex justify-between items-start gap-2 border-b border-stone-150 pb-3 mb-3">
+          <div>
+            <h5 className="font-extrabold text-stone-900 text-xs sm:text-sm">{customer.name}</h5>
+            <span className="font-mono text-[9px] font-bold text-stone-500 bg-stone-200 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+              {customer.referenceId}
+            </span>
+          </div>
+          <span className={`text-[8px] px-1.5 py-1 font-black rounded uppercase text-white ${
+            customer.preference === 'Veg' ? 'bg-green-600' : 'bg-[#C2185B]'
+          }`}>
+            {customer.preference}
+          </span>
+        </div>
+
+        <div className="text-xs text-stone-600 space-y-2 mb-4 leading-relaxed font-semibold">
+          <p>☎ <strong>Phone:</strong> {customer.phone}</p>
+          {customer.email && <p className="truncate">✉ <strong>Email:</strong> {customer.email}</p>}
+          <p className="line-clamp-2">📍 <strong>Address:</strong> {customer.address}</p>
+        </div>
+
+        {/* Action controllers */}
+        <div className="border-t border-stone-150 pt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-stone-400 uppercase">Plan Price</label>
+              <input
+                type="number"
+                value={localPrice}
+                onChange={(e) => setLocalPrice(Number(e.target.value))}
+                className="px-2 py-1.5 bg-white border border-stone-200 rounded-lg outline-none font-bold text-stone-850 focus:border-[#C2185B]"
+              />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-stone-400 uppercase">Balance Due</label>
+              <input
+                type="number"
+                value={localBalance}
+                onChange={(e) => setLocalBalance(Number(e.target.value))}
+                className="px-2 py-1.5 bg-white border border-stone-200 rounded-lg outline-none font-bold text-stone-850 focus:border-[#C2185B]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-stone-400 uppercase">Today Status</label>
+              <select
+                value={localTodayStatus}
+                onChange={(e) => setLocalTodayStatus(e.target.value)}
+                className="px-2 py-1.5 bg-white border border-stone-200 rounded-lg font-bold text-stone-850 cursor-pointer"
+              >
+                <option value="Not Started">Not Started</option>
+                <option value="Preparing">Preparing</option>
+                <option value="Out For Delivery">Out For Delivery</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-black text-stone-400 uppercase">Next Date</label>
+              <input
+                type="date"
+                value={localNextDate}
+                onChange={(e) => setLocalNextDate(e.target.value)}
+                className="px-2 py-1 bg-white border border-stone-200 rounded-lg outline-none font-bold text-stone-850 focus:border-[#C2185B]"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-0.5 text-xs font-semibold">
+            <label className="text-[8px] font-black text-stone-400 uppercase">Overall Tiffin Status</label>
+            <select
+              value={customer.status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="px-2 py-1.5 bg-[#C2185B] text-white rounded-lg font-extrabold cursor-pointer border-0 outline-none"
+            >
+              <option value="Registered" className="bg-white text-stone-800">Registered</option>
+              <option value="Active" className="bg-white text-stone-800">Active</option>
+              <option value="Preparing" className="bg-white text-stone-800">Preparing</option>
+              <option value="Out For Delivery" className="bg-white text-stone-800">Out For Delivery</option>
+              <option value="Delivered" className="bg-white text-stone-800">Delivered</option>
+              <option value="Paused" className="bg-white text-stone-800">Paused</option>
+              <option value="Cancelled" className="bg-white text-stone-800">Cancelled</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        disabled={updating}
+        onClick={handleUpdateClick}
+        className="w-full mt-4 py-2 bg-stone-900 text-white font-extrabold text-[9px] uppercase rounded-xl hover:bg-stone-850 tracking-wider shadow-xs transition-colors"
+      >
+        {updating ? "Saving Details..." : "Save Custom Properties"}
+      </button>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<'admin' | null>(null);
@@ -115,6 +255,7 @@ export default function Dashboard() {
 
   // Tiffin Service active management states
   const [tiffinCustomers, setTiffinCustomers] = useState<TiffinCustomer[]>([]);
+  const [tiffinOrders, setTiffinOrders] = useState<any[]>([]);
   const [tiffinSubTab, setTiffinSubTab] = useState<'registered' | 'active' | 'orders' | 'register'>('registered');
   const [tiffinForm, setTiffinForm] = useState({
     name: '',
@@ -151,6 +292,8 @@ export default function Dashboard() {
   });
 
   const ordersUnsubscribeRef = React.useRef<(() => void) | null>(null);
+  const tiffinCustomersUnsubRef = React.useRef<(() => void) | null>(null);
+  const tiffinOrdersUnsubRef = React.useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -181,6 +324,12 @@ export default function Dashboard() {
       unsubscribe();
       if (ordersUnsubscribeRef.current) {
         ordersUnsubscribeRef.current();
+      }
+      if (tiffinCustomersUnsubRef.current) {
+        tiffinCustomersUnsubRef.current();
+      }
+      if (tiffinOrdersUnsubRef.current) {
+        tiffinOrdersUnsubRef.current();
       }
     };
   }, []);
@@ -271,6 +420,61 @@ export default function Dashboard() {
       appsList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setApplications(appsList);
 
+      // Clean old listeners
+      if (tiffinCustomersUnsubRef.current) {
+        tiffinCustomersUnsubRef.current();
+      }
+      if (tiffinOrdersUnsubRef.current) {
+        tiffinOrdersUnsubRef.current();
+      }
+
+      // 4. Real-time Tiffin Customers
+      const unsubTiffinCust = onSnapshot(collection(db, 'tiffinCustomers'), (snapshot) => {
+        const list: TiffinCustomer[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          list.push({
+            id: doc.id,
+            referenceId: data.referenceId || '',
+            name: data.name || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            address: data.address || '',
+            preference: data.preference || 'Veg',
+            monthlyPrice: Number(data.monthlyPrice) || 0,
+            balanceAmount: Number(data.balanceAmount) || 0,
+            status: data.status || 'Active',
+            createdAt: data.createdAt || '',
+            userId: data.userId || '',
+            todayDeliveryStatus: data.todayDeliveryStatus || 'Not Started',
+            nextDeliveryDate: data.nextDeliveryDate || '',
+            planName: data.planName || ''
+          });
+        });
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setTiffinCustomers(list);
+      }, (error) => {
+        console.error("Real-time tiffinCustomers sync failed:", error);
+      });
+      tiffinCustomersUnsubRef.current = unsubTiffinCust;
+
+      // 5. Real-time Tiffin Orders
+      const unsubTiffinOrd = onSnapshot(collection(db, 'tiffinOrders'), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          list.push({
+            id: doc.id,
+            ...data
+          });
+        });
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setTiffinOrders(list);
+      }, (error) => {
+        console.error("Real-time tiffinOrders sync failed:", error);
+      });
+      tiffinOrdersUnsubRef.current = unsubTiffinOrd;
+
     } catch (error) {
       console.error("Error loading admin collections:", error);
     } finally {
@@ -341,6 +545,79 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Error updating order status:", err);
       alert("Failed to update status. Please try again.");
+    }
+  };
+
+  // Tiffin Customers Admin updates
+  const handleUpdateTiffinCustomer = async (customerId: string, fields: Partial<TiffinCustomer>) => {
+    try {
+      const customerRef = doc(db, 'tiffinCustomers', customerId);
+      await updateDoc(customerRef, fields);
+      alert("Successfully updated customer details!");
+    } catch (err) {
+      console.error("Error updating tiffin customer:", err);
+      alert("Failed to update: " + (err as Error).message);
+    }
+  };
+
+  // Generate reference ID MTS-TF-XXXXXX
+  const handleGenerateReferenceId = () => {
+    const randomDigits = Math.floor(100000 + Math.random() * 900000);
+    const generatedId = `MTS-TF-${randomDigits}`;
+    setTiffinForm(prev => ({ ...prev, referenceId: generatedId }));
+  };
+
+  // Copy reference ID to clipboard
+  const handleCopyId = () => {
+    if (tiffinForm.referenceId) {
+      navigator.clipboard.writeText(tiffinForm.referenceId);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    }
+  };
+
+  // Submit Register Tiffin Customer form
+  const handleRegisterTiffinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tiffinForm.referenceId) {
+      alert("Please generate a Reference ID first.");
+      return;
+    }
+    setRegisteringTiffin(true);
+    try {
+      const payload = {
+        referenceId: tiffinForm.referenceId,
+        name: tiffinForm.name,
+        phone: tiffinForm.phone,
+        email: tiffinForm.email || '',
+        address: tiffinForm.address,
+        preference: tiffinForm.preference,
+        monthlyPrice: Number(tiffinForm.monthlyPrice) || 0,
+        balanceAmount: Number(tiffinForm.balanceAmount) || 0,
+        status: 'Active',
+        createdAt: new Date().toISOString(),
+        todayDeliveryStatus: 'Not Started',
+        nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // tomorrow
+      };
+
+      await setDoc(doc(db, 'tiffinCustomers', tiffinForm.referenceId), payload);
+      alert("Tiffin Service Customer successfully registered and verified!");
+      // Reset form
+      setTiffinForm({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        preference: 'Veg',
+        monthlyPrice: '',
+        balanceAmount: '0',
+        referenceId: ''
+      });
+    } catch (err) {
+      console.error("Error registering tiffin customer:", err);
+      alert("Registration failed: " + (err as Error).message);
+    } finally {
+      setRegisteringTiffin(false);
     }
   };
 
@@ -533,6 +810,19 @@ export default function Dashboard() {
                 {orders.filter(o => (o as any).rating > 0).length > 0 && (
                   <span className="ml-auto w-5 h-5 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center text-[10px] font-black border border-yellow-200">
                     {orders.filter(o => (o as any).rating > 0).length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab('tiffin')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'tiffin' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
+              >
+                <Coffee size={16} />
+                <span>Tiffin Service</span>
+                {tiffinCustomers.length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-rose-100 text-rose-800 rounded-full flex items-center justify-center text-[10px] font-black border border-rose-200">
+                    {tiffinCustomers.length}
                   </span>
                 )}
               </button>
@@ -841,6 +1131,269 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* ===================== TIFFIN SERVICE MANAGEMENT SYSTEM ===================== */}
+              {activeTab === 'tiffin' && (
+                <div className="bg-white border border-stone-200/55 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-black text-[#C2185B] tracking-tight">Mithila Tiffin Administration</h3>
+                      <p className="text-xs text-stone-400 font-bold uppercase mt-1">Manage active subscribers, plans, status updates, and registrations</p>
+                    </div>
+                  </div>
+
+                  {/* Tiffin Subtab Selectors */}
+                  <div className="flex flex-wrap border-b border-stone-200 gap-4 mb-6 pb-0.5">
+                    <button
+                      onClick={() => setTiffinSubTab('registered')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        tiffinSubTab === 'registered' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Registered Customers ({tiffinCustomers.filter(c => c.status === 'Registered').length})
+                    </button>
+                    <button
+                      onClick={() => setTiffinSubTab('active')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        tiffinSubTab === 'active' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Active Tiffin Customers ({tiffinCustomers.filter(c => c.status !== 'Registered').length})
+                    </button>
+                    <button
+                      onClick={() => setTiffinSubTab('orders')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        tiffinSubTab === 'orders' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Tiffin Orders ({tiffinOrders.length})
+                    </button>
+                    <button
+                      onClick={() => setTiffinSubTab('register')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        tiffinSubTab === 'register' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Register Tiffin Service
+                    </button>
+                  </div>
+
+                  {/* SUBTAB CONTENTS */}
+                  {tiffinSubTab === 'registered' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {tiffinCustomers
+                        .filter(c => c.status === 'Registered')
+                        .map((cust) => (
+                          <TiffinCustomerCard key={cust.id} customer={cust} onUpdate={handleUpdateTiffinCustomer} />
+                        ))}
+                      {tiffinCustomers.filter(c => c.status === 'Registered').length === 0 && (
+                        <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
+                          <Users size={32} className="mx-auto text-stone-400 mb-2" />
+                          <p className="text-xs font-semibold text-stone-500">No Customers in Registered Status.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {tiffinSubTab === 'active' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {tiffinCustomers
+                        .filter(c => c.status !== 'Registered')
+                        .map((cust) => (
+                          <TiffinCustomerCard key={cust.id} customer={cust} onUpdate={handleUpdateTiffinCustomer} />
+                        ))}
+                      {tiffinCustomers.filter(c => c.status !== 'Registered').length === 0 && (
+                        <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
+                          <Users size={32} className="mx-auto text-stone-400 mb-2" />
+                          <p className="text-xs font-semibold text-stone-500">No Customers in active/operational stages.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {tiffinSubTab === 'orders' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {tiffinOrders.map((ord) => (
+                        <div key={ord.id} className="bg-[#C2185B] text-white rounded-3xl p-6 shadow-xl border border-rose-300/10 flex flex-col justify-between">
+                          <div>
+                            <div className="flex justify-between items-start border-b border-white/20 pb-4 mb-4">
+                              <div>
+                                <span className="text-[10px] font-black uppercase text-rose-200 tracking-wider block">Reference Ticket</span>
+                                <h4 className="text-xs font-black font-mono tracking-tight text-white mt-1">{ord.id.toUpperCase()}</h4>
+                              </div>
+                              <span className="text-[10px] bg-green-500 text-white font-extrabold px-2.5 py-1 rounded-md uppercase">
+                                PAID
+                              </span>
+                            </div>
+
+                            <div className="space-y-1 bg-black/10 rounded-2xl p-3.5 mb-4 border border-white/5 text-xs text-rose-50 leading-snug">
+                              <p className="text-sm font-black text-white">{ord.customerName}</p>
+                              <p className="font-mono text-yellow-300">☎ {ord.phone}</p>
+                              <p className="mt-1">📍 {ord.address}</p>
+                              {ord.referenceId && <p className="font-bold text-[10px] bg-white/10 text-white inline-block px-1.5 py-0.5 rounded mt-1">Ref ID: {ord.referenceId}</p>}
+                            </div>
+
+                            <div className="bg-black/10 rounded-2xl p-3.5 border border-white/5 space-y-1.5 text-xs mb-4">
+                              <div className="flex justify-between">
+                                <span className="text-rose-200">Plan Option</span>
+                                <span className="font-bold text-white">{ord.plan}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-rose-200">Amount Paid</span>
+                                <span className="font-bold text-yellow-300">₹{ord.amount}</span>
+                              </div>
+                              <div className="flex justify-between text-[10px] text-rose-300">
+                                <span>Purchase Date</span>
+                                <span>{ord.orderDate || ord.createdAt?.split('T')[0]}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {tiffinOrders.length === 0 && (
+                        <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
+                          <ShoppingBag size={32} className="mx-auto text-stone-400 mb-2" />
+                          <p className="text-xs font-semibold text-stone-500">No Online Tiffin Orders recorded yet.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {tiffinSubTab === 'register' && (
+                    <div className="bg-stone-50 rounded-[2rem] border border-stone-150 p-6 md:p-8 max-w-2xl mx-auto">
+                      <h4 className="text-lg font-black text-[#C2185B] uppercase mb-1">Establish New Subscriber</h4>
+                      <p className="text-xs text-stone-400 font-bold mb-6 uppercase">Save basic preferences and generate reference keys</p>
+
+                      <form onSubmit={handleRegisterTiffinSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1 flex flex-col">
+                            <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Full Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={tiffinForm.name}
+                              onChange={(e) => setTiffinForm(prev => ({ ...prev, name: e.target.value }))}
+                              placeholder="e.g. Ramesh Chandra Mishra"
+                              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850"
+                            />
+                          </div>
+
+                          <div className="space-y-1 flex flex-col">
+                            <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Mobile Number *</label>
+                            <input
+                              type="text"
+                              required
+                              value={tiffinForm.phone}
+                              onChange={(e) => setTiffinForm(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="e.g. +91900010002"
+                              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1 flex flex-col">
+                            <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Email (Optional)</label>
+                            <input
+                              type="email"
+                              value={tiffinForm.email}
+                              onChange={(e) => setTiffinForm(prev => ({ ...prev, email: e.target.value }))}
+                              placeholder="e.g. customer@gmail.com"
+                              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850"
+                            />
+                          </div>
+
+                          <div className="space-y-1 flex flex-col">
+                            <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Dietary Preference *</label>
+                            <select
+                              value={tiffinForm.preference}
+                              onChange={(e) => setTiffinForm(prev => ({ ...prev, preference: e.target.value as 'Veg' | 'Non-Veg' }))}
+                              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850 cursor-pointer"
+                            >
+                              <option value="Veg">Vegetarian (Mithila Pure Veg)</option>
+                              <option value="Non-Veg">Non-Vegetarian (Mithila Styled Fish/Curry)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 flex flex-col">
+                          <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Doorstep Address *</label>
+                          <textarea
+                            required
+                            rows={2}
+                            value={tiffinForm.address}
+                            onChange={(e) => setTiffinForm(prev => ({ ...prev, address: e.target.value }))}
+                            placeholder="Full home or office delivery address..."
+                            className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-semibold text-stone-850 resize-none"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1 flex flex-col">
+                            <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Monthly Subscription Price (₹) *</label>
+                            <input
+                              type="number"
+                              required
+                              value={tiffinForm.monthlyPrice}
+                              onChange={(e) => setTiffinForm(prev => ({ ...prev, monthlyPrice: e.target.value }))}
+                              placeholder="e.g. 2400"
+                              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850"
+                            />
+                          </div>
+
+                          <div className="space-y-1 flex flex-col">
+                            <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Starting Balance Amount (₹) *</label>
+                            <input
+                              type="number"
+                              required
+                              value={tiffinForm.balanceAmount}
+                              onChange={(e) => setTiffinForm(prev => ({ ...prev, balanceAmount: e.target.value }))}
+                              className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-[#C2185B]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-stone-200 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div>
+                            <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider block">Generated Reference ID</span>
+                            <span className="text-sm font-black font-mono text-[#C2185B] block mt-0.5 animate-pulse">
+                              {tiffinForm.referenceId || "No Reference Activated"}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleGenerateReferenceId}
+                            className="px-4 py-3 bg-[#C2185B] hover:bg-[#a0134b] text-white text-xs font-black rounded-lg transition-colors shadow-sm select-none"
+                          >
+                            Generate Reference ID
+                          </button>
+                        </div>
+
+                        {tiffinForm.referenceId && (
+                          <div className="flex justify-between gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={handleCopyId}
+                              className="px-4 py-2 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-lg border border-stone-250 transition-colors"
+                            >
+                              {copiedId ? "Copied ✓" : "Copy ID"}
+                            </button>
+
+                            <button
+                              type="submit"
+                              disabled={registeringTiffin}
+                              className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-black rounded-lg transition-all shadow-md inline-flex items-center gap-1.5"
+                            >
+                              {registeringTiffin ? "Activating..." : "Register Tiffin Customer"}
+                            </button>
+                          </div>
+                        )}
+                      </form>
+                    </div>
+                  )}
                 </div>
               )}
             </>
