@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { 
-  collection, query, getDocs, doc, updateDoc, addDoc, deleteDoc, where, orderBy, onSnapshot 
+  collection, query, getDocs, doc, updateDoc, addDoc, deleteDoc, where, orderBy, onSnapshot, setDoc 
 } from 'firebase/firestore';
 import { 
   User as UserIcon, Shield, LogOut, CheckCircle, Clock, Search, ListFilter,
   DollarSign, FileText, Settings, UserCheck, Calendar, MapPin, Sparkles, Send, Phone,
   Coffee, ChevronRight, Calculator, CheckSquare, Plus, Trash2, Mail, ShoppingBag, Layers,
-  Activity, Tag, ExternalLink, Loader2, X, Star
+  Activity, Tag, ExternalLink, Loader2, X, Star, Users
 } from 'lucide-react';
 
 interface Inquiry {
@@ -81,6 +81,26 @@ interface Application {
   createdAt: string;
 }
 
+export interface TiffinCustomer {
+  id: string;
+  referenceId: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address: string;
+  preference: 'Veg' | 'Non-Veg';
+  monthlyPrice: number;
+  balanceAmount: number;
+  status: 'Registered' | 'Active' | 'Preparing' | 'Out For Delivery' | 'Delivered' | 'Paused' | 'Cancelled';
+  createdAt: string;
+  userId?: string;
+  orderId?: string;
+  mealTimings?: string;
+  planName?: string;
+  nextDeliveryDate?: string;
+  todayDeliveryStatus?: string;
+}
+
 export default function Dashboard() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<'admin' | null>(null);
@@ -92,6 +112,22 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<JobPost[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loadingDb, setLoadingDb] = useState(false);
+
+  // Tiffin Service active management states
+  const [tiffinCustomers, setTiffinCustomers] = useState<TiffinCustomer[]>([]);
+  const [tiffinSubTab, setTiffinSubTab] = useState<'registered' | 'active' | 'orders' | 'register'>('registered');
+  const [tiffinForm, setTiffinForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    preference: 'Veg' as 'Veg' | 'Non-Veg',
+    monthlyPrice: '',
+    balanceAmount: '0',
+    referenceId: ''
+  });
+  const [registeringTiffin, setRegisteringTiffin] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
 
   // Filters and Builders state
   const [orderFilter, setOrderFilter] = useState<string>('All');

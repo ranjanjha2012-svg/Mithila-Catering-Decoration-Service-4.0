@@ -66,6 +66,24 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["jobId", "applicantId", "applicantName", "applicantPhone", "status"]
+    },
+    "TiffinCustomer": {
+      "title": "TiffinCustomer",
+      "description": "Tiffin service subscribers and active customers tracked by Reference ID",
+      "type": "object",
+      "properties": {
+        "referenceId": { "type": "string", "description": "MTS-TF-XXXXXX unique reference tracker" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "preference": { "type": "string", "enum": ["Veg", "Non-Veg"] },
+        "monthlyPrice": { "type": "integer" },
+        "balanceAmount": { "type": "integer" },
+        "status": { "type": "string", "enum": ["Registered", "Active", "Preparing", "Out For Delivery", "Delivered", "Paused", "Cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["referenceId", "name", "phone", "address", "preference", "monthlyPrice", "balanceAmount", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -84,6 +102,10 @@
     "/applications/{applicationId}": {
       "schema": "Application",
       "description": "Job applications submitted by applicants"
+    },
+    "/tiffinCustomers/{customerId}": {
+      "schema": "TiffinCustomer",
+      "description": "Subscribers for Mithila Tiffin service"
     }
   }
 }
