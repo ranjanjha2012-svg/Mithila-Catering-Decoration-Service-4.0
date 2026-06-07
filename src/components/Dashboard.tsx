@@ -394,6 +394,7 @@ export default function Dashboard() {
 
   // Activation Captcha Confirmation states
   const [activeActivationId, setActiveActivationId] = useState<string | null>(null);
+  const [orderActivationTarget, setOrderActivationTarget] = useState<any | null>(null);
   const [activationCaptchaInput, setActivationCaptchaInput] = useState('');
   const [activationError, setActivationError] = useState('');
 
@@ -507,45 +508,54 @@ export default function Dashboard() {
       ordersUnsubscribeRef.current = unsubscribeOrders;
 
       // 2. Fetch jobs posted by ONLY this admin
-      const jobsQuery = query(collection(db, 'jobs'), where('createdBy', '==', adminUid));
-      const jobsSnap = await getDocs(jobsQuery);
-      const jobsList: JobPost[] = [];
-      jobsSnap.forEach((doc) => {
-        const data = doc.data();
-        jobsList.push({
-          id: doc.id,
-          title: data.title || '',
-          description: data.description || '',
-          department: data.department || '',
-          salary: data.salary || '',
-          location: data.location || '',
-          requirements: data.requirements || [],
-          createdBy: data.createdBy || ''
+      // 2. Fetch jobs posted by ONLY this admin
+      try {
+        const jobsQuery = query(collection(db, 'jobs'), where('createdBy', '==', adminUid));
+        const jobsSnap = await getDocs(jobsQuery);
+        const jobsList: JobPost[] = [];
+        jobsSnap.forEach((doc) => {
+          const data = doc.data();
+          jobsList.push({
+            id: doc.id,
+            title: data.title || '',
+            description: data.description || '',
+            department: data.department || '',
+            salary: data.salary || '',
+            location: data.location || '',
+            requirements: data.requirements || [],
+            createdBy: data.createdBy || ''
+          });
         });
-      });
-      setJobs(jobsList);
+        setJobs(jobsList);
+      } catch (err) {
+        console.error("Failed to load admin jobs:", err);
+      }
 
       // 3. Fetch all job candidate submissions
-      const appsSnap = await getDocs(collection(db, 'applications'));
-      const appsList: Application[] = [];
-      appsSnap.forEach((doc) => {
-        const data = doc.data();
-        appsList.push({
-          id: doc.id,
-          jobId: data.jobId || '',
-          jobTitle: data.jobTitle || '',
-          userId: data.userId || '',
-          applicantName: data.applicantName || '',
-          applicantEmail: data.applicantEmail || '',
-          applicantPhone: data.applicantPhone || '',
-          experience: data.experience || '',
-          coverLetter: data.coverLetter || '',
-          status: data.status || 'Pending',
-          createdAt: data.createdAt || ''
+      try {
+        const appsSnap = await getDocs(collection(db, 'applications'));
+        const appsList: Application[] = [];
+        appsSnap.forEach((doc) => {
+          const data = doc.data();
+          appsList.push({
+            id: doc.id,
+            jobId: data.jobId || '',
+            jobTitle: data.jobTitle || '',
+            userId: data.userId || '',
+            applicantName: data.applicantName || '',
+            applicantEmail: data.applicantEmail || '',
+            applicantPhone: data.applicantPhone || '',
+            experience: data.experience || '',
+            coverLetter: data.coverLetter || '',
+            status: data.status || 'Pending',
+            createdAt: data.createdAt || ''
+          });
         });
-      });
-      appsList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setApplications(appsList);
+        appsList.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setApplications(appsList);
+      } catch (err) {
+        console.error("Failed to load application submissions:", err);
+      }
 
       // Clean old listeners
       if (tiffinCustomersUnsubRef.current) {
@@ -579,7 +589,9 @@ export default function Dashboard() {
           });
         });
         list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        setTiffinCustomers(list);
+        const customers = list;
+        console.log("Loaded Customers:", customers.length);
+        setTiffinCustomers(customers);
       }, (error) => {
         console.error("Real-time tiffinCustomers sync failed:", error);
       });
@@ -592,11 +604,14 @@ export default function Dashboard() {
           const data = doc.data();
           list.push({
             id: doc.id,
+            status: data.status || 'Pending',
             ...data
           });
         });
         list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        setTiffinOrders(list);
+        const orders = list;
+        console.log("Loaded Tiffin Orders:", orders.length);
+        setTiffinOrders(orders);
       }, (error) => {
         console.error("Real-time tiffinOrders sync failed:", error);
       });
@@ -1287,7 +1302,7 @@ export default function Dashboard() {
                         tiffinSubTab === 'active' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
                       }`}
                     >
-                      Active Tiffin Customers ({tiffinCustomers.filter(c => c.status !== 'Registered').length})
+                      Active Tiffin Customers ({tiffinCustomers.filter(c => c.status === 'Active').length})
                     </button>
                     <button
                       onClick={() => setTiffinSubTab('orders')}
@@ -1295,7 +1310,7 @@ export default function Dashboard() {
                         tiffinSubTab === 'orders' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
                       }`}
                     >
-                      Tiffin Orders ({tiffinOrders.length})
+                      Tiffin Orders ({tiffinOrders.filter(o => o.status !== 'Active').length})
                     </button>
                     <button
                       onClick={() => setTiffinSubTab('register')}
@@ -1332,7 +1347,7 @@ export default function Dashboard() {
                   {tiffinSubTab === 'active' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {tiffinCustomers
-                        .filter(c => c.status !== 'Registered')
+                        .filter(c => c.status === 'Active')
                         .map((cust) => (
                           <TiffinCustomerCard 
                             key={cust.id} 
@@ -1341,10 +1356,10 @@ export default function Dashboard() {
                             onActivateTrigger={setActiveActivationId} 
                           />
                         ))}
-                      {tiffinCustomers.filter(c => c.status !== 'Registered').length === 0 && (
+                      {tiffinCustomers.filter(c => c.status === 'Active').length === 0 && (
                         <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
                           <Users size={32} className="mx-auto text-stone-400 mb-2" />
-                          <p className="text-xs font-semibold text-stone-500">No Customers in active/operational stages.</p>
+                          <p className="text-xs font-semibold text-stone-500">No Customers in Active status.</p>
                         </div>
                       )}
                     </div>
@@ -1352,44 +1367,53 @@ export default function Dashboard() {
 
                   {tiffinSubTab === 'orders' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {tiffinOrders.map((ord) => (
-                        <div key={ord.id} className="bg-[#C2185B] text-white rounded-3xl p-6 shadow-xl border border-rose-300/10 flex flex-col justify-between">
-                          <div>
-                            <div className="flex justify-between items-start border-b border-white/20 pb-4 mb-4">
-                              <div>
-                                <span className="text-[10px] font-black uppercase text-rose-200 tracking-wider block">Reference Ticket</span>
-                                <h4 className="text-xs font-black font-mono tracking-tight text-white mt-1">{ord.id.toUpperCase()}</h4>
+                      {tiffinOrders
+                        .filter(ord => ord.status !== 'Active')
+                        .map((ord) => (
+                          <div key={ord.id} className="bg-[#C2185B] text-white rounded-3xl p-6 shadow-xl border border-rose-300/10 flex flex-col justify-between">
+                            <div>
+                              <div className="flex justify-between items-start border-b border-white/20 pb-4 mb-4">
+                                <div>
+                                  <span className="text-[10px] font-black uppercase text-rose-200 tracking-wider block">Reference Ticket</span>
+                                  <h4 className="text-xs font-black font-mono tracking-tight text-white mt-1">{ord.id.toUpperCase()}</h4>
+                                </div>
+                                <span className="text-[10px] bg-green-500 text-white font-extrabold px-2.5 py-1 rounded-md uppercase">
+                                  PAID
+                                </span>
                               </div>
-                              <span className="text-[10px] bg-green-500 text-white font-extrabold px-2.5 py-1 rounded-md uppercase">
-                                PAID
-                              </span>
-                            </div>
 
-                            <div className="space-y-1 bg-black/10 rounded-2xl p-3.5 mb-4 border border-white/5 text-xs text-rose-50 leading-snug">
-                              <p className="text-sm font-black text-white">{ord.customerName}</p>
-                              <p className="font-mono text-yellow-300">☎ {ord.phone}</p>
-                              <p className="mt-1">📍 {ord.address}</p>
-                              {ord.referenceId && <p className="font-bold text-[10px] bg-white/10 text-white inline-block px-1.5 py-0.5 rounded mt-1">Ref ID: {ord.referenceId}</p>}
-                            </div>
+                              <div className="space-y-1 bg-black/10 rounded-2xl p-3.5 mb-4 border border-white/5 text-xs text-rose-50 leading-snug">
+                                <p className="text-sm font-black text-white">{ord.customerName}</p>
+                                <p className="font-mono text-yellow-300">☎ {ord.phone}</p>
+                                <p className="mt-1">📍 {ord.address}</p>
+                                {ord.referenceId && <p className="font-bold text-[10px] bg-white/10 text-white inline-block px-1.5 py-0.5 rounded mt-1">Ref ID: {ord.referenceId}</p>}
+                              </div>
 
-                            <div className="bg-black/10 rounded-2xl p-3.5 border border-white/5 space-y-1.5 text-xs mb-4">
-                              <div className="flex justify-between">
-                                <span className="text-rose-200">Plan Option</span>
-                                <span className="font-bold text-white">{ord.plan}</span>
+                              <div className="bg-black/10 rounded-2xl p-3.5 border border-white/5 space-y-1.5 text-xs mb-4">
+                                <div className="flex justify-between">
+                                  <span className="text-rose-200">Plan Option</span>
+                                  <span className="font-bold text-white">{ord.plan}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-rose-200">Amount Paid</span>
+                                  <span className="font-bold text-yellow-300">₹{ord.amount}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] text-rose-300">
+                                  <span>Purchase Date</span>
+                                  <span>{ord.orderDate || ord.createdAt?.split('T')[0]}</span>
+                                </div>
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-rose-200">Amount Paid</span>
-                                <span className="font-bold text-yellow-300">₹{ord.amount}</span>
-                              </div>
-                              <div className="flex justify-between text-[10px] text-rose-300">
-                                <span>Purchase Date</span>
-                                <span>{ord.orderDate || ord.createdAt?.split('T')[0]}</span>
-                              </div>
+
+                              <button
+                                onClick={() => setOrderActivationTarget(ord)}
+                                className="mt-2 w-full py-2.5 bg-yellow-450 hover:bg-yellow-500 text-rose-950 text-xs font-black rounded-xl transition uppercase tracking-wider text-center select-none cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                Activate Subscription
+                              </button>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                      {tiffinOrders.length === 0 && (
+                        ))}
+                      {tiffinOrders.filter(ord => ord.status !== 'Active').length === 0 && (
                         <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
                           <ShoppingBag size={32} className="mx-auto text-stone-400 mb-2" />
                           <p className="text-xs font-semibold text-stone-500">No Online Tiffin Orders recorded yet.</p>
@@ -1736,6 +1760,115 @@ export default function Dashboard() {
                   className="w-1/2 py-2.5 bg-[#C2185B] hover:bg-[#a0134b] text-white text-xs font-black rounded-lg transition shadow-sm uppercase tracking-wider"
                 >
                   ACTIVATE NOW
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tiffin Order Activation Captcha Confirmation Modal */}
+      {orderActivationTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-[2rem] border border-stone-200 max-w-sm w-full p-6 text-stone-900 shadow-2xl relative">
+            <button 
+              onClick={() => {
+                setOrderActivationTarget(null);
+                setActivationCaptchaInput('');
+                setActivationError('');
+              }}
+              className="absolute top-5 right-5 p-1.5 hover:bg-stone-100 rounded-full text-stone-400 hover:text-stone-700 transition"
+            >
+              <X size={18} />
+            </button>
+            <h3 className="text-base font-black text-[#C2185B] uppercase tracking-wide mb-1 flex items-center gap-1.5">
+              <span>Activate Order Subscription</span>
+            </h3>
+            <p className="text-[11px] text-stone-500 font-bold uppercase tracking-wide leading-relaxed mb-4">
+              Type <span className="text-black font-extrabold pr-0.5">ACTIVATE</span> to verify process
+            </p>
+
+            <div className="bg-stone-50 border border-stone-150 p-4 rounded-xl text-center mb-4">
+              <span className="font-mono text-[11px] font-black tracking-widest text-[#C2185B] bg-yellow-100 px-3 py-1 rounded border border-yellow-250 uppercase select-none">
+                ACTIVATE
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={activationCaptchaInput}
+                onChange={(e) => setActivationCaptchaInput(e.target.value)}
+                placeholder="Type ACTIVATE here..."
+                className="w-full px-4 py-2.5 border border-stone-200 rounded-xl outline-none focus:ring-1 focus:ring-[#C2185B] text-xs font-bold text-black placeholder-stone-500 uppercase"
+              />
+              {activationError && (
+                <p className="text-[10px] text-red-650 font-bold uppercase">{activationError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrderActivationTarget(null);
+                    setActivationCaptchaInput('');
+                    setActivationError('');
+                  }}
+                  className="w-1/2 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-black rounded-lg transition"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (activationCaptchaInput.trim() !== "ACTIVATE") {
+                      setActivationError("Code mismatch. Please type exactly 'ACTIVATE'.");
+                      return;
+                    }
+                    try {
+                      const ord = orderActivationTarget;
+                      const refId = ord.referenceId || `MTS-TF-${Math.floor(100000 + Math.random() * 900000)}`;
+                      
+                      // 1. Move to Active Tiffin Customers in tiffinCustomers
+                      const custRef = doc(db, 'tiffinCustomers', refId);
+                      const prefStr = (ord.plan || '').toLowerCase().includes('non') ? 'Non-Veg' : 'Veg';
+                      
+                      await setDoc(custRef, {
+                        referenceId: refId,
+                        name: ord.customerName || 'Customer',
+                        phone: ord.phone || '',
+                        email: ord.customerEmail || ord.email || '',
+                        address: ord.address || '',
+                        preference: prefStr,
+                        monthlyPrice: Number(ord.amount) || 0,
+                        balanceAmount: 0,
+                        status: 'Active',
+                        createdAt: ord.createdAt || new Date().toISOString(),
+                        activatedAt: new Date().toISOString(),
+                        todayDeliveryStatus: 'Not Started',
+                        nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+                        userId: ord.userId || '',
+                        orderId: ord.id,
+                        planName: ord.plan || 'Tiffin Subscription'
+                      }, { merge: true });
+
+                      // 2. Set status to Active in tiffinOrders
+                      const orderRef = doc(db, 'tiffinOrders', ord.id);
+                      await updateDoc(orderRef, {
+                        status: 'Active',
+                        activatedAt: new Date().toISOString()
+                      });
+
+                      alert("Tiffin subscription successfully activated! Customer is now an Active Tiffin Subscriber.");
+                      setOrderActivationTarget(null);
+                      setActivationCaptchaInput('');
+                      setActivationError('');
+                    } catch (err: any) {
+                      setActivationError("Error: " + err.message);
+                    }
+                  }}
+                  className="w-1/2 py-2.5 bg-[#C2185B] hover:bg-[#a0134b] text-white text-xs font-black rounded-lg transition shadow-sm uppercase tracking-wider"
+                >
+                  CONFIRM ACTIVATION
                 </button>
               </div>
             </div>
