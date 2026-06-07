@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Check, Info, CreditCard, Smartphone, Globe, ArrowRight, X, Loader2 } from 'lucide-react';
+import { Check, Info, CreditCard, Smartphone, Globe, ArrowRight, X, Loader2, RefreshCw, Search, Calendar, MapPin } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 
 interface TiffinPlan {
   id: string;
@@ -55,6 +55,31 @@ export default function TiffinService() {
   const [phone, setPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Tiffin Tracking system states
+  const [viewMode, setViewMode] = useState<'plans' | 'tracker'>('plans');
+  const [trackerRefId, setTrackerRefId] = useState('');
+  const [captchaCode, setCaptchaCode] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
+  const [isTracking, setIsTracking] = useState(false);
+  const [trackerError, setTrackerError] = useState('');
+  const [trackerResult, setTrackerResult] = useState<any | null>(null);
+
+  // Captcha Generator logic
+  const generateCaptcha = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+  };
+
+  useEffect(() => {
+    if (viewMode === 'tracker' && !captchaCode) {
+      generateCaptcha();
+    }
+  }, [viewMode]);
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -188,6 +213,57 @@ export default function TiffinService() {
     }
   };
 
+  const handleTrackerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTrackerError('');
+    setTrackerResult(null);
+
+    const inputCode = captchaInput.toUpperCase().trim();
+    if (inputCode !== captchaCode) {
+      setTrackerError("CAPTCHA verification failed. Please type exactly the character code matching visual indicator.");
+      generateCaptcha();
+      return;
+    }
+
+    const trimmedRefId = trackerRefId.trim();
+    if (!trimmedRefId) {
+      setTrackerError("Please enter a valid Reference ID.");
+      return;
+    }
+
+    setIsTracking(true);
+    try {
+      // Try direct ID lookup first
+      const directRef = doc(db, 'tiffinCustomers', trimmedRefId);
+      const directSnap = await getDoc(directRef);
+      if (directSnap.exists()) {
+        setTrackerResult({ id: directSnap.id, ...directSnap.data() });
+        setIsTracking(false);
+        return;
+      }
+
+      // Try referenceId field query second
+      const q = query(
+        collection(db, 'tiffinCustomers'),
+        where('referenceId', '==', trimmedRefId)
+      );
+      const querySnap = await getDocs(q);
+      if (!querySnap.empty) {
+        const firstDoc = querySnap.docs[0];
+        setTrackerResult({ id: firstDoc.id, ...firstDoc.data() });
+      } else {
+        setTrackerError(`No active Tiffin Service found for reference ID "${trimmedRefId}". Keep in mind IDs are formatted as MTS-TF-XXXXXX.`);
+        generateCaptcha();
+      }
+    } catch (err: any) {
+      console.error("Error tracking subscriber:", err);
+      setTrackerError("Failed to fetch tracking details: " + err.message);
+      generateCaptcha();
+    } finally {
+      setIsTracking(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#064e3b] pt-32 pb-20">
       <div className="container mx-auto px-4">
@@ -224,43 +300,340 @@ export default function TiffinService() {
           </motion.a>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, i) => (
-            <motion.div
-              key={plan.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 flex flex-col"
-            >
-              <div className="h-56 overflow-hidden relative">
-                <img src={plan.logo} alt={plan.name} className="w-full h-full object-cover transition-transform duration-500" />
-              </div>
-              <div className="p-8 flex-1 flex flex-col">
-                <h3 className="text-2xl font-black text-gray-900 mb-2">{plan.name}</h3>
-                <p className="text-gray-600 text-sm mb-6 flex-1">{plan.description}</p>
-                <div className="mb-8">
-                  <span className="text-4xl font-black text-green-700">₹{plan.price}</span>
-                  <span className="text-gray-400 text-sm ml-2">/ month</span>
-                </div>
-                <button
-                  onClick={() => {
-                    if (!auth.currentUser) {
-                      window.dispatchEvent(new CustomEvent('open-mithila-auth'));
-                      return;
-                    }
-                    setSelectedPlan(plan);
-                    setShowBooking(true);
-                    setStep(1);
-                  }}
-                  className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest cursor-pointer"
-                >
-                  Book Now
-                </button>
-              </div>
-            </motion.div>
-          ))}
+        {/* Premium Selection Tabs */}
+        <div className="flex justify-center mb-10 gap-4">
+          <button
+            onClick={() => {
+              setViewMode('plans');
+              setTrackerResult(null);
+              setTrackerError('');
+            }}
+            className={`px-5 py-2.5 rounded-xl font-black uppercase text-xs tracking-wider transition-all cursor-pointer shadow-md select-none ${
+              viewMode === 'plans'
+                ? 'bg-yellow-500 text-stone-950 border border-yellow-400'
+                : 'bg-green-800 hover:bg-green-750 text-green-100 border border-green-700'
+            }`}
+          >
+            Subscription Plans
+          </button>
+          <button
+            onClick={() => {
+              setViewMode('tracker');
+              generateCaptcha();
+            }}
+            className={`px-5 py-2.5 rounded-xl font-black uppercase text-xs tracking-wider transition-all cursor-pointer shadow-md select-none ${
+              viewMode === 'tracker'
+                ? 'bg-yellow-500 text-stone-950 border border-yellow-400'
+                : 'bg-green-800 hover:bg-green-750 text-green-100 border border-green-700'
+            }`}
+          >
+            Track Your Tiffin
+          </button>
         </div>
+
+        {/* 1. PLANS VIEW */}
+        {viewMode === 'plans' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {plans.map((plan, i) => (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 flex flex-col"
+              >
+                <div className="h-56 overflow-hidden relative">
+                  <img src={plan.logo} alt={plan.name} className="w-full h-full object-cover transition-transform duration-500" />
+                </div>
+                <div className="p-8 flex-1 flex flex-col">
+                  <h3 className="text-2xl font-black text-gray-900 mb-2">{plan.name} Plan</h3>
+                  <p className="text-gray-600 text-sm mb-6 flex-1">{plan.description}</p>
+                  <div className="mb-8">
+                    <span className="text-4xl font-black text-green-700">₹{plan.price}</span>
+                    <span className="text-gray-400 text-sm ml-2">/ month</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!auth.currentUser) {
+                        window.dispatchEvent(new CustomEvent('open-mithila-auth'));
+                        return;
+                      }
+                      setSelectedPlan(plan);
+                      setShowBooking(true);
+                      setStep(1);
+                    }}
+                    className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-black rounded-2xl shadow-lg hover:shadow-yellow-200 transition-all uppercase tracking-widest cursor-pointer"
+                  >
+                    Book Now
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* 2. DYNAMIC READ-ONLY TIFFIN TRACKER */}
+        {viewMode === 'tracker' && (
+          <div className="max-w-2xl mx-auto">
+            {!trackerResult ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-stone-200"
+              >
+                <h3 className="text-lg font-black text-[#C2185B] uppercase mb-1 font-sans">Mithila Live Tiffin Tracker</h3>
+                <p className="text-xs text-stone-400 font-bold uppercase mb-6 font-sans">Enter Reference ID below to see status</p>
+
+                <form onSubmit={handleTrackerSubmit} className="space-y-4">
+                  <div className="space-y-1 flex flex-col text-left">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider font-sans">Reference Key *</label>
+                    <input
+                      type="text"
+                      required
+                      value={trackerRefId}
+                      onChange={(e) => setTrackerRefId(e.target.value)}
+                      placeholder="e.g. MTS-TF-839274"
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-1 focus:ring-green-600 outline-none text-xs font-bold text-black placeholder-stone-400 uppercase font-sans"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1 flex flex-col text-left">
+                      <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider font-sans">Human Security CAPTCHA *</label>
+                      <input
+                        type="text"
+                        required
+                        value={captchaInput}
+                        onChange={(e) => setCaptchaInput(e.target.value)}
+                        placeholder="Verify code here..."
+                        className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-1 focus:ring-green-600 outline-none text-xs font-bold text-black placeholder-stone-400 uppercase font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1 flex flex-col text-left justify-end">
+                      <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider sm:mb-1 font-sans">CAPTCHA Indicator</label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="select-none font-mono text-lg font-black tracking-widest text-[#C2185B] bg-amber-50 py-2 px-5 rounded-xl border border-amber-200 italic shadow-inner relative overflow-hidden flex items-center justify-center min-w-[125px] h-11"
+                          style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.12)" }}
+                        >
+                          <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,rgba(194,24,91,0.08)_6px,rgba(194,24,91,0.08)_12px)] pointer-events-none" />
+                          <span className="relative z-10">{captchaCode}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={generateCaptcha}
+                          title="Generate New Code"
+                          className="p-3 bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-850 rounded-xl transition-all h-11 flex items-center justify-center cursor-pointer"
+                        >
+                          <RefreshCw size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {trackerError && (
+                    <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-[10px] sm:text-xs font-bold text-red-705 uppercase tracking-wide flex items-start gap-2 leading-relaxed">
+                      <Info size={14} className="shrink-0 mt-0.5" />
+                      <span>{trackerError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isTracking}
+                    className="w-full mt-2 py-4 bg-[#C2185B] hover:bg-[#a0134b] text-white font-black rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md select-none flex items-center justify-center gap-2 font-sans"
+                  >
+                    {isTracking ? (
+                      <>Searching Customer File... <Loader2 size={14} className="animate-spin" /></>
+                    ) : (
+                      <>Verify & Track Tiffin <Search size={14} /></>
+                    )}
+                  </button>
+                </form>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-[2rem] p-6 sm:p-8 space-y-6 text-stone-900 border border-stone-200 shadow-2xl relative overflow-hidden"
+              >
+                <div className="absolute right-0 top-0 w-32 h-32 bg-green-500/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
+                
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-stone-100 pb-5 text-left">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-[#C2185B] tracking-widest block mb-1 font-sans">Mithila Customer Panel (Read Only)</span>
+                    <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight font-sans">{trackerResult.name}</h3>
+                    <p className="text-xs text-stone-400 font-bold font-mono mt-0.5">ID: {trackerResult.referenceId}</p>
+                  </div>
+                  <span className={`text-xs font-black uppercase px-3 py-1.5 rounded-full border ${
+                    trackerResult.status === 'Active' 
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : trackerResult.status === 'Paused'
+                      ? 'bg-amber-50 text-amber-800 border-amber-150'
+                      : 'bg-rose-50 text-[#C2185B] border-rose-150'
+                  }`}>
+                    {trackerResult.status} Status
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left font-sans text-xs">
+                  <div className="bg-stone-50 border border-stone-150 p-4 rounded-2xl text-[11px] sm:text-xs space-y-2 text-stone-600 leading-relaxed font-semibold">
+                    <p className="font-sans">☎ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Primary Mobile:</strong> {trackerResult.phone}</p>
+                    {trackerResult.email && <p className="truncate font-sans">✉ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Email Address:</strong> {trackerResult.email}</p>}
+                    <p className="font-sans">📍 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Delivery Address:</strong> {trackerResult.address}</p>
+                    <p className="font-sans">🥬 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Plan Preference:</strong> {trackerResult.preference === 'Veg' ? 'Vegetarian Meals (Pure Veg)' : 'Non-Vegetarian Meals (Fish & Curry styled)'}</p>
+                  </div>
+
+                  <div className="bg-stone-50 border border-stone-150 p-4 rounded-2xl text-[11px] sm:text-xs space-y-2 text-stone-600 leading-relaxed font-semibold font-sans">
+                    <p className="font-sans">📅 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Registered Date:</strong> {trackerResult.createdAt ? new Date(trackerResult.createdAt).toLocaleDateString() : 'N/A'}</p>
+                    <p className="font-sans">💰 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Monthly subscription:</strong> ₹{trackerResult.monthlyPrice}</p>
+                    <p className="text-stone-900 font-sans font-sans">⚖ <strong className="uppercase text-[9px] tracking-wider font-extrabold text-stone-900 font-sans">Remaining Balance:</strong> <strong className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-150">₹{trackerResult.balanceAmount}</strong></p>
+                    {trackerResult.activatedAt && (
+                      <p className="font-sans">✨ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Activation Time:</strong> {new Date(trackerResult.activatedAt).toLocaleString()}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stepper tracking progress timeline */}
+                <div className="border-t border-stone-100 pt-6 space-y-5 text-left font-sans">
+                  <h4 className="text-xs font-black uppercase text-stone-400 tracking-wider font-sans">Operational Tracking Stepper (Live status)</h4>
+                  
+                  <div className="relative pl-6 space-y-6 border-l-2 border-stone-200">
+                    {/* STEP 1 */}
+                    <div className="relative font-sans">
+                      <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                        <Check size={10} className="font-black" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Client Registration Logged</h5>
+                        <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Reference credentials and profile registered in database.</p>
+                      </div>
+                    </div>
+
+                    {/* STEP 2 */}
+                    <div className="relative">
+                      {trackerResult.status !== 'Registered' ? (
+                        <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                          <Check size={10} className="font-black" />
+                        </div>
+                      ) : (
+                        <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                      )}
+                      <div>
+                        <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Service Activation Status</h5>
+                        <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">
+                          {trackerResult.status !== 'Registered' 
+                            ? 'Subscription verified and service scheduled/operational.' 
+                            : 'Awaiting administrator activation process.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* STEP 3 */}
+                    <div className="relative">
+                      {['Preparing', 'Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
+                        <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                          <Check size={10} className="font-black" />
+                        </div>
+                      ) : trackerResult.todayDeliveryStatus === 'Not Started' && trackerResult.status === 'Active' ? (
+                        <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                      ) : (
+                        <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                      )}
+                      <div>
+                        <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Daily Meal Kitchen Prep</h5>
+                        <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans font-sans">Chef packaging of hot pure home-cooked recipes styled to your details.</p>
+                      </div>
+                    </div>
+
+                    {/* STEP 4 */}
+                    <div className="relative font-sans">
+                      {['Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
+                        <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                          <Check size={10} className="font-black" />
+                        </div>
+                      ) : trackerResult.todayDeliveryStatus === 'Preparing' && trackerResult.status === 'Active' ? (
+                        <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                      ) : (
+                        <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                      )}
+                      <div>
+                        <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Out For Daily Delivery Flow</h5>
+                        <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Tiffin carrier dispatched to destination doorstep.</p>
+                      </div>
+                    </div>
+
+                    {/* STEP 5 */}
+                    <div className="relative font-sans">
+                      {trackerResult.todayDeliveryStatus === 'Delivered' && trackerResult.status === 'Active' ? (
+                        <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                          <Check size={10} className="font-black" />
+                        </div>
+                      ) : trackerResult.todayDeliveryStatus === 'Out For Delivery' && trackerResult.status === 'Active' ? (
+                        <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                      ) : (
+                        <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                      )}
+                      <div>
+                        <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Doorstep Service Complete</h5>
+                        <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Nutritious hot food handed over successfully.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2 font-sans">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!trackerResult.referenceId) return;
+                      setIsTracking(true);
+                      try {
+                        const directRef = doc(db, 'tiffinCustomers', trackerResult.referenceId);
+                        const snap = await getDoc(directRef);
+                        if (snap.exists()) {
+                          setTrackerResult({ id: snap.id, ...snap.data() });
+                        } else {
+                          // Try query fallback
+                          const q = query(
+                            collection(db, 'tiffinCustomers'),
+                            where('referenceId', '==', trackerResult.referenceId)
+                          );
+                          const querySnap = await getDocs(q);
+                          if (!querySnap.empty) {
+                            setTrackerResult({ id: querySnap.docs[0].id, ...querySnap.docs[0].data() });
+                          }
+                        }
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        setIsTracking(false);
+                      }
+                    }}
+                    disabled={isTracking}
+                    className="w-1/2 py-3 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 select-none h-11 cursor-pointer font-sans"
+                  >
+                    <RefreshCw size={12} className={isTracking ? "animate-spin" : ""} /> Refresh Live Status
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTrackerResult(null);
+                      setTrackerRefId('');
+                      setCaptchaInput('');
+                      generateCaptcha();
+                    }}
+                    className="w-1/2 py-3 bg-stone-900 hover:bg-black text-white text-xs font-bold rounded-xl transition select-none h-11 cursor-pointer font-sans"
+                  >
+                    Track another number
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        )}
 
         <AnimatePresence>
           {showBooking && (
