@@ -73,32 +73,70 @@ function PaymentSuccessScreen() {
               userId: updatedOrderData.userId || '',
               customerName: updatedOrderData.customerName || 'Customer',
               phone: updatedOrderData.customerPhone || updatedOrderData.userPhone || '',
+              customerEmail: updatedOrderData.customerEmail || '',
               address: updatedOrderData.address || '',
               plan: updatedOrderData.items?.[0]?.name || 'Tiffin Subscription',
               amount: updatedOrderData.totalAmount || 0,
               orderDate: updatedOrderData.orderDate || new Date().toISOString().split('T')[0],
               createdAt: updatedOrderData.createdAt || new Date().toISOString(),
-              referenceId: refId
+              referenceId: refId,
+              status: 'Pending Activation',
+              paymentStatus: 'Paid'
             });
 
-            const prefStr = (updatedOrderData.items?.[0]?.name || '').toLowerCase().includes('non') ? 'Non-Veg' : 'Veg';
-            await setDoc(doc(db, 'tiffinCustomers', refId), {
-              referenceId: refId,
-              name: updatedOrderData.customerName || 'Customer',
-              phone: updatedOrderData.customerPhone || updatedOrderData.userPhone || '',
-              email: updatedOrderData.customerEmail || '',
-              address: updatedOrderData.address || '',
-              preference: prefStr,
-              monthlyPrice: Number(updatedOrderData.totalAmount) || 0,
-              balanceAmount: 0,
-              status: 'Active',
-              createdAt: new Date().toISOString(),
-              todayDeliveryStatus: 'Not Started',
-              nextDeliveryDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-              userId: updatedOrderData.userId || '',
-              orderId: orderId,
-              planName: updatedOrderData.items?.[0]?.name || 'Tiffin Subscription'
-            });
+            // Update main orders document with Tiffin Reference ID and state
+            try {
+              const mainOrderRef = doc(db, 'orders', orderId);
+              await updateDoc(mainOrderRef, {
+                referenceId: refId,
+                tiffinReferenceId: refId,
+                tiffinStatus: 'Pending Activation'
+              });
+            } catch (upErr) {
+              console.error("Error updating parent order with reference ID:", upErr);
+            }
+
+            // Save Reference ID in customer profile
+            try {
+              const uId = updatedOrderData.userId;
+              if (uId) {
+                const userRef = doc(db, 'users', uId);
+                await updateDoc(userRef, {
+                  tiffinReferenceId: refId,
+                  tiffinStatus: 'Pending Activation'
+                });
+              }
+            } catch (uErr) {
+              console.error("Error updating customer profile with reference ID:", uErr);
+            }
+
+            // Trigger Tiffin Purchase Formspree and Gmail Email Notification
+            try {
+              await fetch('https://formspree.io/f/xwvjljzp', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                  subject: `NEW TIFFIN SUBSCRIPTION PURCHASE - Reference ID #${refId}`,
+                  customerName: updatedOrderData.customerName || 'Customer',
+                  phoneNumber: updatedOrderData.customerPhone || updatedOrderData.userPhone || 'N/A',
+                  email: updatedOrderData.customerEmail || 'N/A',
+                  address: updatedOrderData.address || 'N/A',
+                  planName: updatedOrderData.items?.[0]?.name || 'Tiffin Subscription',
+                  amountPaid: `₹${updatedOrderData.totalAmount || 0}`,
+                  paymentMethod: 'Pay Online',
+                  paymentStatus: 'Paid Successfully',
+                  purchaseDate: updatedOrderData.orderDate || new Date().toISOString().split('T')[0],
+                  purchaseTime: updatedOrderData.orderTime || new Date().toTimeString().split(' ')[0],
+                  generatedReferenceId: refId,
+                  recipient: 'mithilacateringservices@gmail.com'
+                })
+              });
+            } catch (emailErr) {
+              console.error("Error triggering Tiffin Purchase notification:", emailErr);
+            }
           }
         }
 

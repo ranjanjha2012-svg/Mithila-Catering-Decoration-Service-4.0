@@ -56,6 +56,9 @@ export default function MyOrdersPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancellationReasonInput, setCancellationReasonInput] = useState('');
+  
+  const [tiffinOrders, setTiffinOrders] = useState<any[]>([]);
+  const tiffinUnsubRef = useRef<(() => void) | null>(null);
 
   const ordersUnsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -64,9 +67,11 @@ export default function MyOrdersPage() {
       if (currentUser) {
         setUser(currentUser);
         fetchUserOrders(currentUser.uid);
+        fetchUserTiffinOrders(currentUser.uid);
       } else {
         setUser(null);
         setOrders([]);
+        setTiffinOrders([]);
         window.location.href = '/';
       }
       setLoading(false);
@@ -77,6 +82,9 @@ export default function MyOrdersPage() {
       if (ordersUnsubscribeRef.current) {
         ordersUnsubscribeRef.current();
       }
+      if (tiffinUnsubRef.current) {
+        tiffinUnsubRef.current();
+      }
     };
   }, []);
 
@@ -85,6 +93,34 @@ export default function MyOrdersPage() {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, isAiTyping]);
+
+  const fetchUserTiffinOrders = (userId: string) => {
+    if (tiffinUnsubRef.current) {
+      tiffinUnsubRef.current();
+    }
+
+    try {
+      const q = query(collection(db, 'tiffinOrders'), where('userId', '==', userId));
+      const unsub = onSnapshot(q, (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          list.push({
+            id: doc.id,
+            ...data
+          });
+        });
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setTiffinOrders(list);
+      }, (err) => {
+        console.error('Real-time sync of customer tiffin subscriptions failed: ', err);
+      });
+
+      tiffinUnsubRef.current = unsub;
+    } catch (err) {
+      console.error('Error establishing real-time tiffin subscription log:', err);
+    }
+  };
 
   const fetchUserOrders = (userId: string) => {
     setLoadingOrders(true);
@@ -126,11 +162,12 @@ export default function MyOrdersPage() {
         // Sort newest first
         list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         
-        // CUSTOMER: Cannot see failed payment orders as active orders. Hide these orders from active order lists.
+        // CUSTOMER: Cannot see failed payment orders as active orders. Hide these orders from active order lists. Also separate raw Tiffin purchases.
         const filteredList = list.filter(order => 
           order.status !== 'Pending Payment' && 
           order.status !== 'Cancelled by Payment Failure' &&
-          order.paymentStatus !== 'Failed'
+          order.paymentStatus !== 'Failed' &&
+          !(order as any).isTiffinOrder
         );
         
         setOrders(filteredList);
@@ -403,27 +440,121 @@ export default function MyOrdersPage() {
           <Loader2 className="w-10 h-10 text-orange-600 animate-spin mx-auto mb-4" />
           <p className="text-stone-500 text-xs font-black uppercase tracking-wide">Synchronizing orders history list...</p>
         </div>
-      ) : orders.length === 0 ? (
+      ) : (orders.length === 0 && tiffinOrders.length === 0) ? (
         <div className="text-center py-24 bg-white border border-stone-200/60 rounded-3xl p-8 shadow-sm">
           <div className="w-16 h-16 bg-neutral-50 border border-stone-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <ShoppingBag className="text-stone-300" size={32} />
           </div>
-          <h3 className="text-xl font-black text-stone-850">No Orders Recoded</h3>
+          <h3 className="text-xl font-black text-stone-850">No Subscriptions or Orders Recorded</h3>
           <p className="text-stone-400 text-sm mt-1 max-w-md mx-auto">
-            You haven't placed any online orders with Mithila Catering yet. Choose your favorite recipe thalis, single starters, sweets, or wedding premium packages now!
+            You haven't purchased a tiffin service or placed any online cooking orders with Mithila Catering yet. Explore our menus today!
           </p>
           <div className="mt-8">
             <a 
               href="/order.html" 
-              className="inline-flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-transform active:scale-95"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#C2185B] hover:bg-[#a0134b] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-transform active:scale-95 cursor-pointer"
             >
               Order Online Menu <ArrowRight size={14} />
             </a>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6">
-          {orders.map((order) => {
+        <div className="space-y-10">
+          {/* Tiffin Subscriptions Section */}
+          {tiffinOrders.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-4 bg-purple-50/50 p-3.5 rounded-2xl border border-purple-100/60">
+                <span className="w-2.5 h-6 bg-[#C2185B] rounded-full inline-block" />
+                <h3 className="text-sm font-black uppercase tracking-widest text-stone-855">My Tiffin Subscriptions</h3>
+                <span className="bg-[#C2185B] text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold ml-auto shadow-sm">
+                  {tiffinOrders.length} Subscriptions Active
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {tiffinOrders.map((sub) => (
+                  <div 
+                    key={sub.id} 
+                    className="bg-white border-2 border-stone-100 hover:border-[#C2185B]/20 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between transition-all hover:shadow-md"
+                  >
+                    {/* Border accent */}
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#C2185B]" />
+                    
+                    <div>
+                      <div className="flex justify-between items-start border-b border-stone-150 pb-4 mb-4">
+                        <div>
+                          <span className="text-[9px] font-black uppercase text-stone-400 tracking-wider block">Tiffin Reference ID</span>
+                          <h4 className="text-sm font-extrabold font-mono tracking-tight text-[#C2185B] mt-0.5 font-sans">
+                            {sub.referenceId || 'MTS-TF-PENDING'}
+                          </h4>
+                        </div>
+                        <span className={`text-[10px] uppercase font-black px-3 py-1 rounded-full border ${
+                          sub.status === 'Active' 
+                            ? 'bg-green-50 text-green-700 border-green-200' 
+                            : 'bg-rose-50 text-[#C2185B] border-rose-200 animate-pulse'
+                        }`}>
+                          {sub.status || 'Pending Activation'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3 text-xs font-semibold text-stone-600">
+                        <div className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+                          <span className="text-stone-400 font-bold text-[10.5px]">Subscription Plan</span>
+                          <span className="text-stone-900 font-extrabold">{sub.plan || sub.planName || 'Tiffin Subscription'}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+                            <span className="text-stone-400 block text-[9.5px]">Amount Paid</span>
+                            <span className="text-stone-950 font-bold">₹{sub.amount}</span>
+                          </div>
+                          <div className="bg-stone-50 p-2.5 rounded-xl border border-[#C2185B]/10">
+                            <span className="text-stone-400 block text-[9.5px]">Payment Status</span>
+                            <span className="text-[#C2185B] font-extrabold uppercase text-[10px]">PAID</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100 flex justify-between">
+                          <span className="text-stone-400">Purchase Date</span>
+                          <span className="text-stone-700">{sub.orderDate || sub.createdAt?.split('T')[0] || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t border-stone-100 pt-4 text-center">
+                      {sub.status === 'Active' ? (
+                        <p className="text-[10.5px] text-green-600 font-bold uppercase tracking-wide">
+                          ✅ Subscription is active. Daily deliveries are underway!
+                        </p>
+                      ) : (
+                        <p className="text-[10.5px] text-stone-500 font-semibold leading-relaxed">
+                          ⏳ Awaiting admin verification and delivery route assignment. Usually activated within 2-4 hours. Refer Reference ID of this subscription ticket.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Catering Orders Section */}
+          <div className="pt-2">
+            <div className="flex items-center gap-2 mb-4 bg-orange-50/50 p-3.5 rounded-2xl border border-orange-100/60">
+              <span className="w-2.5 h-6 bg-orange-600 rounded-full inline-block" />
+              <h3 className="text-sm font-black uppercase tracking-widest text-stone-850">My Food Catering Orders</h3>
+              <span className="bg-orange-600 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold ml-auto shadow-sm">
+                {orders.length} Catering Orders
+              </span>
+            </div>
+            
+            {orders.length === 0 ? (
+              <div className="text-center py-10 bg-white border border-stone-200/60 rounded-3xl p-8 shadow-sm">
+                <h4 className="text-md font-bold text-stone-700">No Food Catering orders placed yet</h4>
+                <p className="text-stone-400 text-xs mt-1">Ready to treat your events or family dinners? Place an order now!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {orders.map((order) => {
             const isFailureCancelled = order.status === 'Cancelled by Payment Failure';
             const isCustomerCancelled = order.status === 'Cancelled by Customer';
             const isAnyCancelled = order.status === 'Cancelled' || isFailureCancelled || isCustomerCancelled;
@@ -630,6 +761,9 @@ export default function MyOrdersPage() {
               </motion.div>
             );
           })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

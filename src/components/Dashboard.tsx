@@ -172,7 +172,7 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
             {customer.email && <p className="truncate">✉ <strong>Email:</strong> {customer.email}</p>}
             <p>📍 <strong>Address:</strong> {customer.address}</p>
             <p>💰 <strong>Monthly Price:</strong> ₹{customer.monthlyPrice}</p>
-            <p>⚖ <strong>Balance:</strong> ₹{customer.balanceAmount}</p>
+            <p>⚖ <strong>Balance:</strong> {customer.balanceAmount}</p>
             <p>📅 <strong>Registration Date:</strong> {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}</p>
           </div>
         </div>
@@ -218,33 +218,12 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
             </div>
             <div className="text-right">
               <span className="text-[9px] text-rose-200 uppercase block font-black font-sans">Current Balance</span>
-              <span className="text-yellow-300 font-extrabold text-sm font-mono">₹{customer.balanceAmount}</span>
+              <span className="text-yellow-300 font-extrabold text-sm font-mono">{customer.balanceAmount}</span>
             </div>
           </div>
         </div>
 
-        {/* Balance Adjustments Control Section */}
         <div className="border-t border-white/10 pt-3.5 space-y-3">
-          <div>
-            <span className="text-[10px] uppercase font-black text-rose-200 tracking-wider block mb-1">Balance Adjustments:</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleAdjustBalance(100)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] py-1.5 px-2 rounded-lg transition uppercase tracking-wider"
-              >
-                + ₹100
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAdjustBalance(-100)}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] py-1.5 px-2 rounded-lg transition uppercase tracking-wider"
-              >
-                - ₹100
-              </button>
-            </div>
-          </div>
-
           <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-black">
             <div className="flex flex-col gap-0.5">
               <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Update Balance</label>
@@ -315,38 +294,6 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
               <option value="Paused">Paused</option>
               <option value="Cancelled">Cancelled</option>
             </select>
-          </div>
-
-          {/* Quick toggle shortcut controls */}
-          <div className="pt-2 flex flex-wrap gap-1.5 border-t border-white/10">
-            {customer.status !== 'Paused' && customer.status !== 'Cancelled' ? (
-              <button
-                type="button"
-                onClick={() => handleStatusChange('Paused')}
-                className="flex-1 py-1.5 px-2 bg-amber-500/30 text-white font-extrabold text-[9px] uppercase rounded-lg hover:bg-amber-500/50"
-              >
-                Pause Service
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleStatusChange('Active')}
-                className="flex-1 py-1.5 px-2 bg-emerald-500/30 text-white font-extrabold text-[9px] uppercase rounded-lg hover:bg-emerald-500/50"
-              >
-                Resume Service
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={async () => {
-                if (window.confirm("Are you sure you want to cancel this subscriber's active tiffin service?")) {
-                  await handleStatusChange('Cancelled');
-                }
-              }}
-              className="py-1.5 px-2 bg-red-650/30 text-white font-extrabold text-[9px] uppercase rounded-lg hover:bg-red-650/50 w-full"
-            >
-              Cancel Service
-            </button>
           </div>
         </div>
       </div>
