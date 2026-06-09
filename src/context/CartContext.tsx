@@ -202,7 +202,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       paymentMethod,
       orderDate: formData.orderDate || new Date().toISOString().split('T')[0],
       orderTime: formData.orderTime || new Date().toTimeString().split(' ')[0],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      orderType: 'catering'
     };
 
     const pathForWrite = 'orders';

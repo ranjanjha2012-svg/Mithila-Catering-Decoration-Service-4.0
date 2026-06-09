@@ -203,6 +203,7 @@ export default function TiffinService() {
         orderTime: new Date().toTimeString().split(' ')[0],
         createdAt: new Date().toISOString(),
         isTiffinOrder: true,
+        orderType: 'tiffin',
         statusHistory: [
           { status: 'Pending Payment', timestamp: new Date().toISOString() }
         ]

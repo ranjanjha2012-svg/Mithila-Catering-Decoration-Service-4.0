@@ -81,7 +81,8 @@ function PaymentSuccessScreen() {
               createdAt: updatedOrderData.createdAt || new Date().toISOString(),
               referenceId: refId,
               status: 'Pending Activation',
-              paymentStatus: 'Paid'
+              paymentStatus: 'Paid',
+              orderType: 'tiffin'
             });
 
             // Update main orders document with Tiffin Reference ID and state
@@ -90,7 +91,8 @@ function PaymentSuccessScreen() {
               await updateDoc(mainOrderRef, {
                 referenceId: refId,
                 tiffinReferenceId: refId,
-                tiffinStatus: 'Pending Activation'
+                tiffinStatus: 'Pending Activation',
+                orderType: 'tiffin'
               });
             } catch (upErr) {
               console.error("Error updating parent order with reference ID:", upErr);
