@@ -137,6 +137,7 @@ function PaymentSuccessScreen() {
             } catch (emailErr) {
               console.error("Error triggering Tiffin Purchase notification:", emailErr);
             }
+            setOrder((prev: any) => prev ? { ...prev, referenceId: refId } : null);
           }
         }
 
@@ -259,7 +260,7 @@ Please initiate the kitchen preparation immediately.`;
         <div className="p-6 sm:p-10 space-y-6">
           <div className="flex flex-col sm:flex-row justify-between border-b border-stone-100 pb-6 gap-4">
             <div>
-              <p className="text-[10px] font-black tracking-widest text-stone-400 uppercase">Order Reference</p>
+              <p className="text-[10px] font-black tracking-widest text-[#800000] uppercase">Order Reference</p>
               <h3 className="text-lg font-black text-stone-800 font-mono mt-0.5">#{orderId}</h3>
             </div>
             <div className="sm:text-right">
@@ -269,6 +270,31 @@ Please initiate the kitchen preparation immediately.`;
               </span>
             </div>
           </div>
+
+          {/* Tiffin Reference Card for immediate visibility & copy option */}
+          {(order.isTiffinOrder || order.referenceId) && (
+            <div className="bg-red-50 border border-[#800000]/20 rounded-2xl p-6 text-center text-stone-900 space-y-3 shadow-inner my-4">
+              <span className="text-[10px] font-black uppercase text-stone-500 tracking-wider block">Generated Tiffin Subscription Reference ID</span>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xl sm:text-2xl font-mono font-black text-[#800000] tracking-wider select-all">{order.referenceId || "MTS-TF-PENDING"}</span>
+                {order.referenceId && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(order.referenceId);
+                      alert('Reference Subscription ID copied to clipboard: ' + order.referenceId);
+                    }}
+                    className="px-3 py-1 bg-[#800000] text-white rounded-md hover:bg-black transition-colors text-xs font-bold cursor-pointer"
+                    id="copy-tiffin-ref-btn"
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-stone-600 font-bold max-w-md mx-auto leading-normal">
+                This key is required to log operational status updates. Keep it saved! You can track your meal deliveries in real-time under the <strong>My Orders</strong> section.
+              </p>
+            </div>
+          )}
 
           {/* Delivery & Schedule Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-stone-50 p-5 rounded-2xl border border-stone-100/50 text-xs text-stone-600 font-medium">

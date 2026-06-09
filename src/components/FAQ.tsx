@@ -68,10 +68,10 @@ export default function FAQ() {
                   onClick={() => toggleFAQ(index)}
                   className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 focus:outline-none cursor-pointer"
                 >
-                  <span className="text-sm md:text-base font-extrabold text-stone-850 group-hover:text-red-700">
+                  <span className="text-sm md:text-base font-extrabold text-[#000000] group-hover:text-[#800000]">
                     {item.question}
                   </span>
-                  <div className={`p-1.5 rounded-full ${isOpen ? 'bg-red-50 text-red-650' : 'bg-stone-50 text-stone-500'} transition-colors`}>
+                  <div className={`p-1.5 rounded-full ${isOpen ? 'bg-red-50 text-red-650' : 'bg-stone-55 text-stone-500'} transition-colors`}>
                     {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                   </div>
                 </button>
@@ -84,7 +84,7 @@ export default function FAQ() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.25, ease: "easeOut" }}
                     >
-                      <div className="px-6 pb-6 pt-1 text-xs md:text-sm text-stone-605 font-medium border-t border-stone-50 leading-relaxed bg-stone-50/30">
+                      <div className="px-6 pb-6 pt-2 text-xs md:text-sm text-[#000000] font-semibold border-t border-stone-50 leading-relaxed bg-stone-50/30">
                         {item.answer}
                       </div>
                     </motion.div>

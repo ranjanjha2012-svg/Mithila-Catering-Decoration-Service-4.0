@@ -17,28 +17,91 @@ const plans: TiffinPlan[] = [
   {
     id: 'veg',
     name: 'Pure Veg',
-    price: 1,
-    description: '4 Roti + Rice + Sabji + Dal + Salad + Sweet/Raita (Weekdays)',
+    price: 2500,
+    description: '4 Roti + Rice + Sabji + Dal + Salad + Sweet/Raita. Choose up to 3 meals. (Veg starting from ₹2500/mo)',
     logo: 'https://i.ibb.co/Z6fr2j20/images.jpg',
     color: 'bg-green-600',
   },
   {
     id: 'egg',
     name: 'Egg Tiffin',
-    price: 2900,
-    description: 'Menu as per you (Egg based dishes included)',
+    price: 2600,
+    description: '4 Roti + Rice + Egg Curry/Bhurji/Role + Dal + Salad. Choose up to 3 meals. (Egg starting from ₹2600/mo)',
     logo: 'https://i.ibb.co/CK3GVkh5/egg.jpg',
     color: 'bg-yellow-600',
   },
   {
     id: 'nonveg',
     name: 'Non-Veg',
-    price: 3100,
-    description: 'Menu as per you (Chicken/Mutton based dishes included)',
+    price: 2700,
+    description: '4 Roti + Rice + Special Chicken/Fish/Mutton + Dal + Salad. Choose up to 3 meals. (Non-Veg starting from ₹2700/mo)',
     logo: 'https://i.ibb.co/TDcBbnpk/pawan-tiffin-service-sultanpur-majra-delhi-ccor92cbjx.avif',
     color: 'bg-red-600',
   },
+  {
+    id: 'daily_trial',
+    name: 'Daily Tiffin Trial',
+    price: 1,
+    description: 'Hot single meal trial of our premium pure homestyle cooking served hot. Just ₹1 limit one meal.',
+    logo: 'https://i.ibb.co/Lzr2gnd9/tiffin-delivery.jpg',
+    color: 'bg-purple-600',
+  }
 ];
+
+export const getTiffinPrice = (planId: string, selectedTimings: string[]): number => {
+  if (planId === 'daily_trial') {
+    return 1;
+  }
+  const count = selectedTimings.length;
+  if (count === 0) return 0;
+
+  const isVeg = planId === 'veg';
+  const hasBreakfast = selectedTimings.includes('Breakfast');
+  const hasLunch = selectedTimings.includes('Lunch');
+  const hasDinner = selectedTimings.includes('Dinner');
+
+  if (isVeg) {
+    if (count === 1) {
+      if (hasBreakfast) return 2500;
+      return 2700; // Lunch or Dinner Only
+    }
+    if (count === 2) {
+      if (hasLunch && hasDinner) return 5100;
+      return 4400; // Breakfast + Lunch / Breakfast + Dinner
+    }
+    if (count === 3) {
+      return 6500;
+    }
+    return 2500 * count;
+  } else if (planId === 'nonveg') {
+    if (count === 1) {
+      if (hasBreakfast) return 2700;
+      return 3100; // Lunch or Dinner Only
+    }
+    if (count === 2) {
+      if (hasLunch && hasDinner) return 5600;
+      return 5000;
+    }
+    if (count === 3) {
+      return 7500;
+    }
+    return 2700 * count;
+  } else {
+    // Egg Tiffin
+    if (count === 1) {
+      if (hasBreakfast) return 2600;
+      return 2900;
+    }
+    if (count === 2) {
+      if (hasLunch && hasDinner) return 5300;
+      return 4700;
+    }
+    if (count === 3) {
+      return 6900;
+    }
+    return 2600 * count;
+  }
+};
 
 const locations = ['Delhi', 'Faridabad', 'Noida'];
 const timings = ['Breakfast', 'Lunch', 'Dinner'];
@@ -54,6 +117,8 @@ export default function TiffinService() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [preferenceInput, setPreferenceInput] = useState('Veg');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Tiffin Tracking system states
@@ -84,21 +149,14 @@ export default function TiffinService() {
   useEffect(() => {
     if (auth.currentUser) {
       setFullName(auth.currentUser.displayName || '');
+      setEmailInput(auth.currentUser.email || '');
     }
   }, [auth.currentUser, showBooking]);
 
-  const getDiscountRate = () => {
-    const count = selectedTimings.length;
-    if (count === 1) return 0.02;
-    if (count === 2) return 0.06;
-    if (count === 3) return 0.10;
-    return 0;
-  };
-
-  const subtotal = (selectedPlan?.price || 0) * selectedTimings.length;
-  const discountRate = getDiscountRate();
-  const discountAmount = Math.round(subtotal * discountRate);
-  const totalAmount = subtotal - discountAmount;
+  const subtotal = getTiffinPrice(selectedPlan?.id || '', selectedTimings);
+  const discountRate = 0;
+  const discountAmount = 0;
+  const totalAmount = subtotal;
 
   const handleTimingToggle = (timing: string) => {
     if (selectedTimings.includes(timing)) {
@@ -118,19 +176,21 @@ export default function TiffinService() {
         userId: auth.currentUser.uid,
         customerName: fullName,
         customerPhone: phone,
-        customerEmail: auth.currentUser.email || '',
+        customerEmail: emailInput || auth.currentUser.email || '',
         userName: fullName,
         userPhone: phone,
         address: deliveryAddress,
         location: location,
+        preference: preferenceInput,
         items: [
           {
             id: selectedPlan?.id || 'veg',
             name: `${selectedPlan?.name} Tiffin Subscription`,
-            price: selectedPlan?.price || 0,
-            quantity: selectedTimings.length,
+            price: totalAmount,
+            quantity: 1,
             size: selectedTimings.join('+'),
-            total: totalAmount
+            total: totalAmount,
+            preference: preferenceInput
           }
         ],
         subtotal: subtotal,
@@ -163,7 +223,7 @@ export default function TiffinService() {
           amount: totalAmount.toFixed(2),
           productinfo: `${selectedPlan?.name} Tiffin Subscription`,
           firstname: fullName,
-          email: auth.currentUser?.email || "info@mithilacatering.com"
+          email: emailInput || auth.currentUser?.email || "info@mithilacatering.com"
         })
       });
 
@@ -187,7 +247,7 @@ export default function TiffinService() {
         amount: totalAmount.toFixed(2),
         productinfo: `${selectedPlan?.name} Tiffin Subscription`,
         firstname: fullName,
-        email: auth.currentUser?.email || "info@mithilacatering.com",
+        email: emailInput || auth.currentUser?.email || "info@mithilacatering.com",
         phone: phone,
         surl: surl,
         furl: furl,
@@ -393,7 +453,7 @@ export default function TiffinService() {
                   <div className="bg-stone-50 border border-stone-150 p-4 rounded-2xl text-[11px] sm:text-xs space-y-2 text-stone-600 leading-relaxed font-semibold font-sans">
                     <p className="font-sans">📅 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Registered Date:</strong> {trackerResult.createdAt ? new Date(trackerResult.createdAt).toLocaleDateString() : 'N/A'}</p>
                     <p className="font-sans">💰 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Monthly subscription:</strong> ₹{trackerResult.monthlyPrice}</p>
-                    <p className="text-stone-900 font-sans font-sans">⚖ <strong className="uppercase text-[9px] tracking-wider font-extrabold text-stone-900 font-sans">Remaining Balance:</strong> <strong className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-150">₹{trackerResult.balanceAmount}</strong></p>
+                    <p className="text-stone-900 font-sans font-sans">⚖ <strong className="uppercase text-[9px] tracking-wider font-extrabold text-stone-900 font-sans">Remaining Balance:</strong> <strong className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-150">{trackerResult.balanceAmount}</strong></p>
                     {trackerResult.activatedAt && (
                       <p className="font-sans">✨ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Activation Time:</strong> {new Date(trackerResult.activatedAt).toLocaleString()}</p>
                     )}
@@ -667,7 +727,7 @@ export default function TiffinService() {
                         <p className="font-sans">📅 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Registered Date:</strong> {trackerResult.createdAt ? new Date(trackerResult.createdAt).toLocaleDateString() : 'N/A'}</p>
                         <p className="font-sans font-semibold">💎 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Plan Name:</strong> {trackerResult.planName || (trackerResult.preference === 'Veg' ? 'Pure Veg Tiffin Plan' : 'Non-Veg Tiffin Plan')}</p>
                         <p className="font-sans">💰 <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Amount Paid:</strong> ₹{trackerResult.monthlyPrice}</p>
-                        <p className="text-stone-900 font-sans font-semibold">⚖ <strong className="uppercase text-[9px] tracking-wider font-extrabold text-stone-900 font-sans">Remaining Balance:</strong> <strong className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-150 font-bold">₹{trackerResult.balanceAmount}</strong></p>
+                        <p className="text-stone-900 font-sans font-semibold">⚖ <strong className="uppercase text-[9px] tracking-wider font-extrabold text-stone-900 font-sans">Remaining Balance:</strong> <strong className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-150 font-bold">{trackerResult.balanceAmount}</strong></p>
                         {trackerResult.activatedAt ? (
                           <p className="font-sans font-semibold">✨ <strong className="text-stone-900 uppercase text-[9px] tracking-wider font-extrabold font-sans">Activation Date:</strong> {new Date(trackerResult.activatedAt).toLocaleDateString()}</p>
                         ) : (
@@ -881,50 +941,109 @@ export default function TiffinService() {
                     </div>
 
                     {/* Delivery Form fields inside Step 1 */}
-                    <div className="space-y-4 border-t border-gray-100 pt-6">
+                    <div className="space-y-4 border-t border-stone-250 pt-6">
                       <div className="text-center">
-                        <h3 className="text-lg font-black text-gray-900">Delivery Information</h3>
-                        <p className="text-xs text-gray-500">Provide contact and address matching your location</p>
+                        <h3 className="text-lg font-black text-black">Delivery Information</h3>
+                        <p className="text-xs text-stone-605">Provide contact and address matching your location</p>
                       </div>
-                      <div className="space-y-3 text-left">
+                      <div className="space-y-4 text-left">
                         <div>
-                          <label className="text-xs font-bold text-gray-700 block mb-1">Full Name</label>
+                          <label className="text-xs font-bold text-[#000000] block mb-1">Full Name</label>
                           <input
                             type="text"
                             required
                             placeholder="Enter your full name"
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-1 focus:ring-green-500 outline-none"
+                            className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:ring-1 focus:ring-green-500 outline-none text-[#000000] placeholder-[#555555] font-semibold bg-white"
                           />
+                          {!fullName && (
+                            <span className="text-[11px] text-[#000000] font-extrabold mt-1 block">
+                              ⚠️ Full name is required to activate and book.
+                            </span>
+                          )}
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-gray-700 block mb-1">Phone Number</label>
+                          <label className="text-xs font-bold text-[#000000] block mb-1">Phone Number (10-Digit Mobile)</label>
                           <input
                             type="tel"
                             required
                             placeholder="Enter 10-digit mobile number"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-1 focus:ring-green-500 outline-none"
+                            className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:ring-1 focus:ring-green-500 outline-none text-[#000000] placeholder-[#555555] font-semibold bg-white"
                           />
+                          {(!phone || phone.length !== 10) && (
+                            <span className="text-[11px] text-[#000000] font-extrabold mt-1 block">
+                              ⚠️ Please enter your exact 10-digit Indian active mobile number.
+                            </span>
+                          )}
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-gray-700 block mb-1">Precise Delivery Address</label>
+                          <label className="text-xs font-bold text-[#000000] block mb-1">Email Address (For receipts & copy id)</label>
+                          <input
+                            type="email"
+                            required
+                            placeholder="Enter your email address"
+                            value={emailInput}
+                            onChange={(e) => setEmailInput(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:ring-1 focus:ring-green-500 outline-none text-[#000000] placeholder-[#555555] font-semibold bg-white"
+                          />
+                          {!emailInput && (
+                            <span className="text-[11px] text-[#000000] font-extrabold mt-1 block">
+                              ⚠️ Valid email address is requested.
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-[#000000] block mb-1">Precise Delivery Address</label>
                           <textarea
                             required
                             rows={2}
                             placeholder="Apartment/House No, Floor, Block, Area, Landmark, etc."
                             value={deliveryAddress}
                             onChange={(e) => setDeliveryAddress(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-1 focus:ring-green-500 outline-none resize-none"
+                            className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:ring-1 focus:ring-green-500 outline-none resize-none text-[#000000] placeholder-[#555555] font-semibold bg-white"
                           />
+                          {!deliveryAddress && (
+                            <span className="text-[11px] text-[#000000] font-extrabold mt-1 block">
+                              ⚠️ Full street address details are requested.
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-[#000000] block mb-1">Food Preference</label>
+                          <select
+                            value={preferenceInput}
+                            onChange={(e) => setPreferenceInput(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:ring-1 focus:ring-green-500 outline-none text-[#000000] font-extrabold bg-white cursor-pointer"
+                          >
+                            <option value="Veg" className="text-[#000000] font-bold">Vegetarian Plan (Pure Veg)</option>
+                            <option value="Non-Veg" className="text-[#000000] font-bold">Non-Vegetarian Plan (Fish & Curry)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-[#000000] block mb-1">Plan Selection</label>
+                          <select
+                            value={selectedPlan?.id || ''}
+                            onChange={(e) => {
+                              const selected = plans.find(p => p.id === e.target.value);
+                              if (selected) setSelectedPlan(selected);
+                            }}
+                            className="w-full px-4 py-2.5 rounded-xl border border-stone-300 text-sm focus:ring-1 focus:ring-green-500 outline-none text-[#000000] font-extrabold bg-white cursor-pointer"
+                          >
+                            {plans.map(p => (
+                              <option key={p.id} value={p.id} className="text-[#000000] font-bold">
+                                {p.name} (pricing starts at ₹{p.price})
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     </div>
 
                     <button
-                      disabled={!location || selectedTimings.length === 0 || !fullName || !phone || !deliveryAddress}
+                      disabled={!location || selectedTimings.length === 0 || !fullName || !phone || phone.length !== 10 || !deliveryAddress || !emailInput}
                       onClick={() => setStep(2)}
                       className="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
