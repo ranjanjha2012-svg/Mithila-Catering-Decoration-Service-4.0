@@ -135,10 +135,14 @@ function PaymentSuccessScreen() {
             const uId = updatedOrderData.userId;
             if (uId) {
               const userRef = doc(db, 'users', uId);
-              await updateDoc(userRef, {
-                tiffinReferenceId: refId,
-                tiffinStatus: 'Pending Activation'
-              });
+              await setDoc(
+                userRef,
+                {
+                  tiffinReferenceId: refId,
+                  tiffinStatus: 'Pending Activation'
+                },
+                { merge: true }
+              );
             }
           } catch (uErr) {
             console.error("Error updating customer profile with reference ID:", uErr);
