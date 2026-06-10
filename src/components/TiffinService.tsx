@@ -172,6 +172,9 @@ export default function TiffinService() {
     if (!auth.currentUser) return;
     setIsSubmitting(true);
     try {
+      const randomDigits = Math.floor(100000 + Math.random() * 900000);
+      const newOrderId = `MTSTF-${Date.now()}-${randomDigits}`;
+
       const orderPayload = {
         userId: auth.currentUser.uid,
         customerName: fullName,
@@ -209,8 +212,9 @@ export default function TiffinService() {
         ]
       };
 
-      const docRef = await addDoc(collection(db, 'orders'), orderPayload);
-      const newOrderId = docRef.id;
+      // Store the pending tiffin order payload into localStorage.
+      // We process the actual Firestore billing write in payment-success.tsx upon validation to eliminate unpaid/draft record pollution.
+      localStorage.setItem(`pending_tiffin_order_${newOrderId}`, JSON.stringify(orderPayload));
 
       const configRes = await fetch('/api/payu/config');
       const configData = await configRes.json();

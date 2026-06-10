@@ -27,15 +27,36 @@ function PaymentSuccessScreen() {
 
       try {
         const orderRef = doc(db, 'orders', orderId);
-        const docSnap = await getDoc(orderRef);
+        let docSnap = await getDoc(orderRef);
+        let orderData: any = null;
 
         if (!docSnap.exists()) {
-          setError(`Order Reference #${orderId} was not found.`);
-          setLoading(false);
-          return;
+          // Check if there is a pending tiffin order payload saved in localStorage
+          const pendingOrderStr = localStorage.getItem(`pending_tiffin_order_${orderId}`);
+          if (pendingOrderStr) {
+            const pendingPayload = JSON.parse(pendingOrderStr);
+            // Create the order document fresh with "Placed" and "Paid" statuses
+            const initialPayload = {
+              ...pendingPayload,
+              status: 'Placed',
+              paymentStatus: 'Paid',
+              paymentVerifiedAt: new Date().toISOString()
+            };
+            await setDoc(orderRef, initialPayload);
+            localStorage.removeItem(`pending_tiffin_order_${orderId}`);
+            
+            // Re-fetch docSnap so that it now exists
+            docSnap = await getDoc(orderRef);
+            orderData = docSnap.data();
+          } else {
+            setError(`Order Reference #${orderId} was not found.`);
+            setLoading(false);
+            return;
+          }
+        } else {
+          orderData = docSnap.data();
         }
 
-        const orderData = docSnap.data();
         setOrder(orderData);
 
         // If order status is pending payment, update it to Paid and status to Placed
