@@ -40,6 +40,12 @@ interface FirestoreOrder {
   locked?: boolean;
   isPermanentCancellation?: boolean;
   paymentStatus?: string;
+  orderType?: string;
+  referenceId?: string;
+  tiffinReferenceId?: string;
+  planName?: string;
+  plan?: string;
+  subscriptionType?: string;
 }
 
 export default function MyOrdersPage() {
@@ -137,20 +143,32 @@ export default function MyOrdersPage() {
     try {
       const q = query(
         collection(db, 'tiffinOrders'), 
-        where('userId', '==', userId),
-        where('orderType', '==', 'tiffin')
+        where('userId', '==', userId)
       );
       const unsub = onSnapshot(q, (snapshot) => {
         const list: any[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
+        snapshot.forEach((dt) => {
+          const data = dt.data();
+          // Migration logic: If old records does not contain orderType "tiffin", write it to Firestore
+          if (data.orderType !== 'tiffin') {
+            updateDoc(doc(db, 'tiffinOrders', dt.id), { orderType: 'tiffin' })
+              .catch(err => console.error("Error migrating tiffinOrders record to 'tiffin':", err));
+          }
           list.push({
-            id: doc.id,
-            ...data
+            id: dt.id,
+            ...data,
+            orderType: 'tiffin'
           });
         });
         list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        const filteredList = list.filter(item => item.orderType === 'tiffin');
+        
+        // Ensure only tiffin entries appear
+        const filteredList = list.filter(item => 
+          item.orderType === 'tiffin' || 
+          item.referenceId?.startsWith('MTS-TF-')
+        );
+
+        console.log("Tiffin Orders:", filteredList);
         setTiffinOrders(filteredList);
       }, (err) => {
         console.error('Real-time sync of customer tiffin subscriptions failed: ', err);
@@ -251,17 +269,44 @@ export default function MyOrdersPage() {
     }
 
     try {
+      // Query on user's orders. To prevent index mismatch and support dynamic migration of 
+      // old orders, we load all user orders and apply direct migration state checks inside the handler.
       const q = query(
         collection(db, 'orders'), 
-        where('userId', '==', userId),
-        where('orderType', '==', 'catering')
+        where('userId', '==', userId)
       );
       const unsub = onSnapshot(q, (snapshot) => {
         const list: FirestoreOrder[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          
+          // Identity & metadata check: Detect if it is a Tiffin Subscription in any form
+          const isTiffinRef = data.referenceId?.startsWith('MTS-TF-') || data.tiffinReferenceId?.startsWith('MTS-TF-');
+          const isTiffinType = data.orderType === 'tiffin';
+          const isTiffinField = data.isTiffinOrder === true;
+          const hasTiffinPlan = data.planName?.toLowerCase().includes('tiffin') || data.plan?.toLowerCase().includes('tiffin');
+          const hasSubscription = !!data.subscriptionType;
+          const hasTiffinInItems = data.items?.some((item: any) => 
+            item.name?.toLowerCase().includes('tiffin') || item.size?.toLowerCase().includes('mts-tf')
+          );
+
+          const isReallyTiffin = isTiffinRef || isTiffinType || isTiffinField || hasTiffinPlan || hasSubscription || hasTiffinInItems;
+
+          // Database on-the-fly migration: write missing orderType to Firestore for consistency
+          if (isReallyTiffin) {
+            if (data.orderType !== 'tiffin') {
+              updateDoc(doc(db, 'orders', docSnap.id), { orderType: 'tiffin' })
+                .catch(err => console.error("Error migrating orders record to 'tiffin':", err));
+            }
+          } else {
+            if (data.orderType !== 'catering') {
+              updateDoc(doc(db, 'orders', docSnap.id), { orderType: 'catering' })
+                .catch(err => console.error("Error migrating orders record to 'catering':", err));
+            }
+          }
+
           list.push({
-            id: doc.id,
+            id: docSnap.id,
             items: data.items || [],
             subtotal: data.subtotal || 0,
             totalAmount: data.totalAmount || 0,
@@ -282,26 +327,48 @@ export default function MyOrdersPage() {
             orderStatus: data.orderStatus || '',
             locked: data.locked || false,
             isPermanentCancellation: data.isPermanentCancellation || false,
-            paymentStatus: data.paymentStatus || ''
+            paymentStatus: data.paymentStatus || '',
+            orderType: isReallyTiffin ? 'tiffin' : 'catering',
+            referenceId: data.referenceId,
+            tiffinReferenceId: data.tiffinReferenceId,
+            planName: data.planName,
+            plan: data.plan,
+            subscriptionType: data.subscriptionType
           });
         });
+
         // Sort newest first
         list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         
-        // CUSTOMER: Cannot see failed payment orders as active orders. Hide these orders from active order lists.
-        const filteredList = list.filter(order => 
-          order.status !== 'Pending Payment' && 
-          order.status !== 'Cancelled by Payment Failure' &&
-          order.paymentStatus !== 'Failed' &&
-          order.orderType === 'catering'
-        );
+        // Filter catering orders strictly using both schema markers and fields (for Zero Duplication Guarantee)
+        const filteredCateringList = list.filter(order => {
+          const isTiffinRef = order.referenceId?.startsWith('MTS-TF-') || order.tiffinReferenceId?.startsWith('MTS-TF-');
+          const isTiffinType = order.orderType === 'tiffin';
+          const isTiffinField = (order as any).isTiffinOrder === true;
+          const hasTiffinPlan = order.planName?.toLowerCase().includes('tiffin') || order.plan?.toLowerCase().includes('tiffin');
+          const hasSubscription = !!order.subscriptionType;
+          const hasTiffinInItems = order.items?.some(item => 
+            item.name?.toLowerCase().includes('tiffin') || item.size?.toLowerCase().includes('mts-tf')
+          );
+
+          // Exclude any Tiffin orders from Catering list
+          if (isTiffinRef || isTiffinType || isTiffinField || hasTiffinPlan || hasSubscription || hasTiffinInItems) {
+            return false;
+          }
+
+          // Exclude pending/failed payment entries
+          return order.status !== 'Pending Payment' && 
+                 order.status !== 'Cancelled by Payment Failure' &&
+                 order.paymentStatus !== 'Failed';
+        });
         
-        setOrders(filteredList);
+        console.log("Catering Orders:", filteredCateringList);
+        setOrders(filteredCateringList);
         setLoadingOrders(false);
 
         // Update selected order in help modal in real-time to reflect state changes
         if (selectedOrderForHelp) {
-          const updated = filteredList.find(o => o.id === selectedOrderForHelp.id);
+          const updated = filteredCateringList.find(o => o.id === selectedOrderForHelp.id);
           if (updated && updated.status !== selectedOrderForHelp.status) {
             setSelectedOrderForHelp(updated);
           }
