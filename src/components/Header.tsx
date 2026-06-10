@@ -101,32 +101,14 @@ export default function Header() {
     localStorage.setItem('mithila_lang', lang);
 
     const cookieValue = lang === 'hi' ? '/en/hi' : '/en/en';
-    
-    // Clear old versions and write robust cross-iframe cookies
     document.cookie = `googtrans=${cookieValue}; path=/;`;
-    document.cookie = `googtrans=${cookieValue}; path=/; SameSite=None; Secure;`;
-    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}; SameSite=None; Secure;`;
-    
-    const hostParts = window.location.hostname.split('.');
-    if (hostParts.length >= 2) {
-      const parentDomain = `.${hostParts.slice(-2).join('.')}`;
-      document.cookie = `googtrans=${cookieValue}; path=/; domain=${parentDomain}; SameSite=None; Secure;`;
-    }
-
-    // Hash navigation as secondary trigger for iframes
-    const hashValue = lang === 'hi' ? '#googtrans(en|hi)' : '#googtrans(en|en)';
-    if (window.location.hash !== hashValue) {
-      window.location.hash = hashValue;
-    }
+    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname};`;
 
     const triggerSelectorUpdate = () => {
       const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
       if (combo) {
-        const targetValue = lang;
-        const alternativeValue = `/en/${lang}`;
-        const option = Array.from(combo.options).find(opt => opt.value === targetValue || opt.value === alternativeValue);
-        if (option && combo.value !== option.value) {
-          combo.value = option.value;
+        if (combo.value !== lang) {
+          combo.value = lang;
           combo.dispatchEvent(new Event('change'));
         }
       }

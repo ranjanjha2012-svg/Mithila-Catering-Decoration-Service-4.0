@@ -209,7 +209,7 @@ export default function TiffinService() {
         ]
       };
 
-      const docRef = await addDoc(collection(db, 'tiffinOrders'), orderPayload);
+      const docRef = await addDoc(collection(db, 'orders'), orderPayload);
       const newOrderId = docRef.id;
 
       const configRes = await fetch('/api/payu/config');
