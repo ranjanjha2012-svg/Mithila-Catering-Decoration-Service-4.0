@@ -12,6 +12,7 @@ function PaymentSuccessScreen() {
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isTiffin, setIsTiffin] = useState(false);
 
   const queryParams = new URLSearchParams(window.location.search);
   const orderId = queryParams.get('orderId') || '';
@@ -26,47 +27,87 @@ function PaymentSuccessScreen() {
       }
 
       try {
-        const orderRef = doc(db, 'orders', orderId);
-        const docSnap = await getDoc(orderRef);
+        let orderRef = doc(db, 'orders', orderId);
+        let docSnap = await getDoc(orderRef);
+        let tiffinCheck = false;
+        let orderData: any = null;
 
-        if (!docSnap.exists()) {
-          setError(`Order Reference #${orderId} was not found.`);
-          setLoading(false);
-          return;
+        if (docSnap.exists()) {
+          orderData = docSnap.data();
+          tiffinCheck = orderData.isTiffinOrder === true || orderData.orderType === 'tiffin';
+          setIsTiffin(tiffinCheck);
+        } else {
+          // Check tiffinOrders
+          const tiffinRef = doc(db, 'tiffinOrders', orderId);
+          const tiffinSnap = await getDoc(tiffinRef);
+          if (tiffinSnap.exists()) {
+            orderData = tiffinSnap.data();
+            tiffinCheck = true;
+            setIsTiffin(true);
+            orderRef = tiffinRef;
+          } else {
+            setError(`Order Reference #${orderId} was not found.`);
+            setLoading(false);
+            return;
+          }
         }
 
-        const orderData = docSnap.data();
         setOrder(orderData);
 
-        // If order status is pending payment, update it to Paid and status to Placed
+        // If order status is pending payment, update it to Paid and status to Placed/Pending Activation
         let updatedOrderData = orderData;
         if (orderData.status === 'Pending Payment') {
+          const nextStatus = tiffinCheck ? 'Pending Activation' : 'Placed';
           await updateDoc(orderRef, {
-            status: 'Placed',
+            status: nextStatus,
             paymentStatus: 'Paid',
             paymentVerifiedAt: new Date().toISOString()
           });
           
           await logUserActivity('Order Payment Verified', { 
             orderId, 
-            status: 'Placed',
+            status: nextStatus,
             paymentStatus: 'Paid', 
             amount: orderData.totalAmount 
           });
 
-          updatedOrderData = { ...orderData, status: 'Placed', paymentStatus: 'Paid' };
+          updatedOrderData = { ...orderData, status: nextStatus, paymentStatus: 'Paid' };
           // Refresh order status in state
           setOrder(updatedOrderData);
         }
 
         // Handle automated Tiffin service database creation on payment validation
-        if (updatedOrderData.isTiffinOrder === true) {
+        if (tiffinCheck) {
           const tiffinOrderRef = doc(db, 'tiffinOrders', orderId);
           const tiffinOrderSnap = await getDoc(tiffinOrderRef);
-          if (!tiffinOrderSnap.exists()) {
+          let refId = '';
+          
+          if (tiffinOrderSnap.exists()) {
+            const currentTiffinData = tiffinOrderSnap.data();
+            
+            // Check if we already processed and set referenceId
+            if (currentTiffinData.referenceId) {
+              refId = currentTiffinData.referenceId;
+            } else {
+              const randomDigits = Math.floor(100000 + Math.random() * 900000);
+              refId = `MTS-TF-${randomDigits}`;
+              
+              await updateDoc(tiffinOrderRef, {
+                referenceId: refId,
+                status: 'Pending Activation',
+                paymentStatus: 'Paid',
+                paymentVerifiedAt: new Date().toISOString()
+              });
+              
+              // update status in the updatedOrderData for context below
+              updatedOrderData = { ...updatedOrderData, referenceId: refId, status: 'Pending Activation', paymentStatus: 'Paid' };
+              setOrder(updatedOrderData);
+            }
+          } else {
+            // Fallback if somehow doc doesn't exist, though it was created at checkout
             const randomDigits = Math.floor(100000 + Math.random() * 900000);
-            const refId = `MTS-TF-${randomDigits}`;
-
+            refId = `MTS-TF-${randomDigits}`;
+            
             await setDoc(tiffinOrderRef, {
               id: orderId,
               orderId: orderId,
@@ -84,35 +125,27 @@ function PaymentSuccessScreen() {
               paymentStatus: 'Paid',
               orderType: 'tiffin'
             });
+            
+            updatedOrderData = { ...updatedOrderData, referenceId: refId, status: 'Pending Activation', paymentStatus: 'Paid' };
+            setOrder(updatedOrderData);
+          }
 
-            // Update main orders document with Tiffin Reference ID and state
-            try {
-              const mainOrderRef = doc(db, 'orders', orderId);
-              await updateDoc(mainOrderRef, {
-                referenceId: refId,
+          // Save Reference ID in customer profile
+          try {
+            const uId = updatedOrderData.userId;
+            if (uId) {
+              const userRef = doc(db, 'users', uId);
+              await updateDoc(userRef, {
                 tiffinReferenceId: refId,
-                tiffinStatus: 'Pending Activation',
-                orderType: 'tiffin'
+                tiffinStatus: 'Pending Activation'
               });
-            } catch (upErr) {
-              console.error("Error updating parent order with reference ID:", upErr);
             }
+          } catch (uErr) {
+            console.error("Error updating customer profile with reference ID:", uErr);
+          }
 
-            // Save Reference ID in customer profile
-            try {
-              const uId = updatedOrderData.userId;
-              if (uId) {
-                const userRef = doc(db, 'users', uId);
-                await updateDoc(userRef, {
-                  tiffinReferenceId: refId,
-                  tiffinStatus: 'Pending Activation'
-                });
-              }
-            } catch (uErr) {
-              console.error("Error updating customer profile with reference ID:", uErr);
-            }
-
-            // Trigger Tiffin Purchase Formspree and Gmail Email Notification
+          // Trigger Tiffin Purchase Formspree and Gmail Email Notification
+          if (updatedOrderData.isNotificationSent !== true) {
             try {
               await fetch('https://formspree.io/f/xwvjljzp', {
                 method: 'POST',
@@ -136,15 +169,20 @@ function PaymentSuccessScreen() {
                   recipient: 'mithilacateringservices@gmail.com'
                 })
               });
+              
+              await updateDoc(tiffinOrderRef, {
+                isNotificationSent: true
+              });
+              setOrder((prev: any) => prev ? { ...prev, referenceId: refId, isNotificationSent: true } : null);
             } catch (emailErr) {
               console.error("Error triggering Tiffin Purchase notification:", emailErr);
             }
-            setOrder((prev: any) => prev ? { ...prev, referenceId: refId } : null);
           }
         }
 
         // Send Formspree email notification for successful Online Payment placement
         if (
+          !tiffinCheck &&
           (updatedOrderData.status === 'Placed' || updatedOrderData.paymentStatus === 'Paid') &&
           updatedOrderData.isNotificationSent !== true
         ) {
@@ -344,17 +382,21 @@ Please initiate the kitchen preparation immediately.`;
           {/* Totals */}
           <div className="border-t border-stone-100 pt-5 space-y-2 text-xs font-semibold text-stone-500">
             <div className="flex justify-between">
-              <span>Catering Subtotal</span>
+              <span>{isTiffin ? 'Subscription Subtotal' : 'Catering Subtotal'}</span>
               <span className="text-stone-800">₹{order.subtotal}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Packing & Sanitation charges</span>
-              <span className="text-stone-800">₹{order.packingCharge !== undefined ? order.packingCharge : 12}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Doorstep Delivery charges</span>
-              <span className="text-stone-800">₹{order.deliveryCharge !== undefined ? order.deliveryCharge : 40}</span>
-            </div>
+            {!isTiffin && (
+              <>
+                <div className="flex justify-between">
+                  <span>Packing & Sanitation charges</span>
+                  <span className="text-stone-800">₹{order.packingCharge !== undefined ? order.packingCharge : 12}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Doorstep Delivery charges</span>
+                  <span className="text-stone-800">₹{order.deliveryCharge !== undefined ? order.deliveryCharge : 40}</span>
+                </div>
+              </>
+            )}
             <div className="pt-3 border-t border-stone-100 flex justify-between font-black text-stone-800 text-sm">
               <span className="uppercase tracking-wider">Total Paid</span>
               <span className="text-orange-600 text-base">₹{order.totalAmount}</span>

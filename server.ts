@@ -64,12 +64,27 @@ async function startServer() {
     if (txnid) {
       try {
         const orderRef = doc(db, 'orders', txnid);
-        await updateDoc(orderRef, {
-          status: 'Placed',
-          paymentStatus: 'Paid',
-          paymentVerifiedAt: new Date().toISOString()
-        });
-        console.info(`[PayU Webhook] Success: Order #${txnid} updated to Placed/Paid.`);
+        const orderSnap = await getDoc(orderRef);
+        if (orderSnap.exists()) {
+          await updateDoc(orderRef, {
+            status: 'Placed',
+            paymentStatus: 'Paid',
+            paymentVerifiedAt: new Date().toISOString()
+          });
+          console.info(`[PayU Webhook] Success: Order #${txnid} updated to Placed/Paid.`);
+        } else {
+          // Check tiffinOrders
+          const tiffinRef = doc(db, 'tiffinOrders', txnid);
+          const tiffinSnap = await getDoc(tiffinRef);
+          if (tiffinSnap.exists()) {
+            await updateDoc(tiffinRef, {
+              status: 'Pending Activation',
+              paymentStatus: 'Paid',
+              paymentVerifiedAt: new Date().toISOString()
+            });
+            console.info(`[PayU Webhook] Success: Tiffin Order #${txnid} updated to Pending Activation/Paid.`);
+          }
+        }
       } catch (err: any) {
         console.warn(`[PayU Webhook Warning] Firestore backend update skipped or deferred to client success screen. Details: ${err.message}`);
       }
@@ -85,15 +100,30 @@ async function startServer() {
     if (txnid) {
       try {
         const orderRef = doc(db, 'orders', txnid);
-        await updateDoc(orderRef, {
-          status: 'Cancelled by Payment Failure',
-          paymentStatus: 'Failed',
-          locked: true,
-          isPermanentCancellation: true,
-          paymentFailureReason: msg,
-          cancelledAt: new Date().toISOString()
-        });
-        console.info(`[PayU Webhook] Failure: Order #${txnid} updated to Cancelled by Payment Failure.`);
+        const orderSnap = await getDoc(orderRef);
+        if (orderSnap.exists()) {
+          await updateDoc(orderRef, {
+            status: 'Cancelled by Payment Failure',
+            paymentStatus: 'Failed',
+            locked: true,
+            isPermanentCancellation: true,
+            paymentFailureReason: msg,
+            cancelledAt: new Date().toISOString()
+          });
+          console.info(`[PayU Webhook] Failure: Order #${txnid} updated to Cancelled by Payment Failure.`);
+        } else {
+          const tiffinRef = doc(db, 'tiffinOrders', txnid);
+          const tiffinSnap = await getDoc(tiffinRef);
+          if (tiffinSnap.exists()) {
+            await updateDoc(tiffinRef, {
+              status: 'Payment Failed',
+              paymentStatus: 'Failed',
+              paymentFailureReason: msg,
+              cancelledAt: new Date().toISOString()
+            });
+            console.info(`[PayU Webhook] Failure: Tiffin Order #${txnid} updated to Payment Failed.`);
+          }
+        }
       } catch (err: any) {
         console.warn(`[PayU Webhook Warning] Firestore backend failure update skipped or deferred to client failure screen. Details: ${err.message}`);
       }

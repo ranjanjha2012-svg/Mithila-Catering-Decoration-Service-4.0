@@ -31,10 +31,134 @@ export default function Header() {
     return 'en';
   });
 
+  // Programmatic Google Translate Initialization and Configuration
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Inject hidden container for Google Translate to load into
+    let elem = document.getElementById('google_translate_element');
+    if (!elem) {
+      elem = document.createElement('div');
+      elem.id = 'google_translate_element';
+      elem.style.display = 'none';
+      document.body.appendChild(elem);
+    }
+
+    // 2. Define global callback for Google Web Translate
+    (window as any).googleTranslateElementInit = () => {
+      if ((window as any).google && (window as any).google.translate) {
+        new (window as any).google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: 'hi,en',
+          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
+          autoDisplay: false
+        }, 'google_translate_element');
+      }
+    };
+
+    // 3. Load script if not already fetched
+    const existingScript = document.getElementById('google-translate-script');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.id = 'google-translate-script';
+      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    // 4. Inject global styles to cleanly hide all translation banners/frames
+    const styleId = 'google-translate-cleanup-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.innerHTML = `
+        #google_translate_element, 
+        .skiptranslate, 
+        .goog-te-banner-frame, 
+        .goog-te-balloon-frame, 
+        .goog-te-banner,
+        iframe.goog-te-banner-frame {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0px !important;
+        }
+        body {
+          top: 0px !important;
+          position: static !important;
+        }
+        font {
+          background-color: transparent !important;
+          box-shadow: none !important;
+          color: inherit !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  // Sync translation cookies and dropdown triggers dynamically on lang state change
+  useEffect(() => {
+    localStorage.setItem('mithila_lang', lang);
+
+    const cookieValue = lang === 'hi' ? '/en/hi' : '/en/en';
+    
+    // Clear old versions and write robust cross-iframe cookies
+    document.cookie = `googtrans=${cookieValue}; path=/;`;
+    document.cookie = `googtrans=${cookieValue}; path=/; SameSite=None; Secure;`;
+    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}; SameSite=None; Secure;`;
+    
+    const hostParts = window.location.hostname.split('.');
+    if (hostParts.length >= 2) {
+      const parentDomain = `.${hostParts.slice(-2).join('.')}`;
+      document.cookie = `googtrans=${cookieValue}; path=/; domain=${parentDomain}; SameSite=None; Secure;`;
+    }
+
+    // Hash navigation as secondary trigger for iframes
+    const hashValue = lang === 'hi' ? '#googtrans(en|hi)' : '#googtrans(en|en)';
+    if (window.location.hash !== hashValue) {
+      window.location.hash = hashValue;
+    }
+
+    const triggerSelectorUpdate = () => {
+      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+      if (combo) {
+        const targetValue = lang;
+        const alternativeValue = `/en/${lang}`;
+        const option = Array.from(combo.options).find(opt => opt.value === targetValue || opt.value === alternativeValue);
+        if (option && combo.value !== option.value) {
+          combo.value = option.value;
+          combo.dispatchEvent(new Event('change'));
+        }
+      }
+    };
+
+    triggerSelectorUpdate();
+    const interval = setInterval(triggerSelectorUpdate, 800);
+    const timeout = setTimeout(() => clearInterval(interval), 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [lang]);
+
+  // Synchronize state if language change is dispatched from other sessions/pages
+  useEffect(() => {
+    const handleEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail !== lang) {
+        setLang(customEvent.detail);
+      }
+    };
+    window.addEventListener('mithila_lang_updated', handleEvent);
+    return () => {
+      window.removeEventListener('mithila_lang_updated', handleEvent);
+    };
+  }, [lang]);
+
   const toggleLang = () => {
     const nextLang = lang === 'en' ? 'hi' : 'en';
     setLang(nextLang);
-    localStorage.setItem('mithila_lang', nextLang);
     window.dispatchEvent(new CustomEvent('mithila_lang_updated', { detail: nextLang }));
   };
 
@@ -183,7 +307,7 @@ export default function Header() {
             {/* Language Switcher */}
             <button
               onClick={toggleLang}
-              className="px-2 py-1 bg-white hover:bg-orange-50 border border-orange-200 rounded-lg text-[10px] font-black text-orange-700 transition-all cursor-pointer whitespace-nowrap shrink-0 tracking-wider"
+              className="px-2 py-1 bg-white hover:bg-orange-50 border border-orange-200 rounded-lg text-[10px] font-black text-orange-700 transition-all cursor-pointer whitespace-nowrap shrink-0 tracking-wider notranslate"
               title="Toggle Language / भाषा बदलें"
             >
               {lang === 'en' ? 'हिन्दी' : 'EN'}
@@ -342,7 +466,7 @@ export default function Header() {
           {/* Language Switcher Button */}
           <button
             onClick={toggleLang}
-            className="px-3 py-1.5 border border-orange-200 bg-white hover:bg-orange-50 text-orange-700 font-extrabold text-xs rounded-xl shadow-xs cursor-pointer transition-all shrink-0 select-none"
+            className="px-3 py-1.5 border border-orange-200 bg-white hover:bg-orange-50 text-orange-700 font-extrabold text-xs rounded-xl shadow-xs cursor-pointer transition-all shrink-0 select-none notranslate"
             title="Toggle Language / भाषा बदलें"
           >
             {lang === 'en' ? 'हिन्दी' : 'English'}
