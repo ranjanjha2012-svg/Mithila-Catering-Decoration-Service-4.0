@@ -23,126 +23,21 @@ export default function Header() {
   const [suggestions, setSuggestions] = useState<typeof menuItems>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Simple language switcher English / Hindi
-  const [lang, setLang] = useState<'en' | 'hi'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('mithila_lang') as 'en' | 'hi') || 'en';
-    }
-    return 'en';
-  });
-
-  // Programmatic Google Translate Initialization and Configuration
+  // Reset/clean up any previous Google Translate settings to enforce English as default
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // 1. Inject hidden container for Google Translate to load into
-    let elem = document.getElementById('google_translate_element');
-    if (!elem) {
-      elem = document.createElement('div');
-      elem.id = 'google_translate_element';
-      elem.style.display = 'none';
-      document.body.appendChild(elem);
-    }
-
-    // 2. Define global callback for Google Web Translate
-    (window as any).googleTranslateElementInit = () => {
-      if ((window as any).google && (window as any).google.translate) {
-        new (window as any).google.translate.TranslateElement({
-          pageLanguage: 'en',
-          includedLanguages: 'hi,en',
-          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
-          autoDisplay: false
-        }, 'google_translate_element');
-      }
-    };
-
-    // 3. Load script if not already fetched
-    const existingScript = document.getElementById('google-translate-script');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'google-translate-script';
-      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-
-    // 4. Inject global styles to cleanly hide all translation banners/frames
-    const styleId = 'google-translate-cleanup-styles';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.innerHTML = `
-        #google_translate_element, 
-        .skiptranslate, 
-        .goog-te-banner-frame, 
-        .goog-te-balloon-frame, 
-        .goog-te-banner,
-        iframe.goog-te-banner-frame {
-          display: none !important;
-          visibility: hidden !important;
-          height: 0px !important;
-        }
-        body {
-          top: 0px !important;
-          position: static !important;
-        }
-        font {
-          background-color: transparent !important;
-          box-shadow: none !important;
-          color: inherit !important;
-        }
-      `;
-      document.head.appendChild(style);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mithila_lang');
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+      
+      const script = document.getElementById('google-translate-script');
+      if (script) script.remove();
+      const style = document.getElementById('google-translate-cleanup-styles');
+      if (style) style.remove();
+      const elem = document.getElementById('google_translate_element');
+      if (elem) elem.remove();
     }
   }, []);
-
-  // Sync translation cookies and dropdown triggers dynamically on lang state change
-  useEffect(() => {
-    localStorage.setItem('mithila_lang', lang);
-
-    const cookieValue = lang === 'hi' ? '/en/hi' : '/en/en';
-    document.cookie = `googtrans=${cookieValue}; path=/;`;
-    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname};`;
-
-    const triggerSelectorUpdate = () => {
-      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-      if (combo) {
-        if (combo.value !== lang) {
-          combo.value = lang;
-          combo.dispatchEvent(new Event('change'));
-        }
-      }
-    };
-
-    triggerSelectorUpdate();
-    const interval = setInterval(triggerSelectorUpdate, 800);
-    const timeout = setTimeout(() => clearInterval(interval), 5000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [lang]);
-
-  // Synchronize state if language change is dispatched from other sessions/pages
-  useEffect(() => {
-    const handleEvent = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail && customEvent.detail !== lang) {
-        setLang(customEvent.detail);
-      }
-    };
-    window.addEventListener('mithila_lang_updated', handleEvent);
-    return () => {
-      window.removeEventListener('mithila_lang_updated', handleEvent);
-    };
-  }, [lang]);
-
-  const toggleLang = () => {
-    const nextLang = lang === 'en' ? 'hi' : 'en';
-    setLang(nextLang);
-    window.dispatchEvent(new CustomEvent('mithila_lang_updated', { detail: nextLang }));
-  };
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -286,15 +181,6 @@ export default function Header() {
 
           {/* Mobile Interactive Actions Container */}
           <div className="flex items-center gap-2 lg:hidden shrink-0">
-            {/* Language Switcher */}
-            <button
-              onClick={toggleLang}
-              className="px-2 py-1 bg-white hover:bg-orange-50 border border-orange-200 rounded-lg text-[10px] font-black text-orange-700 transition-all cursor-pointer whitespace-nowrap shrink-0 tracking-wider notranslate"
-              title="Toggle Language / भाषा बदलें"
-            >
-              {lang === 'en' ? 'हिन्दी' : 'EN'}
-            </button>
-
             {/* Cart trigger button with reactive count */}
             {user && (
               <button
@@ -444,15 +330,6 @@ export default function Header() {
               </button>
             )}
           </nav>
-
-          {/* Language Switcher Button */}
-          <button
-            onClick={toggleLang}
-            className="px-3 py-1.5 border border-orange-200 bg-white hover:bg-orange-50 text-orange-700 font-extrabold text-xs rounded-xl shadow-xs cursor-pointer transition-all shrink-0 select-none notranslate"
-            title="Toggle Language / भाषा बदलें"
-          >
-            {lang === 'en' ? 'हिन्दी' : 'English'}
-          </button>
 
           {/* Desktop-only Cart trigger button with reactive count */}
           {user && (
