@@ -26,16 +26,41 @@ function PaymentSuccessScreen() {
       }
 
       try {
-        let orderRef = doc(db, 'orders', orderId);
+        let isTiffin = orderId.startsWith('TIF-') || !!localStorage.getItem(`pending_tiffin_order_${orderId}`);
+        let orderRef = isTiffin ? doc(db, 'tiffinOrders', orderId) : doc(db, 'orders', orderId);
         let docSnap = await getDoc(orderRef);
-        let isTiffin = false;
+        let orderData: any = null;
 
-        if (!docSnap.exists()) {
-          // Check tiffinOrders collection instead (since Tiffin orders are never added to orders collection)
-          orderRef = doc(db, 'tiffinOrders', orderId);
-          docSnap = await getDoc(orderRef);
-          if (docSnap.exists()) {
-            isTiffin = true;
+        if (docSnap.exists()) {
+          orderData = docSnap.data();
+        } else {
+          if (isTiffin) {
+            const stored = localStorage.getItem(`pending_tiffin_order_${orderId}`);
+            if (stored) {
+              orderData = JSON.parse(stored);
+            } else {
+              orderData = {
+                id: orderId,
+                orderId: orderId,
+                userId: auth.currentUser?.uid || '',
+                customerName: auth.currentUser?.displayName || 'Customer',
+                phone: '',
+                address: '',
+                plan: 'Tiffin Subscription',
+                amount: Number(amount) || 0,
+                totalAmount: Number(amount) || 0,
+                status: 'Pending Payment',
+                paymentStatus: 'Pending Payment',
+                isTiffinOrder: true,
+                orderType: 'tiffin',
+                orderDate: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString()
+              };
+            }
+            // Create initial pending document in Firestore tiffinOrders
+            await setDoc(orderRef, orderData);
+            // Clean up cached localStorage
+            localStorage.removeItem(`pending_tiffin_order_${orderId}`);
           } else {
             setError(`Order Reference #${orderId} was not found.`);
             setLoading(false);
@@ -43,7 +68,6 @@ function PaymentSuccessScreen() {
           }
         }
 
-        const orderData = docSnap.data();
         setOrder(orderData);
 
         // If order status is pending payment, update it to Paid and status to Placed (or Pending Activation for Tiffin)
@@ -75,18 +99,18 @@ function PaymentSuccessScreen() {
             };
             setOrder(updatedOrderData);
 
-            // Save Reference ID in customer profile
+            // Save Reference ID in customer profile - utilizing setDoc merge for zero potential failure
             try {
               const uId = updatedOrderData.userId;
               if (uId) {
                 const userRef = doc(db, 'users', uId);
-                await updateDoc(userRef, {
+                await setDoc(userRef, {
                   tiffinReferenceId: refId,
                   tiffinStatus: 'Pending Activation'
-                });
+                }, { merge: true });
               }
             } catch (uErr) {
-              console.error("Error updating customer profile with reference ID:", uErr);
+              console.error("Non-blocking error updating customer profile with reference ID:", uErr);
             }
 
             // Trigger Tiffin Purchase Formspree and Gmail Email Notification

@@ -212,8 +212,8 @@ export default function TiffinService() {
         ]
       };
 
-      const docRef = await addDoc(collection(db, 'tiffinOrders'), orderPayload);
-      const newOrderId = docRef.id;
+      const newOrderId = `TIF-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      localStorage.setItem(`pending_tiffin_order_${newOrderId}`, JSON.stringify(orderPayload));
 
       const configRes = await fetch('/api/payu/config');
       const configData = await configRes.json();
