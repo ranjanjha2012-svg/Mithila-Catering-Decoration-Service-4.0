@@ -325,7 +325,11 @@ export default function Dashboard() {
   // Tiffin Service active management states
   const [tiffinCustomers, setTiffinCustomers] = useState<TiffinCustomer[]>([]);
   const [tiffinOrders, setTiffinOrders] = useState<any[]>([]);
-  const [tiffinSubTab, setTiffinSubTab] = useState<'registered' | 'active' | 'orders' | 'register'>('registered');
+  const [tiffinSubTab, setTiffinSubTab] = useState<'registered' | 'active' | 'orders' | 'paused_cancelled' | 'notices' | 'register'>('registered');
+  const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'finalised'>('active');
+  const [notices, setNotices] = useState<any[]>([]);
+  const [noticeForm, setNoticeForm] = useState({ title: '', content: '' });
+  const [publishingNotice, setPublishingNotice] = useState(false);
   const [tiffinForm, setTiffinForm] = useState({
     name: '',
     phone: '',
@@ -369,6 +373,7 @@ export default function Dashboard() {
   const ordersUnsubscribeRef = React.useRef<(() => void) | null>(null);
   const tiffinCustomersUnsubRef = React.useRef<(() => void) | null>(null);
   const tiffinOrdersUnsubRef = React.useRef<(() => void) | null>(null);
+  const tiffinNoticesUnsubRef = React.useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -405,6 +410,9 @@ export default function Dashboard() {
       }
       if (tiffinOrdersUnsubRef.current) {
         tiffinOrdersUnsubRef.current();
+      }
+      if (tiffinNoticesUnsubRef.current) {
+        tiffinNoticesUnsubRef.current();
       }
     };
   }, []);
@@ -511,6 +519,9 @@ export default function Dashboard() {
       if (tiffinOrdersUnsubRef.current) {
         tiffinOrdersUnsubRef.current();
       }
+      if (tiffinNoticesUnsubRef.current) {
+        tiffinNoticesUnsubRef.current();
+      }
 
       // 4. Real-time Tiffin Customers
       const unsubTiffinCust = onSnapshot(collection(db, 'tiffinCustomers'), (snapshot) => {
@@ -564,10 +575,59 @@ export default function Dashboard() {
       });
       tiffinOrdersUnsubRef.current = unsubTiffinOrd;
 
+      // 6. Real-time Tiffin Notices
+      const unsubTiffinNotices = onSnapshot(collection(db, 'tiffinNotices'), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          list.push({
+            id: doc.id,
+            title: data.title || '',
+            content: data.content || '',
+            createdAt: data.createdAt || ''
+          });
+        });
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setNotices(list);
+      }, (error) => {
+        console.error("Real-time tiffinNotices sync failed:", error);
+      });
+      tiffinNoticesUnsubRef.current = unsubTiffinNotices;
+
     } catch (error) {
       console.error("Error loading admin collections:", error);
     } finally {
       setLoadingDb(false);
+    }
+  };
+
+  const handlePublishNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noticeForm.title.trim() || !noticeForm.content.trim()) return;
+    setPublishingNotice(true);
+    try {
+      await addDoc(collection(db, 'tiffinNotices'), {
+        title: noticeForm.title,
+        content: noticeForm.content,
+        createdAt: new Date().toISOString()
+      });
+      setNoticeForm({ title: '', content: '' });
+      alert("Notice published successfully to Customer Notice Board.");
+    } catch (err: any) {
+      alert("Error publishing notice: " + err.message);
+    } finally {
+      setPublishingNotice(false);
+    }
+  };
+
+  const handleDeleteNotice = async (noticeId: string) => {
+    if (window.confirm("Are you sure you want to delete this notice?")) {
+      try {
+        await deleteDoc(doc(db, 'tiffinNotices', noticeId));
+        alert("Notice deleted successfully.");
+      } catch (err: any) {
+        alert("Error deleting notice: " + err.message);
+      }
     }
   };
 
@@ -933,7 +993,7 @@ export default function Dashboard() {
                 <div className="bg-white border border-stone-200/55 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Active Customer Orders</h3>
+                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Customer Orders Console</h3>
                       <p className="text-xs text-stone-400 font-bold uppercase mt-1">Total Placed: {orders.length} orders</p>
                     </div>
 
@@ -953,11 +1013,37 @@ export default function Dashboard() {
                     </div>
                   </div>
 
+                  {/* Orders Subtab Selectors */}
+                  <div className="flex border-b border-stone-200 gap-4 mb-2 pb-0.5">
+                    <button
+                      onClick={() => setOrdersSubTab('active')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        ordersSubTab === 'active' ? 'border-orange-600 text-orange-600' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Active Orders ({orders.filter(o => o.status !== 'Delivered' && !(o.status || '').toLowerCase().includes('cancel')).length})
+                    </button>
+                    <button
+                      onClick={() => setOrdersSubTab('finalised')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        ordersSubTab === 'finalised' ? 'border-orange-600 text-orange-600' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Finalised ({orders.filter(o => o.status === 'Delivered' || (o.status || '').toLowerCase().includes('cancel')).length})
+                    </button>
+                  </div>
+
                   {/* Redefined Magenta Order Cards Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {orders
                       .filter((order) => {
-                        let mapped = order.status || 'Placed';
+                        const status = order.status || 'Placed';
+                        const isFinalised = status === 'Delivered' || status.toLowerCase().includes('cancel');
+
+                        if (ordersSubTab === 'active' && isFinalised) return false;
+                        if (ordersSubTab === 'finalised' && !isFinalised) return false;
+
+                        let mapped = status;
                         if (mapped === 'Pending' || mapped === 'Pending Payment' || mapped === 'COD Pending') {
                           mapped = 'Placed';
                         } else if (mapped === 'Approved') {
@@ -1252,12 +1338,28 @@ export default function Dashboard() {
                       Active Tiffin Customers ({tiffinCustomers.filter(c => c.status === 'Active').length})
                     </button>
                     <button
+                      onClick={() => setTiffinSubTab('paused_cancelled')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        tiffinSubTab === 'paused_cancelled' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Paused/Cancelled Tiffin Service ({tiffinCustomers.filter(c => c.status === 'Paused' || c.status === 'Cancelled').length})
+                    </button>
+                    <button
                       onClick={() => setTiffinSubTab('orders')}
                       className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
                         tiffinSubTab === 'orders' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
                       }`}
                     >
                       Tiffin Orders ({tiffinOrders.filter(o => o.status !== 'Active').length})
+                    </button>
+                    <button
+                      onClick={() => setTiffinSubTab('notices')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        tiffinSubTab === 'notices' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Notice Board Editor ({notices.length})
                     </button>
                     <button
                       onClick={() => setTiffinSubTab('register')}
@@ -1325,7 +1427,7 @@ export default function Dashboard() {
                                   <h4 className="text-xs font-black font-mono tracking-tight text-white mt-1">{ord.id.toUpperCase()}</h4>
                                 </div>
                                 <span className="text-[10px] bg-green-500 text-white font-extrabold px-2.5 py-1 rounded-md uppercase">
-                                  PAID
+                                  {ord.status || 'PAID'}
                                 </span>
                               </div>
 
@@ -1339,7 +1441,7 @@ export default function Dashboard() {
                               <div className="bg-black/10 rounded-2xl p-3.5 border border-white/5 space-y-1.5 text-xs mb-4">
                                 <div className="flex justify-between">
                                   <span className="text-rose-200">Plan Option</span>
-                                  <span className="font-bold text-white">{ord.plan}</span>
+                                  <span className="font-bold text-white">{ord.plan || ord.planName}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-rose-200">Amount Paid</span>
@@ -1351,12 +1453,38 @@ export default function Dashboard() {
                                 </div>
                               </div>
 
-                              <button
-                                onClick={() => setOrderActivationTarget(ord)}
-                                className="mt-2 w-full py-2.5 bg-yellow-450 hover:bg-yellow-500 text-rose-950 text-xs font-black rounded-xl transition uppercase tracking-wider text-center select-none cursor-pointer flex items-center justify-center gap-1.5"
-                              >
-                                Activate Subscription
-                              </button>
+                              {ord.status !== 'Cancelled' ? (
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                  <button
+                                    onClick={() => setOrderActivationTarget(ord)}
+                                    className="py-2.5 bg-yellow-450 hover:bg-yellow-500 text-rose-950 text-xs font-black rounded-xl transition uppercase tracking-wider text-center select-none cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+                                  >
+                                    Activate
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm(`Are you sure you want to mark order for ${ord.customerName} as Cancelled?`)) {
+                                        try {
+                                          await updateDoc(doc(db, 'tiffinOrders', ord.id), {
+                                            status: 'Cancelled',
+                                            cancelledAt: new Date().toISOString()
+                                          });
+                                          alert("Order marked as Cancelled successfully!");
+                                        } catch (err: any) {
+                                          alert("Error: " + err.message);
+                                        }
+                                      }
+                                    }}
+                                    className="py-2.5 bg-red-650 hover:bg-red-750 text-white text-xs font-black rounded-xl transition uppercase tracking-wider text-center select-none cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+                                  >
+                                    Cancelled
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="mt-2 w-full py-2.5 bg-red-950 text-rose-300 border border-red-905 text-xs font-black rounded-xl text-center uppercase tracking-wider">
+                                  Cancelled
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1366,6 +1494,163 @@ export default function Dashboard() {
                           <p className="text-xs font-semibold text-stone-500">No Online Tiffin Orders recorded yet.</p>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {tiffinSubTab === 'paused_cancelled' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {tiffinCustomers
+                        .filter(c => c.status === 'Paused' || c.status === 'Cancelled')
+                        .map((cust) => (
+                          <div key={cust.id} className="bg-stone-50 border border-stone-200 rounded-3xl p-5 flex flex-col justify-between shadow-sm text-black animate-fade-in">
+                            <div>
+                              <div className="flex justify-between items-start gap-2 border-b border-stone-150 pb-3 mb-3">
+                                <div>
+                                  <h5 className="font-extrabold text-black text-sm">{cust.name}</h5>
+                                  <span className="font-mono text-[10px] font-bold text-stone-600 bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                                    Ref ID: {cust.referenceId}
+                                  </span>
+                                </div>
+                                <span className={`text-[8px] px-2 py-1 font-black rounded uppercase text-white ${
+                                  cust.status === 'Paused' ? 'bg-amber-500' : 'bg-red-500'
+                                }`}>
+                                  {cust.status}
+                                </span>
+                              </div>
+
+                              <div className="text-xs text-stone-850 space-y-2 mb-4 leading-relaxed font-semibold">
+                                <p>☎ <strong>Phone:</strong> {cust.phone}</p>
+                                {cust.email && <p className="truncate">✉ <strong>Email:</strong> {cust.email}</p>}
+                                <p>📍 <strong>Address:</strong> {cust.address}</p>
+                                <p>💰 <strong>Plan Price:</strong> ₹{cust.monthlyPrice}</p>
+                                <p>⚖ <strong>Balance:</strong> {cust.balanceAmount}</p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 mt-4">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await handleUpdateTiffinCustomer(cust.id, { status: 'Active' });
+                                    alert(`Tiffin service for ${cust.name} has been Activated.`);
+                                  } catch (err: any) {
+                                    alert("Error activating: " + err.message);
+                                  }
+                                }}
+                                className="py-2.5 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase rounded-xl tracking-wider shadow-sm transition-all"
+                              >
+                                Activate
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await handleUpdateTiffinCustomer(cust.id, { status: 'Cancelled' });
+                                    alert(`Tiffin service for ${cust.name} has been Cancelled.`);
+                                  } catch (err: any) {
+                                    alert("Error cancelling: " + err.message);
+                                  }
+                                }}
+                                className="py-2.5 bg-red-650 hover:bg-red-750 text-white font-black text-xs uppercase rounded-xl tracking-wider shadow-sm transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      {tiffinCustomers.filter(c => c.status === 'Paused' || c.status === 'Cancelled').length === 0 && (
+                        <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
+                          <Users size={32} className="mx-auto text-stone-400 mb-2" />
+                          <p className="text-xs font-semibold text-stone-500">No customers currently in Paused or Cancelled status.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {tiffinSubTab === 'notices' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+                      {/* Notice Creation Form Column */}
+                      <div className="lg:col-span-1">
+                        <div className="bg-stone-50 rounded-[2rem] border border-stone-150 p-6 flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-sm font-black text-[#C2185B] uppercase mb-1 tracking-wide">Publish News Notice</h4>
+                            <p className="text-[10px] text-stone-400 font-extrabold mb-5 uppercase">This notice will appear on all Tiffin customer pages immediately</p>
+
+                            <form onSubmit={handlePublishNotice} className="space-y-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider block">Notice Title *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={noticeForm.title}
+                                  onChange={(e) => setNoticeForm(prev => ({ ...prev, title: e.target.value }))}
+                                  placeholder="e.g. Festival Delivery Timings"
+                                  className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-black placeholder-stone-500"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider block">Detailed Notice Content *</label>
+                                <textarea
+                                  required
+                                  rows={5}
+                                  value={noticeForm.content}
+                                  onChange={(e) => setNoticeForm(prev => ({ ...prev, content: e.target.value }))}
+                                  placeholder="Type the notice terms, delivery alerts or schedule announcements here..."
+                                  className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-black placeholder-stone-500 font-semibold"
+                                />
+                              </div>
+
+                              <button
+                                type="submit"
+                                disabled={publishingNotice}
+                                className="w-full py-3 bg-[#C2185B] hover:bg-[#a0134b] text-white text-xs font-black uppercase rounded-xl tracking-wider transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                {publishingNotice ? 'Publishing...' : 'Publish Notice 📢'}
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Notice Records List Column */}
+                      <div className="lg:col-span-2 space-y-4">
+                        <div className="flex justify-between items-center border-b border-stone-200 pb-3 mb-1">
+                          <h4 className="text-sm font-black text-stone-900 uppercase">Currently Active Notices</h4>
+                          <span className="text-[10px] font-black bg-[#C2185B]/10 text-[#C2185B] px-2.5 py-1 rounded-full uppercase">{notices.length} notices</span>
+                        </div>
+
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                          {notices.map((notice) => (
+                            <div key={notice.id} className="bg-white border border-stone-200/80 rounded-2xl p-5 shadow-sm space-y-3 relative overflow-hidden">
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#C2185B]" />
+                              
+                              <div className="flex justify-between items-start gap-4">
+                                <div>
+                                  <h5 className="font-extrabold text-stone-900 text-sm">{notice.title}</h5>
+                                  <span className="text-[9px] font-bold text-stone-400 block mt-0.5">{notice.createdAt ? new Date(notice.createdAt).toLocaleString() : 'N/A'}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteNotice(notice.id)}
+                                  className="px-2.5 py-1 text-[9px] font-black text-red-650 bg-red-50 hover:bg-red-100 uppercase rounded-md tracking-wider transition-colors border border-red-200"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+
+                              <p className="text-xs text-stone-650 leading-relaxed font-semibold whitespace-pre-wrap">{notice.content}</p>
+                            </div>
+                          ))}
+
+                          {notices.length === 0 && (
+                            <div className="text-center py-12 bg-stone-50 border border-stone-200 rounded-3xl">
+                              <p className="text-xs font-semibold text-stone-500">No announcements published on the notice board yet.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 

@@ -180,15 +180,6 @@ export default function Header() {
 
           {/* Mobile Interactive Actions Container */}
           <div className="flex items-center gap-2 lg:hidden shrink-0">
-            {/* Language Switcher */}
-            <button
-              onClick={toggleLang}
-              className="px-2 py-1 bg-white hover:bg-orange-50 border border-orange-200 rounded-lg text-[10px] font-black text-orange-700 transition-all cursor-pointer whitespace-nowrap shrink-0 tracking-wider"
-              title="Toggle Language / भाषा बदलें"
-            >
-              {lang === 'en' ? 'हिन्दी' : 'EN'}
-            </button>
-
             {/* Cart trigger button with reactive count */}
             {user && (
               <button
@@ -338,15 +329,6 @@ export default function Header() {
               </button>
             )}
           </nav>
-
-          {/* Language Switcher Button */}
-          <button
-            onClick={toggleLang}
-            className="px-3 py-1.5 border border-orange-200 bg-white hover:bg-orange-50 text-orange-700 font-extrabold text-xs rounded-xl shadow-xs cursor-pointer transition-all shrink-0 select-none"
-            title="Toggle Language / भाषा बदलें"
-          >
-            {lang === 'en' ? 'हिन्दी' : 'English'}
-          </button>
 
           {/* Desktop-only Cart trigger button with reactive count */}
           {user && (

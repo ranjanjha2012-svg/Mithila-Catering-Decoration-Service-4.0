@@ -65,6 +65,7 @@ export default function MyOrdersPage() {
   
   const [tiffinOrders, setTiffinOrders] = useState<any[]>([]);
   const [tiffinCustomers, setTiffinCustomers] = useState<any[]>([]);
+  const [notices, setNotices] = useState<any[]>([]);
 
   // Tiffin tracker states for non-logged in direct tracking
   const [showTrackerModal, setShowTrackerModal] = useState(false);
@@ -131,6 +132,28 @@ export default function MyOrdersPage() {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, isAiTyping]);
+
+  useEffect(() => {
+    const q = collection(db, 'tiffinNotices');
+    const unsub = onSnapshot(q, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((dt) => {
+        const data = dt.data();
+        list.push({
+          id: dt.id,
+          ...data
+        });
+      });
+      list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setNotices(list);
+    }, (error) => {
+      console.error("Failed to load news notices: ", error);
+    });
+
+    return () => {
+      unsub();
+    };
+  }, []);
 
   const fetchUserTiffinOrders = (userId: string) => {
     if (tiffinUnsubRef.current) {
@@ -668,6 +691,29 @@ export default function MyOrdersPage() {
         </div>
       ) : (
         <div className="space-y-10">
+          {/* Tiffin Notice Board section */}
+          {notices.length > 0 && (
+            <div className="bg-amber-50 border-2 border-amber-200/80 rounded-[2rem] p-6 shadow-sm relative overflow-hidden animate-fade-in">
+              <div className="absolute top-0 left-0 bottom-0 w-2.5 bg-amber-500" />
+              <div className="flex items-center gap-2.5 mb-4">
+                <span className="text-xl">📢</span>
+                <h4 className="text-xs sm:text-sm font-black uppercase text-amber-950 tracking-wider">Mithila Tiffin Service Notice Board</h4>
+                <span className="ml-auto text-[9px] font-black bg-amber-200 text-amber-850 px-2.5 py-1 rounded-full uppercase">Notice Center</span>
+              </div>
+              <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                {notices.map((notice) => (
+                  <div key={notice.id} className="bg-white border border-amber-100 rounded-2xl p-4 shadow-sm">
+                    <h5 className="font-black text-amber-950 text-xs sm:text-sm">{notice.title}</h5>
+                    <p className="text-[10px] text-stone-400 font-extrabold block mt-0.5">
+                      Published: {notice.createdAt ? new Date(notice.createdAt).toLocaleString() : 'recently'}
+                    </p>
+                    <p className="text-xs text-stone-700 leading-relaxed font-semibold mt-2.5 whitespace-pre-line">{notice.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Tiffin Subscriptions Section */}
           {tiffinOrders.length > 0 && (
             <div className="mb-6">
