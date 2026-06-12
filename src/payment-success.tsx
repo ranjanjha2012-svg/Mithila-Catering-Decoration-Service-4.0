@@ -26,77 +26,54 @@ function PaymentSuccessScreen() {
       }
 
       try {
-        const orderRef = doc(db, 'orders', orderId);
-        const docSnap = await getDoc(orderRef);
+        let orderRef = doc(db, 'orders', orderId);
+        let docSnap = await getDoc(orderRef);
+        let isTiffin = false;
 
         if (!docSnap.exists()) {
-          setError(`Order Reference #${orderId} was not found.`);
-          setLoading(false);
-          return;
+          // Check tiffinOrders collection instead (since Tiffin orders are never added to orders collection)
+          orderRef = doc(db, 'tiffinOrders', orderId);
+          docSnap = await getDoc(orderRef);
+          if (docSnap.exists()) {
+            isTiffin = true;
+          } else {
+            setError(`Order Reference #${orderId} was not found.`);
+            setLoading(false);
+            return;
+          }
         }
 
         const orderData = docSnap.data();
         setOrder(orderData);
 
-        // If order status is pending payment, update it to Paid and status to Placed
+        // If order status is pending payment, update it to Paid and status to Placed (or Pending Activation for Tiffin)
         let updatedOrderData = orderData;
         if (orderData.status === 'Pending Payment') {
-          await updateDoc(orderRef, {
-            status: 'Placed',
-            paymentStatus: 'Paid',
-            paymentVerifiedAt: new Date().toISOString()
-          });
-          
-          await logUserActivity('Order Payment Verified', { 
-            orderId, 
-            status: 'Placed',
-            paymentStatus: 'Paid', 
-            amount: orderData.totalAmount 
-          });
-
-          updatedOrderData = { ...orderData, status: 'Placed', paymentStatus: 'Paid' };
-          // Refresh order status in state
-          setOrder(updatedOrderData);
-        }
-
-        // Handle automated Tiffin service database creation on payment validation
-        if (updatedOrderData.isTiffinOrder === true) {
-          const tiffinOrderRef = doc(db, 'tiffinOrders', orderId);
-          const tiffinOrderSnap = await getDoc(tiffinOrderRef);
-          if (!tiffinOrderSnap.exists()) {
+          if (isTiffin) {
             const randomDigits = Math.floor(100000 + Math.random() * 900000);
             const refId = `MTS-TF-${randomDigits}`;
 
-            await setDoc(tiffinOrderRef, {
-              id: orderId,
-              orderId: orderId,
-              userId: updatedOrderData.userId || '',
-              customerName: updatedOrderData.customerName || 'Customer',
-              phone: updatedOrderData.customerPhone || updatedOrderData.userPhone || '',
-              customerEmail: updatedOrderData.customerEmail || '',
-              address: updatedOrderData.address || '',
-              plan: updatedOrderData.items?.[0]?.name || 'Tiffin Subscription',
-              amount: updatedOrderData.totalAmount || 0,
-              orderDate: updatedOrderData.orderDate || new Date().toISOString().split('T')[0],
-              createdAt: updatedOrderData.createdAt || new Date().toISOString(),
-              referenceId: refId,
+            await updateDoc(orderRef, {
               status: 'Pending Activation',
               paymentStatus: 'Paid',
-              orderType: 'tiffin'
+              paymentVerifiedAt: new Date().toISOString(),
+              referenceId: refId
             });
 
-            // Update main orders document with Tiffin Reference ID and state
-            try {
-              const mainOrderRef = doc(db, 'orders', orderId);
-              await updateDoc(mainOrderRef, {
-                referenceId: refId,
-                tiffinReferenceId: refId,
-                tiffinStatus: 'Pending Activation',
-                orderType: 'tiffin'
-              });
-            } catch (upErr) {
-              console.error("Error updating parent order with reference ID:", upErr);
-            }
+            await logUserActivity('Tiffin Payment Verified', { 
+              orderId, 
+              status: 'Pending Activation',
+              paymentStatus: 'Paid', 
+              amount: orderData.totalAmount || orderData.amount || 0 
+            });
+
+            updatedOrderData = { 
+              ...orderData, 
+              status: 'Pending Activation', 
+              paymentStatus: 'Paid',
+              referenceId: refId
+            };
+            setOrder(updatedOrderData);
 
             // Save Reference ID in customer profile
             try {
@@ -126,8 +103,8 @@ function PaymentSuccessScreen() {
                   phoneNumber: updatedOrderData.customerPhone || updatedOrderData.userPhone || 'N/A',
                   email: updatedOrderData.customerEmail || 'N/A',
                   address: updatedOrderData.address || 'N/A',
-                  planName: updatedOrderData.items?.[0]?.name || 'Tiffin Subscription',
-                  amountPaid: `₹${updatedOrderData.totalAmount || 0}`,
+                  planName: updatedOrderData.plan || updatedOrderData.items?.[0]?.name || 'Tiffin Subscription',
+                  amountPaid: `₹${updatedOrderData.totalAmount || updatedOrderData.amount || 0}`,
                   paymentMethod: 'Pay Online',
                   paymentStatus: 'Paid Successfully',
                   purchaseDate: updatedOrderData.orderDate || new Date().toISOString().split('T')[0],
@@ -139,12 +116,28 @@ function PaymentSuccessScreen() {
             } catch (emailErr) {
               console.error("Error triggering Tiffin Purchase notification:", emailErr);
             }
-            setOrder((prev: any) => prev ? { ...prev, referenceId: refId } : null);
+          } else {
+            await updateDoc(orderRef, {
+              status: 'Placed',
+              paymentStatus: 'Paid',
+              paymentVerifiedAt: new Date().toISOString()
+            });
+            
+            await logUserActivity('Order Payment Verified', { 
+              orderId, 
+              status: 'Placed',
+              paymentStatus: 'Paid', 
+              amount: orderData.totalAmount 
+            });
+
+            updatedOrderData = { ...orderData, status: 'Placed', paymentStatus: 'Paid' };
+            setOrder(updatedOrderData);
           }
         }
 
         // Send Formspree email notification for successful Online Payment placement
         if (
+          !isTiffin &&
           (updatedOrderData.status === 'Placed' || updatedOrderData.paymentStatus === 'Paid') &&
           updatedOrderData.isNotificationSent !== true
         ) {

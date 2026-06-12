@@ -197,7 +197,10 @@ export default function TiffinService() {
         packingCharge: 0,
         deliveryCharge: 0,
         totalAmount: totalAmount,
+        amount: totalAmount,
+        plan: `${selectedPlan?.name} Tiffin Subscription`,
         status: 'Pending Payment',
+        paymentStatus: 'Pending Payment',
         paymentMethod: 'ONLINE',
         orderDate: new Date().toISOString().split('T')[0],
         orderTime: new Date().toTimeString().split(' ')[0],
@@ -209,7 +212,7 @@ export default function TiffinService() {
         ]
       };
 
-      const docRef = await addDoc(collection(db, 'orders'), orderPayload);
+      const docRef = await addDoc(collection(db, 'tiffinOrders'), orderPayload);
       const newOrderId = docRef.id;
 
       const configRes = await fetch('/api/payu/config');
