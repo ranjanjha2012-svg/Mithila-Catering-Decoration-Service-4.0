@@ -1423,17 +1423,25 @@ export default function Dashboard() {
                                   alert("Error: Missing database write privileges.");
                                 }
                               }}
-                              className={`text-xs font-black uppercase px-2.5 py-1 rounded-xl outline-none border transition-all cursor-pointer ${
-                                inq.status === 'New' ? 'bg-blue-600 text-white border-blue-500' :
-                                inq.status === 'Contacted' ? 'bg-amber-500 text-white border-amber-400' :
-                                inq.status === 'Confirmed' ? 'bg-emerald-600 text-white border-emerald-500' :
-                                'bg-stone-500 text-white border-stone-400'
-                              }`}
+                              style={{
+                                color: '#000000',
+                                backgroundColor: 
+                                  inq.status === 'New' ? '#DBEAFE' : 
+                                  inq.status === 'Contacted' ? '#FEF3C7' : 
+                                  inq.status === 'Confirmed' ? '#D1FAE5' : 
+                                  '#F3F4F6',
+                                borderColor:
+                                  inq.status === 'New' ? '#93C5FD' :
+                                  inq.status === 'Contacted' ? '#FCD34D' :
+                                  inq.status === 'Confirmed' ? '#6EE7B7' :
+                                  '#D1D5DB'
+                              }}
+                              className="text-xs font-black uppercase px-2.5 py-1 rounded-xl outline-none border transition-all cursor-pointer"
                             >
-                              <option value="New" className="bg-white text-stone-850">New 🔵</option>
-                              <option value="Contacted" className="bg-white text-stone-850">Contacted 🟡</option>
-                              <option value="Confirmed" className="bg-white text-stone-850">Confirmed 🟢</option>
-                              <option value="Closed" className="bg-white text-stone-850">Closed ⚫</option>
+                              <option value="New" style={{ color: '#000000' }} className="bg-white text-black">New 🔵</option>
+                              <option value="Contacted" style={{ color: '#000000' }} className="bg-white text-black">Contacted 🟡</option>
+                              <option value="Confirmed" style={{ color: '#000000' }} className="bg-white text-black">Confirmed 🟢</option>
+                              <option value="Closed" style={{ color: '#000000' }} className="bg-white text-black">Closed ⚫</option>
                             </select>
                           </div>
 
@@ -1441,45 +1449,45 @@ export default function Dashboard() {
 
                           <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
                             <div className="space-y-1">
-                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Venue</span>
-                              <span className="text-stone-850 flex items-center gap-1"><MapPin size={12} className="text-stone-400 shrink-0" /> {inq.venueName || 'N/A'}</span>
+                              <span className="text-[10px] text-[#000000] uppercase font-black tracking-wider block">Venue</span>
+                              <span className="text-[#000000] flex items-center gap-1 font-bold"><MapPin size={12} className="text-[#000000] shrink-0" /> {inq.venueName || 'N/A'}</span>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Food Preference</span>
-                              <span className="text-stone-850 flex items-center gap-1"><Utensils size={12} className="text-stone-400 shrink-0" /> {inq.foodPreference || 'N/A'}</span>
+                              <span className="text-[10px] text-[#000000] uppercase font-black tracking-wider block">Food Preference</span>
+                              <span className="text-[#000000] flex items-center gap-1 font-bold"><Utensils size={12} className="text-[#000000] shrink-0" /> {inq.foodPreference || 'N/A'}</span>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">People count</span>
-                              <span className="text-stone-850 flex items-center gap-1"><Users size={12} className="text-stone-400 shrink-0" /> {inq.guestQuantity || 'N/A'} Guests</span>
+                              <span className="text-[10px] text-[#000000] uppercase font-black tracking-wider block">People Count</span>
+                              <span className="text-[#000000] flex items-center gap-1 font-bold"><Users size={12} className="text-[#000000] shrink-0" /> {inq.guestQuantity || 'N/A'} Guests</span>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Submitted At</span>
-                              <span className="text-stone-500 font-mono flex items-center gap-1"><Clock size={12} className="text-stone-400 shrink-0" /> {inq.submittedAt ? new Date(inq.submittedAt).toLocaleDateString() : 'N/A'}</span>
+                              <span className="text-[10px] text-[#000000] uppercase font-black tracking-wider block">Submitted At</span>
+                              <span className="text-[#000000] font-mono flex items-center gap-1 font-bold"><Clock size={12} className="text-[#000000] shrink-0" /> {inq.submittedAt ? new Date(inq.submittedAt).toLocaleDateString() : 'N/A'}</span>
                             </div>
                           </div>
 
                           <div className="space-y-1">
-                            <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Full Contact Address</span>
-                            <p className="text-xs text-stone-700 font-medium leading-relaxed bg-stone-100 p-2.5 rounded-xl border border-stone-200">{inq.address || 'No full address specified.'}</p>
+                            <span className="text-[10px] text-[#000000] uppercase font-black tracking-wider block">Full Contact Address</span>
+                            <p className="text-xs text-[#000000] font-bold leading-relaxed bg-stone-100 p-2.5 rounded-xl border border-stone-200">{inq.address || 'No full address specified.'}</p>
                           </div>
 
                           <div className="space-y-1.5">
-                            <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Required Services</span>
+                            <span className="text-[10px] text-[#000000] uppercase font-black tracking-wider block">Required Services</span>
                             <div className="flex flex-wrap gap-1.5">
                               {Array.isArray(inq.selectedServices) && inq.selectedServices.length > 0 ? (
                                 inq.selectedServices.map((srv: string, idx: number) => (
-                                  <span key={idx} className="text-[10px] font-black uppercase px-2.5 py-1 bg-rose-50 text-orange-700 rounded-lg border border-orange-100/50">
+                                  <span key={idx} className="text-[10px] font-black uppercase px-2.5 py-1 bg-stone-100 text-[#000000] rounded-lg border border-stone-300">
                                     {srv}
                                   </span>
                                 ))
                               ) : typeof inq.selectedServices === 'string' && inq.selectedServices ? (
                                 (inq.selectedServices as string).split(',').map((srv: string, idx: number) => (
-                                  <span key={idx} className="text-[10px] font-black uppercase px-2.5 py-1 bg-rose-50 text-orange-700 rounded-lg border border-orange-100/50">
+                                  <span key={idx} className="text-[10px] font-black uppercase px-2.5 py-1 bg-stone-100 text-[#000000] rounded-lg border border-stone-300">
                                     {srv.trim()}
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-xs text-stone-400 italic font-semibold">General catering services</span>
+                                <span className="text-xs text-[#000000] italic font-bold">General catering services</span>
                               )}
                             </div>
                           </div>
@@ -1488,15 +1496,15 @@ export default function Dashboard() {
                         <div className="pt-2 border-t border-stone-200/65 flex flex-wrap gap-2 text-xs font-black">
                           <a 
                             href={`tel:${inq.phone}`}
-                            className="px-3 py-2 bg-stone-200 hover:bg-stone-300 text-stone-850 rounded-xl transition-all flex items-center gap-1"
+                            className="px-3 py-2 bg-stone-200 hover:bg-stone-300 text-[#000000] rounded-xl transition-all flex items-center gap-1 font-bold"
                           >
-                            <Phone size={12} /> Call Client
+                            <Phone size={12} className="text-[#000000]" /> Call Client
                           </a>
                           <a 
                             href={`mailto:${inq.email}`}
-                            className="px-3 py-2 bg-stone-200 hover:bg-stone-300 text-stone-850 rounded-xl transition-all flex items-center gap-1"
+                            className="px-3 py-2 bg-stone-200 hover:bg-stone-300 text-[#000000] rounded-xl transition-all flex items-center gap-1 font-bold"
                           >
-                            <Mail size={12} /> Email
+                            <Mail size={12} className="text-[#000000]" /> Email
                           </a>
                           <a 
                             href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}`}
