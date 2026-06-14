@@ -727,9 +727,11 @@ export default function MyOrdersPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {tiffinOrders.map((sub) => {
                   const activeCustProfile = tiffinCustomers.find(c => c.referenceId === sub.referenceId);
-                  const displayStatus = activeCustProfile ? activeCustProfile.status : (sub.status || 'Pending Activation');
+                  const rawStatus = activeCustProfile ? activeCustProfile.status : (sub.status || 'Pending Activation');
+                  const displayStatus = rawStatus.replace(/\s+text-black$/gi, '');
                   const balanceVal = activeCustProfile ? activeCustProfile.balanceAmount : 0;
-                  const currentDeliveryStatus = activeCustProfile ? activeCustProfile.todayDeliveryStatus : 'Not Started';
+                  const rawDeliveryStatus = activeCustProfile ? activeCustProfile.todayDeliveryStatus : 'Not Started';
+                  const currentDeliveryStatus = rawDeliveryStatus.replace(/\s+text-black$/gi, '');
 
                   return (
                     <div 
@@ -748,8 +750,12 @@ export default function MyOrdersPage() {
                             </h4>
                           </div>
                           <span className={`text-[10px] uppercase font-black px-3 py-1 rounded-full border ${
-                            displayStatus === 'Active' 
-                              ? 'bg-green-50 text-green-700 border-green-200' 
+                            displayStatus === 'Active' || displayStatus === 'Delivered'
+                              ? 'bg-green-600 text-white border-green-700 font-extrabold'
+                              : displayStatus === 'Cancelled' || displayStatus.toLowerCase().includes('canc')
+                              ? 'bg-red-600 text-white border-red-700 font-extrabold'
+                              : displayStatus === 'Paused' || displayStatus === 'Preparing'
+                              ? 'bg-amber-500 text-white border-amber-600 font-extrabold'
                               : 'bg-rose-50 text-[#800000] border-rose-200 animate-pulse'
                           }`}>
                             {displayStatus}
@@ -783,9 +789,21 @@ export default function MyOrdersPage() {
                             <span className="font-mono text-stone-950 font-extrabold">{balanceVal}</span>
                           </div>
 
-                          <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100 flex justify-between">
-                            <span className="text-stone-400">Current Service Status</span>
-                            <span className="text-stone-950 font-extrabold uppercase text-[10px] tracking-wide">{currentDeliveryStatus}</span>
+                          <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100 flex justify-between items-center">
+                            <span className="text-stone-400 font-bold">Current Service Status</span>
+                            <span className={`text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full border ${
+                              currentDeliveryStatus === 'Delivered'
+                                ? 'bg-green-600 text-white border-green-700 font-extrabold'
+                                : currentDeliveryStatus === 'Cancelled'
+                                ? 'bg-red-600 text-white border-red-700 font-extrabold'
+                                : currentDeliveryStatus === 'Out For Delivery'
+                                ? 'bg-blue-600 text-white border-blue-700 font-extrabold'
+                                : currentDeliveryStatus === 'Preparing'
+                                ? 'bg-amber-500 text-white border-amber-600 font-extrabold'
+                                : 'bg-stone-100 text-stone-600 border-stone-200'
+                            }`}>
+                              {currentDeliveryStatus}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1365,24 +1383,37 @@ export default function MyOrdersPage() {
                       <div className="flex justify-between items-center pb-2 border-b border-stone-200/50">
                         <span className="text-xs font-black uppercase text-[#000000] tracking-wider font-sans">Plan Active Status</span>
                         <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full border ${
-                          trackerResult.status === 'Active' 
-                            ? 'bg-green-50 text-green-700 border-green-200' 
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                          trackerResult.status === 'Active' || trackerResult.status === 'Delivered'
+                            ? 'bg-green-600 text-white border-green-700 font-extrabold' 
+                            : trackerResult.status === 'Cancelled'
+                            ? 'bg-red-600 text-white border-red-700 font-extrabold'
+                            : trackerResult.status === 'Paused' || trackerResult.status === 'Preparing'
+                            ? 'bg-amber-500 text-white border-amber-600 font-extrabold'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         }`}>
                           {trackerResult.status || 'Pending'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center transition-all">
                         <span className="text-xs font-black uppercase text-[#000000] tracking-wider font-sans">Today's Meal Delivery Status</span>
-                        <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full border ${
-                          trackerResult.todayDeliveryStatus === 'Delivered'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : trackerResult.todayDeliveryStatus === 'Out For Delivery'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
-                            : 'bg-stone-100 text-stone-600 border-stone-200'
-                        }`}>
-                          {trackerResult.todayDeliveryStatus || 'Not Started'}
-                        </span>
+                        {(() => {
+                          const todayClean = (trackerResult.todayDeliveryStatus || 'Not Started').replace(/\s+text-black$/gi, '');
+                          return (
+                            <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full border ${
+                              todayClean === 'Delivered'
+                                ? 'bg-green-600 text-white border-green-700 font-extrabold'
+                                : todayClean === 'Cancelled'
+                                ? 'bg-red-600 text-white border-red-700 font-extrabold'
+                                : todayClean === 'Out For Delivery'
+                                ? 'bg-blue-600 text-white border-blue-700 animate-pulse font-extrabold'
+                                : todayClean === 'Preparing'
+                                ? 'bg-amber-500 text-white border-amber-600 font-extrabold'
+                                : 'bg-stone-100 text-stone-600 border-stone-200'
+                            }`}>
+                              {todayClean}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <p className="text-[10px] text-stone-400 font-bold leading-relaxed pt-1.5 font-sans">
                         ℹ️ Standard tiffin dispatches activate in real-time. Any changes made by the kitchen operator will reflect above instantly.

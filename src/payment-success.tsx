@@ -18,10 +18,19 @@ function PaymentSuccessScreen() {
   const amount = queryParams.get('amount') || '';
 
   useEffect(() => {
-    async function processOrderPayment() {
+    let active = true;
+
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (!active) return;
+      processOrderPayment(currentUser);
+    });
+
+    async function processOrderPayment(currentUser: any) {
       if (!orderId) {
-        setError('Missing order transaction reference.');
-        setLoading(false);
+        if (active) {
+          setError('Missing order transaction reference.');
+          setLoading(false);
+        }
         return;
       }
 
@@ -42,8 +51,8 @@ function PaymentSuccessScreen() {
               orderData = {
                 id: orderId,
                 orderId: orderId,
-                userId: auth.currentUser?.uid || '',
-                customerName: auth.currentUser?.displayName || 'Customer',
+                userId: currentUser?.uid || auth.currentUser?.uid || '',
+                customerName: currentUser?.displayName || auth.currentUser?.displayName || 'Customer',
                 phone: '',
                 address: '',
                 plan: 'Tiffin Subscription',
@@ -62,12 +71,15 @@ function PaymentSuccessScreen() {
             // Clean up cached localStorage
             localStorage.removeItem(`pending_tiffin_order_${orderId}`);
           } else {
-            setError(`Order Reference #${orderId} was not found.`);
-            setLoading(false);
+            if (active) {
+              setError(`Order Reference #${orderId} was not found.`);
+              setLoading(false);
+            }
             return;
           }
         }
 
+        if (!active) return;
         setOrder(orderData);
 
         // If order status is pending payment, update it to Paid and status to Placed (or Pending Activation for Tiffin)
@@ -97,11 +109,13 @@ function PaymentSuccessScreen() {
               paymentStatus: 'Paid',
               referenceId: refId
             };
-            setOrder(updatedOrderData);
+            if (active) {
+              setOrder(updatedOrderData);
+            }
 
             // Save Reference ID in customer profile - utilizing setDoc merge for zero potential failure
             try {
-              const uId = updatedOrderData.userId;
+              const uId = updatedOrderData.userId || currentUser?.uid;
               if (uId) {
                 const userRef = doc(db, 'users', uId);
                 await setDoc(userRef, {
@@ -155,7 +169,9 @@ function PaymentSuccessScreen() {
             });
 
             updatedOrderData = { ...orderData, status: 'Placed', paymentStatus: 'Paid' };
-            setOrder(updatedOrderData);
+            if (active) {
+              setOrder(updatedOrderData);
+            }
           }
         }
 
@@ -167,7 +183,7 @@ function PaymentSuccessScreen() {
         ) {
           try {
             const itemsText = (updatedOrderData.items || []).map((i: any, index: number) => 
-              `${index + 1}. ${i.name} (${i.size}) x${i.quantity} [₹${i.total || i.price * i.quantity}]`
+               `${index + 1}. ${i.name} (${i.size}) x${i.quantity} [₹${i.total || i.price * i.quantity}]`
             ).join('\n');
             const totalQty = (updatedOrderData.items || []).reduce((sum: number, i: any) => sum + i.quantity, 0);
 
@@ -197,7 +213,9 @@ function PaymentSuccessScreen() {
               isNotificationSent: true
             });
 
-            setOrder((prev: any) => prev ? { ...prev, isNotificationSent: true } : null);
+            if (active) {
+              setOrder((prev: any) => prev ? { ...prev, isNotificationSent: true } : null);
+            }
           } catch (emailErr) {
             console.error("Error sending PayU success Formspree email:", emailErr);
           }
@@ -205,15 +223,22 @@ function PaymentSuccessScreen() {
 
         // Execution of cart clearing on payment completion
         clearCart();
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       } catch (err) {
         console.error('Error processing success payment:', err);
-        setError('Failed to securely update order details in database.');
-        setLoading(false);
+        if (active) {
+          setError('Failed to securely update order details in database.');
+          setLoading(false);
+        }
       }
     }
 
-    processOrderPayment();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [orderId]);
 
   if (loading) {

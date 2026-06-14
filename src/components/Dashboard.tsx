@@ -188,9 +188,22 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     );
   }
 
-  // Active Customer Card: Background Magenta, Text White, Border Light Gray
+  // Active Customer Card: Background and indicators dynamically styled according to today's status colors
+  const statClean = (localTodayStatus || 'Not Started').replace(/\s+text-black$/gi, '');
+  
+  let bgClass = "bg-[#C2185B] border-stone-205 text-white";
+  if (statClean === 'Delivered') {
+    bgClass = "bg-green-600 border-green-700 text-white";
+  } else if (statClean === 'Cancelled') {
+    bgClass = "bg-red-600 border-red-700 text-white";
+  } else if (statClean === 'Preparing') {
+    bgClass = "bg-amber-500 border-amber-600 text-white";
+  } else if (statClean === 'Out For Delivery') {
+    bgClass = "bg-blue-600 border-blue-700 text-white";
+  }
+
   return (
-    <div className="bg-[#C2185B] border border-stone-205 text-white rounded-3xl p-5 flex flex-col justify-between shadow-xl hover:shadow-2xl transition-all relative overflow-hidden">
+    <div className={`${bgClass} border rounded-3xl p-5 flex flex-col justify-between shadow-xl hover:shadow-2xl transition-all relative overflow-hidden`}>
       <div className="absolute right-0 top-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mt-6 pointer-events-none" />
       
       <div>
@@ -201,11 +214,22 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
               Ref ID: {customer.referenceId}
             </span>
           </div>
-          <span className={`text-[9.5px] px-2.5 py-1 font-black rounded uppercase ${
-            customer.preference === 'Veg' ? 'bg-emerald-500 text-white' : 'bg-white text-[#C2185B]'
-          }`}>
-            {customer.preference}
-          </span>
+          <div className="flex flex-col items-end gap-1.5">
+            <span className={`text-[9.5px] px-2.5 py-1 font-black rounded uppercase ${
+              customer.preference === 'Veg' ? 'bg-emerald-500 text-white' : 'bg-white text-[#C2185B]'
+            }`}>
+              {customer.preference}
+            </span>
+            <span className={`text-[8.5px] font-black px-2 py-0.5 uppercase rounded-full border ${
+              statClean === 'Delivered' ? 'bg-green-750 text-white border-green-800' :
+              statClean === 'Cancelled' ? 'bg-red-750 text-white border-red-800' :
+              statClean === 'Preparing' ? 'bg-amber-600 text-white border-amber-700' :
+              statClean === 'Out For Delivery' ? 'bg-blue-700 text-white border-blue-800 animate-pulse' :
+              'bg-white/25 text-white border-white/30'
+            }`}>
+              {statClean}
+            </span>
+          </div>
         </div>
 
         <div className="text-xs text-rose-105 space-y-2 mb-4 leading-relaxed font-bold">
@@ -262,14 +286,15 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
             <div className="flex flex-col gap-0.5">
               <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Daily Status</label>
               <select
-                value={localTodayStatus}
+                value={statClean}
                 onChange={(e) => setLocalTodayStatus(e.target.value)}
                 className="px-2 py-1.5 bg-white rounded-lg font-bold text-black cursor-pointer text-xs"
               >
-                <option value="Not Started text-black">Not Started</option>
-                <option value="Preparing text-black">Preparing</option>
-                <option value="Out For Delivery text-black">Out For Delivery</option>
-                <option value="Delivered text-black">Delivered</option>
+                <option value="Not Started">Not Started</option>
+                <option value="Preparing">Preparing</option>
+                <option value="Out For Delivery">Out For Delivery</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
             <div className="flex flex-col gap-0.5">
@@ -428,6 +453,16 @@ export default function Dashboard() {
         const ordersList: FirestoreOrder[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          const isTiffinRef = doc.id.startsWith('TIF-') || data.referenceId?.startsWith('MTS-TF-') || data.tiffinReferenceId?.startsWith('MTS-TF-');
+          const isTiffinType = data.orderType === 'tiffin';
+          const isTiffinField = data.isTiffinOrder === true;
+          const hasTiffinPlan = data.planName?.toLowerCase().includes('tiffin') || data.plan?.toLowerCase().includes('tiffin');
+
+          if (isTiffinRef || isTiffinType || isTiffinField || hasTiffinPlan) {
+            // Strictly exclude Tiffin orders from regular Catering dashboard
+            return;
+          }
+
           ordersList.push({
             id: doc.id,
             customerName: data.customerName || data.userName || '',
@@ -1501,64 +1536,75 @@ export default function Dashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {tiffinCustomers
                         .filter(c => c.status === 'Paused' || c.status === 'Cancelled')
-                        .map((cust) => (
-                          <div key={cust.id} className="bg-stone-50 border border-stone-200 rounded-3xl p-5 flex flex-col justify-between shadow-sm text-black animate-fade-in">
-                            <div>
-                              <div className="flex justify-between items-start gap-2 border-b border-stone-150 pb-3 mb-3">
-                                <div>
-                                  <h5 className="font-extrabold text-black text-sm">{cust.name}</h5>
-                                  <span className="font-mono text-[10px] font-bold text-stone-600 bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded mt-0.5 inline-block">
-                                    Ref ID: {cust.referenceId}
+                        .map((cust) => {
+                          const isCancelled = cust.status === 'Cancelled';
+                          const cardClass = isCancelled 
+                            ? "bg-red-600 border border-red-700 rounded-3xl p-5 flex flex-col justify-between shadow-xl text-white animate-fade-in" 
+                            : "bg-stone-50 border border-stone-200 rounded-3xl p-5 flex flex-col justify-between shadow-sm text-black animate-fade-in";
+                          
+                          return (
+                            <div key={cust.id} className={cardClass}>
+                              <div>
+                                <div className={`flex justify-between items-start gap-2 border-b pb-3 mb-3 ${isCancelled ? 'border-white/20' : 'border-stone-150'}`}>
+                                  <div>
+                                    <h5 className={`font-extrabold text-[#000000] text-sm ${isCancelled ? 'text-white' : 'text-black'}`}>{cust.name}</h5>
+                                    <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block ${
+                                      isCancelled ? 'text-red-100 bg-black/20 border border-white/10' : 'text-stone-600 bg-stone-100 border border-stone-200'
+                                    }`}>
+                                      Ref ID: {cust.referenceId}
+                                    </span>
+                                  </div>
+                                  <span className={`text-[8px] px-2 py-1 font-black rounded uppercase text-white ${
+                                    cust.status === 'Paused' ? 'bg-amber-500' : 'bg-red-800'
+                                  }`}>
+                                    {cust.status}
                                   </span>
                                 </div>
-                                <span className={`text-[8px] px-2 py-1 font-black rounded uppercase text-white ${
-                                  cust.status === 'Paused' ? 'bg-amber-500' : 'bg-red-500'
-                                }`}>
-                                  {cust.status}
-                                </span>
+
+                                <div className={`text-xs space-y-2 mb-4 leading-relaxed font-semibold ${isCancelled ? 'text-red-105' : 'text-stone-850'}`}>
+                                  <p>☎ <strong className={isCancelled ? 'text-white' : 'text-black'}>Phone:</strong> {cust.phone}</p>
+                                  {cust.email && <p className="truncate">✉ <strong className={isCancelled ? 'text-white' : 'text-black'}>Email:</strong> {cust.email}</p>}
+                                  <p>📍 <strong className={isCancelled ? 'text-white' : 'text-black'}>Address:</strong> {cust.address}</p>
+                                  <p>💰 <strong className={isCancelled ? 'text-white' : 'text-black'}>Plan Price:</strong> ₹{cust.monthlyPrice}</p>
+                                  <p>⚖ <strong className={isCancelled ? 'text-white' : 'text-black'}>Balance:</strong> {cust.balanceAmount}</p>
+                                </div>
                               </div>
 
-                              <div className="text-xs text-stone-850 space-y-2 mb-4 leading-relaxed font-semibold">
-                                <p>☎ <strong>Phone:</strong> {cust.phone}</p>
-                                {cust.email && <p className="truncate">✉ <strong>Email:</strong> {cust.email}</p>}
-                                <p>📍 <strong>Address:</strong> {cust.address}</p>
-                                <p>💰 <strong>Plan Price:</strong> ₹{cust.monthlyPrice}</p>
-                                <p>⚖ <strong>Balance:</strong> {cust.balanceAmount}</p>
+                              <div className="grid grid-cols-2 gap-2 mt-4">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      await handleUpdateTiffinCustomer(cust.id, { status: 'Active' });
+                                      alert(`Tiffin service for ${cust.name} has been Activated.`);
+                                    } catch (err: any) {
+                                      alert("Error activating: " + err.message);
+                                    }
+                                  }}
+                                  className="py-2.5 bg-green-500 hover:bg-green-600 text-black font-black text-xs uppercase rounded-xl tracking-wider shadow-sm transition-all cursor-pointer"
+                                  style={{ color: '#000000' }}
+                                >
+                                  Activate
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      await handleUpdateTiffinCustomer(cust.id, { status: 'Cancelled' });
+                                      alert(`Tiffin service for ${cust.name} has been Cancelled.`);
+                                    } catch (err: any) {
+                                      alert("Error cancelling: " + err.message);
+                                    }
+                                  }}
+                                  className="py-2.5 bg-red-500 hover:bg-red-600 text-black font-black text-xs uppercase rounded-xl tracking-wider shadow-sm transition-all cursor-pointer"
+                                  style={{ color: '#000000' }}
+                                >
+                                  Cancel
+                                </button>
                               </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-2 mt-4">
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  try {
-                                    await handleUpdateTiffinCustomer(cust.id, { status: 'Active' });
-                                    alert(`Tiffin service for ${cust.name} has been Activated.`);
-                                  } catch (err: any) {
-                                    alert("Error activating: " + err.message);
-                                  }
-                                }}
-                                className="py-2.5 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase rounded-xl tracking-wider shadow-sm transition-all"
-                              >
-                                Activate
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  try {
-                                    await handleUpdateTiffinCustomer(cust.id, { status: 'Cancelled' });
-                                    alert(`Tiffin service for ${cust.name} has been Cancelled.`);
-                                  } catch (err: any) {
-                                    alert("Error cancelling: " + err.message);
-                                  }
-                                }}
-                                className="py-2.5 bg-red-650 hover:bg-red-750 text-white font-black text-xs uppercase rounded-xl tracking-wider shadow-sm transition-all"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       {tiffinCustomers.filter(c => c.status === 'Paused' || c.status === 'Cancelled').length === 0 && (
                         <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
                           <Users size={32} className="mx-auto text-stone-400 mb-2" />

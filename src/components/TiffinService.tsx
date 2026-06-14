@@ -383,7 +383,7 @@ export default function TiffinService() {
         </div>
 
         {/* 1. PLANS VIEW */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {plans.map((plan, i) => (
               <motion.div
                 key={plan.id}
@@ -502,15 +502,20 @@ export default function TiffinService() {
 
                     {/* STEP 3 */}
                     <div className="relative">
-                      {['Preparing', 'Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
-                        <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                          <Check size={10} className="font-black" />
-                        </div>
-                      ) : trackerResult.todayDeliveryStatus === 'Not Started' && trackerResult.status === 'Active' ? (
-                        <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
-                      ) : (
-                        <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
-                      )}
+                      {(() => {
+                        const tc = (trackerResult.todayDeliveryStatus || 'Not Started').replace(/\s+text-black$/gi, '');
+                        const isMatch = ['Preparing', 'Out For Delivery', 'Delivered'].includes(tc) && trackerResult.status === 'Active';
+                        const isNotStarted = tc === 'Not Started' && trackerResult.status === 'Active';
+                        return isMatch ? (
+                          <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                            <Check size={10} className="font-black" />
+                          </div>
+                        ) : isNotStarted ? (
+                          <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                        ) : (
+                          <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                        );
+                      })()}
                       <div>
                         <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Daily Meal Kitchen Prep</h5>
                         <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans font-sans">Chef packaging of hot pure home-cooked recipes styled to your details.</p>
@@ -519,15 +524,20 @@ export default function TiffinService() {
 
                     {/* STEP 4 */}
                     <div className="relative font-sans">
-                      {['Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
-                        <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                          <Check size={10} className="font-black" />
-                        </div>
-                      ) : trackerResult.todayDeliveryStatus === 'Preparing' && trackerResult.status === 'Active' ? (
-                        <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
-                      ) : (
-                        <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
-                      )}
+                      {(() => {
+                        const tc = (trackerResult.todayDeliveryStatus || 'Not Started').replace(/\s+text-black$/gi, '');
+                        const isMatch = ['Out For Delivery', 'Delivered'].includes(tc) && trackerResult.status === 'Active';
+                        const isPreparing = tc === 'Preparing' && trackerResult.status === 'Active';
+                        return isMatch ? (
+                          <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                            <Check size={10} className="font-black" />
+                          </div>
+                        ) : isPreparing ? (
+                          <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                        ) : (
+                          <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                        );
+                      })()}
                       <div>
                         <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Out For Daily Delivery Flow</h5>
                         <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Tiffin carrier dispatched to destination doorstep.</p>
@@ -536,15 +546,20 @@ export default function TiffinService() {
 
                     {/* STEP 5 */}
                     <div className="relative font-sans">
-                      {trackerResult.todayDeliveryStatus === 'Delivered' && trackerResult.status === 'Active' ? (
-                        <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                          <Check size={10} className="font-black" />
-                        </div>
-                      ) : trackerResult.todayDeliveryStatus === 'Out For Delivery' && trackerResult.status === 'Active' ? (
-                        <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
-                      ) : (
-                        <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
-                      )}
+                      {(() => {
+                        const tc = (trackerResult.todayDeliveryStatus || 'Not Started').replace(/\s+text-black$/gi, '');
+                        const isDelivered = tc === 'Delivered' && trackerResult.status === 'Active';
+                        const isOutFor = tc === 'Out For Delivery' && trackerResult.status === 'Active';
+                        return isDelivered ? (
+                          <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                            <Check size={10} className="font-black" />
+                          </div>
+                        ) : isOutFor ? (
+                          <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                        ) : (
+                          <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                        );
+                      })()}
                       <div>
                         <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Doorstep Service Complete</h5>
                         <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Nutritious hot food handed over successfully.</p>
@@ -746,88 +761,93 @@ export default function TiffinService() {
                     <div className="border-t border-stone-100 pt-6 space-y-5 text-left font-sans">
                       <h4 className="text-xs font-black uppercase text-stone-400 tracking-wider font-sans">Operational Tracking Stepper (Live status)</h4>
                       
-                      <div className="relative pl-6 space-y-6 border-l-2 border-stone-200">
-                        {/* STEP 1 */}
-                        <div className="relative font-sans">
-                          <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                            <Check size={10} className="font-black" />
-                          </div>
-                          <div>
-                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Client Registration Logged</h5>
-                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Reference credentials and profile registered in database.</p>
-                          </div>
-                        </div>
-
-                        {/* STEP 2 */}
-                        <div className="relative">
-                          {trackerResult.status !== 'Registered' ? (
-                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                              <Check size={10} className="font-black" />
+                      {(() => {
+                        const todayClean = (trackerResult.todayDeliveryStatus || 'Not Started').replace(/\s+text-black$/gi, '');
+                        return (
+                          <div className="relative pl-6 space-y-6 border-l-2 border-stone-200">
+                            {/* STEP 1 */}
+                            <div className="relative font-sans">
+                              <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                                <Check size={10} className="font-black" />
+                              </div>
+                              <div>
+                                <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Client Registration Logged</h5>
+                                <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Reference credentials and profile registered in database.</p>
+                              </div>
                             </div>
-                          ) : (
-                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
-                          )}
-                          <div>
-                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Service Activation Status</h5>
-                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">
-                              {trackerResult.status !== 'Registered' 
-                                ? 'Subscription verified and service scheduled/operational.' 
-                                : 'Awaiting administrator activation process.'}
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* STEP 3 */}
-                        <div className="relative">
-                          {['Preparing', 'Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
-                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                              <Check size={10} className="font-black" />
+                            {/* STEP 2 */}
+                            <div className="relative">
+                              {trackerResult.status !== 'Registered' ? (
+                                <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                                  <Check size={10} className="font-black" />
+                                </div>
+                              ) : (
+                                <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                              )}
+                              <div>
+                                <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Service Activation Status</h5>
+                                <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">
+                                  {trackerResult.status !== 'Registered' 
+                                    ? 'Subscription verified and service scheduled/operational.' 
+                                    : 'Awaiting administrator activation process.'}
+                                </p>
+                              </div>
                             </div>
-                          ) : trackerResult.todayDeliveryStatus === 'Not Started' && trackerResult.status === 'Active' ? (
-                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
-                          ) : (
-                            <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
-                          )}
-                          <div>
-                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Daily Meal Kitchen Prep</h5>
-                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Chef packaging of hot pure home-cooked recipes styled to your details.</p>
-                          </div>
-                        </div>
 
-                        {/* STEP 4 */}
-                        <div className="relative font-sans">
-                          {['Out For Delivery', 'Delivered'].includes(trackerResult.todayDeliveryStatus) && trackerResult.status === 'Active' ? (
-                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                              <Check size={10} className="font-black" />
+                            {/* STEP 3 */}
+                            <div className="relative">
+                              {['Preparing', 'Out For Delivery', 'Delivered'].includes(todayClean) && trackerResult.status === 'Active' ? (
+                                <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                                  <Check size={10} className="font-black" />
+                                </div>
+                              ) : todayClean === 'Not Started' && trackerResult.status === 'Active' ? (
+                                <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                              ) : (
+                                <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                              )}
+                              <div>
+                                <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Daily Meal Kitchen Prep</h5>
+                                <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans font-sans">Chef packaging of hot pure home-cooked recipes styled to your details.</p>
+                              </div>
                             </div>
-                          ) : trackerResult.todayDeliveryStatus === 'Preparing' && trackerResult.status === 'Active' ? (
-                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
-                          ) : (
-                            <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
-                          )}
-                          <div>
-                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Out For Daily Delivery Flow</h5>
-                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Tiffin carrier dispatched to destination doorstep.</p>
-                          </div>
-                        </div>
 
-                        {/* STEP 5 */}
-                        <div className="relative font-sans">
-                          {trackerResult.todayDeliveryStatus === 'Delivered' && trackerResult.status === 'Active' ? (
-                            <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
-                              <Check size={10} className="font-black" />
+                            {/* STEP 4 */}
+                            <div className="relative font-sans">
+                              {['Out For Delivery', 'Delivered'].includes(todayClean) && trackerResult.status === 'Active' ? (
+                                <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                                  <Check size={10} className="font-black" />
+                                </div>
+                              ) : todayClean === 'Preparing' && trackerResult.status === 'Active' ? (
+                                <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                              ) : (
+                                <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                              )}
+                              <div>
+                                <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Out For Daily Delivery Flow</h5>
+                                <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans font-sans">Tiffin carrier dispatched to destination doorstep.</p>
+                              </div>
                             </div>
-                          ) : trackerResult.todayDeliveryStatus === 'Out For Delivery' && trackerResult.status === 'Active' ? (
-                            <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
-                          ) : (
-                            <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
-                          )}
-                          <div>
-                            <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Doorstep Service Complete</h5>
-                            <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans">Nutritious hot food handed over successfully.</p>
+
+                            {/* STEP 5 */}
+                            <div className="relative font-sans">
+                              {todayClean === 'Delivered' && trackerResult.status === 'Active' ? (
+                                <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white rounded-full p-1 border-4 border-white shadow-md">
+                                  <Check size={10} className="font-black" />
+                                </div>
+                              ) : todayClean === 'Out For Delivery' && trackerResult.status === 'Active' ? (
+                                <div className="absolute -left-[31px] top-0.5 bg-amber-500 text-white rounded-full h-5 w-5 border-4 border-white shadow-md animate-pulse ml-0.5" />
+                              ) : (
+                                <div className="absolute -left-[31px] top-0.5 bg-gray-200 text-white rounded-full h-5 w-5 border-4 border-white shadow-sm ml-0.5" />
+                              )}
+                              <div>
+                                <h5 className="text-xs font-black text-gray-950 uppercase tracking-wide font-sans">Doorstep Service Complete</h5>
+                                <p className="text-[10px] text-stone-400 font-bold mt-0.5 font-sans font-sans">Nutritious hot food handed over successfully.</p>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex gap-3 pt-4 font-sans">
