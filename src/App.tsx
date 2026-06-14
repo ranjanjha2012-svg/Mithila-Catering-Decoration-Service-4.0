@@ -11,6 +11,7 @@ import Services from './components/Services';
 import Gallery from './components/Gallery';
 import AIPlanner from './components/AIPlanner';
 import EnquiryForm from './components/EnquiryForm';
+import ReviewsSection from './components/ReviewsSection';
 import GoogleMap from './components/GoogleMap';
 import TiffinService from './components/TiffinService';
 
@@ -21,6 +22,7 @@ function HomePage() {
       <Services />
       <Gallery />
       <AIPlanner hideBackToHome={true} />
+      <ReviewsSection />
       <EnquiryForm />
       <GoogleMap />
     </>

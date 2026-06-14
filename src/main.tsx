@@ -9,6 +9,7 @@ import Gallery from './components/Gallery';
 import AIPlanner from './components/AIPlanner';
 import FAQ from './components/FAQ';
 import EnquiryForm from './components/EnquiryForm';
+import ReviewsSection from './components/ReviewsSection';
 import CateringRoot from './components/CateringRoot';
 import WhatsAppButton from './components/WhatsAppButton';
 import './index.css';
@@ -25,6 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Gallery />
           <AIPlanner />
           <FAQ />
+          <ReviewsSection />
           <EnquiryForm />
         </main>
         <Footer />

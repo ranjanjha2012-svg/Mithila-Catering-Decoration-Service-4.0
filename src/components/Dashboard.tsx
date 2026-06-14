@@ -9,7 +9,7 @@ import {
   User as UserIcon, Shield, LogOut, CheckCircle, Clock, Search, ListFilter,
   DollarSign, FileText, Settings, UserCheck, Calendar, MapPin, Sparkles, Send, Phone,
   Coffee, ChevronRight, Calculator, CheckSquare, Plus, Trash2, Mail, ShoppingBag, Layers,
-  Activity, Tag, ExternalLink, Loader2, X, Star, Users
+  Activity, Tag, ExternalLink, Loader2, X, Star, Users, Utensils
 } from 'lucide-react';
 
 interface Inquiry {
@@ -355,6 +355,8 @@ export default function Dashboard() {
   const [notices, setNotices] = useState<any[]>([]);
   const [noticeForm, setNoticeForm] = useState({ title: '', content: '' });
   const [publishingNotice, setPublishingNotice] = useState(false);
+  const [dbEnquiries, setDbEnquiries] = useState<any[]>([]);
+  const [dbReviews, setDbReviews] = useState<any[]>([]);
   const [tiffinForm, setTiffinForm] = useState({
     name: '',
     phone: '',
@@ -389,16 +391,15 @@ export default function Dashboard() {
     requirementsCsv: 'Punctual and polished hospitality habit, Able to travel to event sites promptly, Strong team coordinate nature'
   });
 
-  // Local/Classic enquiries fallback
-  const [inquiries, setInquiries] = useState<Inquiry[]>(() => {
-    const saved = localStorage.getItem('mithila_inquiries');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Local/Classic enquiries fallback - cleared to start with empty state
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
 
   const ordersUnsubscribeRef = React.useRef<(() => void) | null>(null);
   const tiffinCustomersUnsubRef = React.useRef<(() => void) | null>(null);
   const tiffinOrdersUnsubRef = React.useRef<(() => void) | null>(null);
   const tiffinNoticesUnsubRef = React.useRef<(() => void) | null>(null);
+  const eventEnquiriesUnsubRef = React.useRef<(() => void) | null>(null);
+  const customerReviewsUnsubRef = React.useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -438,6 +439,12 @@ export default function Dashboard() {
       }
       if (tiffinNoticesUnsubRef.current) {
         tiffinNoticesUnsubRef.current();
+      }
+      if (eventEnquiriesUnsubRef.current) {
+        eventEnquiriesUnsubRef.current();
+      }
+      if (customerReviewsUnsubRef.current) {
+        customerReviewsUnsubRef.current();
       }
     };
   }, []);
@@ -557,6 +564,12 @@ export default function Dashboard() {
       if (tiffinNoticesUnsubRef.current) {
         tiffinNoticesUnsubRef.current();
       }
+      if (eventEnquiriesUnsubRef.current) {
+        eventEnquiriesUnsubRef.current();
+      }
+      if (customerReviewsUnsubRef.current) {
+        customerReviewsUnsubRef.current();
+      }
 
       // 4. Real-time Tiffin Customers
       const unsubTiffinCust = onSnapshot(collection(db, 'tiffinCustomers'), (snapshot) => {
@@ -628,6 +641,60 @@ export default function Dashboard() {
         console.error("Real-time tiffinNotices sync failed:", error);
       });
       tiffinNoticesUnsubRef.current = unsubTiffinNotices;
+
+      // 7. Real-time Event Enquiries
+      if (eventEnquiriesUnsubRef.current) {
+        eventEnquiriesUnsubRef.current();
+      }
+      const unsubEventEnquiries = onSnapshot(collection(db, 'eventEnquiries'), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          list.push({
+            id: doc.id,
+            enquiryId: data.enquiryId || doc.id,
+            customerName: data.customerName || '',
+            venueName: data.venueName || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            address: data.address || '',
+            selectedServices: data.selectedServices || [],
+            guestQuantity: data.guestQuantity || '',
+            foodPreference: data.foodPreference || '',
+            submittedAt: data.submittedAt || '',
+            status: data.status || 'New'
+          });
+        });
+        list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+        setDbEnquiries(list);
+      }, (error) => {
+        console.error("Real-time eventEnquiries sync failed:", error);
+      });
+      eventEnquiriesUnsubRef.current = unsubEventEnquiries;
+
+      // 8. Real-time Customer Reviews
+      if (customerReviewsUnsubRef.current) {
+        customerReviewsUnsubRef.current();
+      }
+      const unsubCustomerReviews = onSnapshot(collection(db, 'customerReviews'), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          list.push({
+            id: doc.id,
+            customerName: data.customerName || '',
+            rating: Number(data.rating) || 5,
+            reviewMessage: data.reviewMessage || '',
+            submittedAt: data.submittedAt || '',
+            userId: data.userId || ''
+          });
+        });
+        list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+        setDbReviews(list);
+      }, (error) => {
+        console.error("Real-time customerReviews sync failed:", error);
+      });
+      customerReviewsUnsubRef.current = unsubCustomerReviews;
 
     } catch (error) {
       console.error("Error loading admin collections:", error);
@@ -982,7 +1049,12 @@ export default function Dashboard() {
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'enquiries' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
               >
                 <Calendar size={16} />
-                <span>Event Inquiries</span>
+                <span>Event Enquiries</span>
+                {dbEnquiries.length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-[10px] font-black border border-blue-200">
+                    {dbEnquiries.length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -991,9 +1063,9 @@ export default function Dashboard() {
               >
                 <Star size={16} />
                 <span>Customer Reviews</span>
-                {orders.filter(o => (o as any).rating > 0).length > 0 && (
-                  <span className="ml-auto w-5 h-5 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center text-[10px] font-black border border-yellow-200">
-                    {orders.filter(o => (o as any).rating > 0).length}
+                {dbReviews.length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-yellow-105 text-yellow-800 rounded-full flex items-center justify-center text-[10px] font-black border border-yellow-250">
+                    {dbReviews.length}
                   </span>
                 )}
               </button>
@@ -1243,104 +1315,225 @@ export default function Dashboard() {
               )}
 
               {/*Customer reviews & live ratings tab view */}
-              {activeTab === 'reviews' && (
-                <div className="bg-white border border-stone-200/55 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-                  <div>
-                    <h3 className="text-xl font-black text-rose-950 tracking-tight">Real-time Customer Ratings & Reviews</h3>
-                    <p className="text-xs text-stone-400 font-bold uppercase mt-1">Real-time Feedback from Placed Orders</p>
-                  </div>
+              {activeTab === 'reviews' && (() => {
+                const totalDbReviews = dbReviews.length;
+                const averageDbRating = totalDbReviews > 0 
+                  ? (dbReviews.reduce((sum, r) => sum + r.rating, 0) / totalDbReviews).toFixed(1)
+                  : '5.0';
+                return (
+                  <div className="bg-white border border-stone-200/55 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-stone-105 pb-5">
+                      <div>
+                        <h3 className="text-xl font-black text-rose-950 tracking-tight">Public Customer Reviews</h3>
+                        <p className="text-xs text-stone-400 font-bold uppercase mt-1">Authentic ratings and feedback managed directly by customers ({totalDbReviews})</p>
+                      </div>
+                      <div className="flex items-center gap-2 bg-amber-50 text-amber-805 border border-amber-200 rounded-2xl px-4 py-2.5 font-black text-xs shrink-0 self-start md:self-auto">
+                        <span>Average Rating:</span>
+                        <span className="text-amber-600 font-bold">⭐ {averageDbRating} / 5</span>
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {orders
-                      .filter(o => (o as any).rating > 0)
-                      .map((o) => (
-                        <div key={o.id} className="bg-stone-50 border border-stone-250 p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {dbReviews.map((rev) => (
+                        <div key={rev.id} className="bg-stone-50 border border-stone-200/60 p-6 rounded-[2rem] relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-all space-y-4">
                           <div>
-                            <div className="flex justify-between items-start gap-4 mb-3">
+                            <div className="flex justify-between items-start gap-4">
                               <div>
-                                <span className="text-xs font-black text-stone-900 block">{o.customerName || 'Mithila Guest'}</span>
-                                <span className="text-[9px] font-mono font-bold text-stone-500 bg-stone-200 px-1.5 py-0.5 rounded">Order ID: {o.id.toUpperCase()}</span>
+                                <span className="text-sm font-black text-stone-900 block">{rev.customerName || 'Mithila Guest'}</span>
+                                {rev.userId ? (
+                                  <span className="text-[8px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-105 inline-block uppercase mt-0.5">Verified User</span>
+                                ) : (
+                                  <span className="text-[8px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded inline-block uppercase mt-0.5">Guest client</span>
+                                )}
                               </div>
-                              <div className="flex items-center gap-0.5 text-yellow-500">
+                              <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
                                 {Array.from({ length: 5 }).map((_, idx) => (
-                                  <Star key={idx} size={14} fill={idx < (o as any).rating ? 'currentColor' : 'none'} className={idx < (o as any).rating ? 'text-yellow-500' : 'text-stone-300'} />
+                                  <Star key={idx} size={14} fill={idx < rev.rating ? 'currentColor' : 'none'} className={idx < rev.rating ? 'text-amber-505 animate-pulse' : 'text-stone-300'} />
                                 ))}
                               </div>
                             </div>
-                            <p className="text-xs text-stone-700 italic font-medium leading-relaxed mb-4">
-                              "{o.review || 'No written review text provided.'}"
+                            <p className="text-xs text-stone-700 italic font-semibold leading-relaxed font-sans mt-3">
+                              "{rev.reviewMessage || 'No written review text provided.'}"
                             </p>
                           </div>
-                          <p className="text-[10px] text-stone-400 font-bold border-t border-stone-200 pt-2 flex justify-between font-mono">
-                            <span>Scheduled: {o.orderDate}</span>
-                            <span>Review Date: {(o as any).reviewDate ? new Date((o as any).reviewDate).toLocaleDateString() : 'N/A'}</span>
-                          </p>
+                          
+                          <div className="text-[10px] text-stone-400 font-bold border-t border-stone-200/60 pt-3 flex justify-between items-center font-mono">
+                            <span>Posted: {rev.submittedAt ? new Date(rev.submittedAt).toLocaleDateString() : 'N/A'}</span>
+                            <button
+                              onClick={async () => {
+                                if (confirm("Are you sure you want to permanently delete this customer review from the website feed?")) {
+                                  try {
+                                    await deleteDoc(doc(db, 'customerReviews', rev.id));
+                                  } catch (err) {
+                                    console.error("Delete review error:", err);
+                                    alert("Error editing review: Missing write privileges.");
+                                  }
+                                }
+                              }}
+                              className="px-2.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-100 transition-all font-black text-[9px] uppercase"
+                            >
+                              Remove Review
+                            </button>
+                          </div>
                         </div>
                       ))}
 
-                    {orders.filter(o => (o as any).rating > 0).length === 0 && (
-                      <div className="col-span-2 text-center py-16 bg-stone-50/50 rounded-2xl border border-stone-150">
-                        <Star className="mx-auto text-stone-300 mb-2" size={36} />
-                        <p className="text-stone-500 text-sm font-bold uppercase">No reviews or ratings received yet.</p>
-                      </div>
-                    )}
+                      {totalDbReviews === 0 && (
+                        <div className="col-span-1 md:col-span-2 text-center py-16 bg-stone-50/50 rounded-2xl border border-stone-150">
+                          <Star className="mx-auto text-stone-300 mb-2" size={36} />
+                          <p className="text-stone-500 text-sm font-bold uppercase">No public customer reviews submitted yet.</p>
+                          <p className="text-xs text-stone-400 font-bold mt-1 max-w-xs mx-auto">New submissions via the homepage "Rate Our Service" form will load automatically here. First-class customer ratings appear dynamically.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
-              {/* ===================== TRADITIONAL EVENT ENQUIRIES ===================== */}
+              {/* ===================== NEW EVENT ENQUIRIES SECTION ===================== */}
               {activeTab === 'enquiries' && (
                 <div className="bg-white border border-stone-200/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-                  <div>
-                    <h3 className="text-xl font-black text-rose-950 tracking-tight">Catering Banqueting Inquiries</h3>
-                    <p className="text-xs text-stone-400 font-bold uppercase mt-1">Catering requests from local form enquiry boards ({inquiries.length})</p>
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-black text-rose-950 tracking-tight">Event Enquiries Dashboard</h3>
+                      <p className="text-xs text-stone-400 font-bold uppercase mt-1">Catering requests saved directly from the Book Your Event form ({dbEnquiries.length})</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {inquiries.map((inq) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {dbEnquiries.map((inq) => (
                       <div 
                         key={inq.id}
-                        className="bg-neutral-50/50 border border-neutral-100 rounded-2xl p-5 hover:bg-white transition-all grid grid-cols-1 md:grid-cols-3 gap-4 items-center"
+                        className="bg-stone-50 border border-stone-200/60 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4"
                       >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-extrabold text-stone-900 text-sm">{inq.name}</h4>
-                            <span className="text-[9px] px-2 py-0.5 rounded font-black bg-amber-50 rounded-md border border-amber-200 text-amber-700 uppercase">
-                              {inq.status}
-                            </span>
+                        <div className="space-y-3.5">
+                          <div className="flex justify-between items-start gap-4">
+                            <div>
+                              <h4 className="font-extrabold text-stone-900 text-base">{inq.customerName}</h4>
+                              <p className="text-[10px] text-stone-400 font-mono mt-0.5">ID: {inq.id}</p>
+                            </div>
+                            <select
+                              value={inq.status}
+                              onChange={async (e) => {
+                                const newStatus = e.target.value;
+                                try {
+                                  await updateDoc(doc(db, 'eventEnquiries', inq.id), { status: newStatus });
+                                } catch (err) {
+                                  console.error("Failed to update enquiry status:", err);
+                                  alert("Error: Missing database write privileges.");
+                                }
+                              }}
+                              className={`text-xs font-black uppercase px-2.5 py-1 rounded-xl outline-none border transition-all cursor-pointer ${
+                                inq.status === 'New' ? 'bg-blue-600 text-white border-blue-500' :
+                                inq.status === 'Contacted' ? 'bg-amber-500 text-white border-amber-400' :
+                                inq.status === 'Confirmed' ? 'bg-emerald-600 text-white border-emerald-500' :
+                                'bg-stone-500 text-white border-stone-400'
+                              }`}
+                            >
+                              <option value="New" className="bg-white text-stone-850">New 🔵</option>
+                              <option value="Contacted" className="bg-white text-stone-850">Contacted 🟡</option>
+                              <option value="Confirmed" className="bg-white text-stone-850">Confirmed 🟢</option>
+                              <option value="Closed" className="bg-white text-stone-850">Closed ⚫</option>
+                            </select>
                           </div>
-                          <p className="text-xs text-orange-900 font-bold mt-1 inline-flex items-center gap-1 bg-orange-50 px-2 py-0.5 rounded border border-orange-100/50">
-                            <Calendar size={12} /> {inq.event}
-                          </p>
+
+                          <div className="h-[1px] bg-stone-200" />
+
+                          <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Venue</span>
+                              <span className="text-stone-850 flex items-center gap-1"><MapPin size={12} className="text-stone-400 shrink-0" /> {inq.venueName || 'N/A'}</span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Food Preference</span>
+                              <span className="text-stone-850 flex items-center gap-1"><Utensils size={12} className="text-stone-400 shrink-0" /> {inq.foodPreference || 'N/A'}</span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">People count</span>
+                              <span className="text-stone-850 flex items-center gap-1"><Users size={12} className="text-stone-400 shrink-0" /> {inq.guestQuantity || 'N/A'} Guests</span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Submitted At</span>
+                              <span className="text-stone-500 font-mono flex items-center gap-1"><Clock size={12} className="text-stone-400 shrink-0" /> {inq.submittedAt ? new Date(inq.submittedAt).toLocaleDateString() : 'N/A'}</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Full Contact Address</span>
+                            <p className="text-xs text-stone-700 font-medium leading-relaxed bg-stone-100 p-2.5 rounded-xl border border-stone-200">{inq.address || 'No full address specified.'}</p>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] text-stone-400 uppercase font-black tracking-wider block">Required Services</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {Array.isArray(inq.selectedServices) && inq.selectedServices.length > 0 ? (
+                                inq.selectedServices.map((srv: string, idx: number) => (
+                                  <span key={idx} className="text-[10px] font-black uppercase px-2.5 py-1 bg-rose-50 text-orange-700 rounded-lg border border-orange-100/50">
+                                    {srv}
+                                  </span>
+                                ))
+                              ) : typeof inq.selectedServices === 'string' && inq.selectedServices ? (
+                                (inq.selectedServices as string).split(',').map((srv: string, idx: number) => (
+                                  <span key={idx} className="text-[10px] font-black uppercase px-2.5 py-1 bg-rose-50 text-orange-700 rounded-lg border border-orange-100/50">
+                                    {srv.trim()}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-stone-400 italic font-semibold">General catering services</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="text-left md:text-center space-y-1">
-                          <p className="text-xs text-stone-500 font-semibold uppercase tracking-wider">
-                            Capacity: <span className="text-stone-850 font-black">{inq.guests} Guest plates</span>
-                          </p>
-                          <p className="text-[10px] text-stone-400 font-bold font-mono">Book Date: {inq.date}</p>
-                        </div>
-
-                        <div className="flex justify-start md:justify-end gap-2 text-xs">
+                        <div className="pt-2 border-t border-stone-200/65 flex flex-wrap gap-2 text-xs font-black">
+                          <a 
+                            href={`tel:${inq.phone}`}
+                            className="px-3 py-2 bg-stone-200 hover:bg-stone-300 text-stone-850 rounded-xl transition-all flex items-center gap-1"
+                          >
+                            <Phone size={12} /> Call Client
+                          </a>
+                          <a 
+                            href={`mailto:${inq.email}`}
+                            className="px-3 py-2 bg-stone-200 hover:bg-stone-300 text-stone-850 rounded-xl transition-all flex items-center gap-1"
+                          >
+                            <Mail size={12} /> Email
+                          </a>
                           <a 
                             href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white font-extrabold rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                            className="px-3.5 py-2 ml-auto bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
                           >
-                            <Send size={12} /> WhatsApp Inquiry
+                            <Send size={12} /> WhatsApp Connect
                           </a>
+                          <button
+                            onClick={async () => {
+                              if (confirm("Are you sure you want to permanently delete this Event Enquiry?")) {
+                                try {
+                                  await deleteDoc(doc(db, 'eventEnquiries', inq.id));
+                                } catch (err) {
+                                  console.error("Delete error:", err);
+                                  alert("Error editing record: Missing deletion rights.");
+                                }
+                              }
+                            }}
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-100 transition-colors"
+                            title="Delete Enquiry"
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </div>
                     ))}
-
-                    {inquiries.length === 0 && (
-                      <div className="text-center py-12 bg-neutral-50 rounded-2xl border border-stone-200 border-dashed">
-                        <Calendar className="mx-auto text-stone-300 mb-2" size={36} />
-                        <p className="text-stone-400 text-xs font-black uppercase">No traditional banqueting enquiries submitted yet.</p>
-                      </div>
-                    )}
                   </div>
+
+                  {dbEnquiries.length === 0 && (
+                    <div className="text-center py-16 bg-neutral-50 rounded-[2.5rem] border border-stone-200 border-dashed">
+                      <Calendar className="mx-auto text-stone-300 mb-2" size={44} />
+                      <p className="text-stone-850 font-black text-sm uppercase tracking-tight">No event enquiries submitted yet.</p>
+                      <p className="text-xs text-stone-400 font-bold mt-1">New submissions via the contact Book Your Event form will load automatically here in real-time.</p>
+                    </div>
+                  )}
                 </div>
               )}
 

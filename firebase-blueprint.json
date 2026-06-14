@@ -84,6 +84,38 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["referenceId", "name", "phone", "address", "preference", "monthlyPrice", "balanceAmount", "status", "createdAt"]
+    },
+    "EventEnquiry": {
+      "title": "EventEnquiry",
+      "description": "Event enquiry submitted by a potential customer",
+      "type": "object",
+      "properties": {
+        "enquiryId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "venueName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "selectedServices": { "type": "array" },
+        "guestQuantity": { "type": "string" },
+        "foodPreference": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["New", "Contacted", "Confirmed", "Closed"] }
+      },
+      "required": ["enquiryId", "customerName", "venueName", "phone", "email", "address", "selectedServices", "guestQuantity", "foodPreference", "submittedAt", "status"]
+    },
+    "CustomerReview": {
+      "title": "CustomerReview",
+      "description": "Customer service review and star rating",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "rating": { "type": "integer" },
+        "reviewMessage": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["customerName", "rating", "reviewMessage", "submittedAt"]
     }
   },
   "firestore": {
@@ -106,6 +138,14 @@
     "/tiffinCustomers/{customerId}": {
       "schema": "TiffinCustomer",
       "description": "Subscribers for Mithila Tiffin service"
+    },
+    "/eventEnquiries/{enquiryId}": {
+      "schema": "EventEnquiry",
+      "description": "Enquiries for custom events and catering services"
+    },
+    "/customerReviews/{reviewId}": {
+      "schema": "CustomerReview",
+      "description": "Public customer feedback and satisfaction ratings"
     }
   }
 }

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Check, Sparkles, Send, User, MapPin, Home, Package, Users, Utensils, Phone, Mail, Clock, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import AIPlanner from './AIPlanner';
+import { collection, doc, setDoc } from 'firebase/firestore';
+import { db, OperationType, handleFirestoreError } from '../lib/firebase';
 
 export default function BookingForm() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -52,6 +54,7 @@ export default function BookingForm() {
     setErrorMessage('');
 
     const calculatedGuests = guestOption === 'Other' ? customGuests : guestOption;
+    const submittedTime = new Date().toISOString();
     const submissionData = {
       name,
       phone,
@@ -61,7 +64,7 @@ export default function BookingForm() {
       selectedServices: selectedServices.join(', '),
       guests: calculatedGuests,
       foodPreference,
-      submittedAt: new Date().toISOString()
+      submittedAt: submittedTime
     };
 
     try {
@@ -75,6 +78,28 @@ export default function BookingForm() {
       });
 
       if (response.ok) {
+        const path = 'eventEnquiries';
+        try {
+          const enquiryRef = doc(collection(db, path));
+          const enquiryId = enquiryRef.id;
+          await setDoc(enquiryRef, {
+            enquiryId,
+            customerName: name,
+            venueName: venue,
+            phone,
+            email,
+            address,
+            selectedServices,
+            guestQuantity: calculatedGuests,
+            foodPreference,
+            submittedAt: submittedTime,
+            status: 'New'
+          });
+        } catch (firebaseErr) {
+          console.error('Firebase save error: ', firebaseErr);
+          handleFirestoreError(firebaseErr, OperationType.CREATE, path);
+        }
+
         setStatus('SUCCESS');
         // Clear all states
         setName('');
@@ -93,7 +118,7 @@ export default function BookingForm() {
     } catch (err: any) {
       console.error('Contact Formspree Error: ', err);
       setStatus('ERROR');
-      setErrorMessage(err.message || 'Something went wrong while connecting with Formspree. Please try again.');
+      setErrorMessage(err.message || 'Something went wrong. Please try again.');
     }
   };
 

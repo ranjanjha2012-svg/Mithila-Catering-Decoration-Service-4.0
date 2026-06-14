@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Check, Info, CreditCard, Smartphone, Globe, ArrowRight, X, Loader2, RefreshCw, Search, Calendar, MapPin } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
 import { collection, addDoc, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import dailyTrialImg from '../assets/images/daily_tiffin_trial_1781238159350.jpg';
 
 interface TiffinPlan {
   id: string;
@@ -44,7 +43,7 @@ const plans: TiffinPlan[] = [
     name: 'Daily Tiffin Trial',
     price: 1,
     description: 'Hot single meal trial of our premium pure homestyle cooking served hot. Just ₹1 limit one meal.',
-    logo: dailyTrialImg,
+    logo: 'https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png',
     color: 'bg-purple-600',
   }
 ];
