@@ -41,16 +41,16 @@ const plans: TiffinPlan[] = [
   {
     id: 'daily_trial',
     name: 'Daily Tiffin Trial',
-    price: 1,
-    description: 'Hot single meal trial of our premium pure homestyle cooking served hot. Just ₹1 limit one meal.',
+    price: 100,
+    description: 'Hot single meal trial of our premium pure homestyle cooking served hot. Just ₹100 per day. Select more than 1 meal/day to add to cart.',
     logo: 'https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png',
     color: 'bg-purple-600',
   }
 ];
 
-export const getTiffinPrice = (planId: string, selectedTimings: string[]): number => {
+export const getTiffinPrice = (planId: string, selectedTimings: string[], trialQuantity: number = 1): number => {
   if (planId === 'daily_trial') {
-    return 1;
+    return 100 * trialQuantity;
   }
   const count = selectedTimings.length;
   if (count === 0) return 0;
@@ -111,6 +111,7 @@ export default function TiffinService() {
   const [step, setStep] = useState(1);
   const [location, setLocation] = useState('');
   const [selectedTimings, setSelectedTimings] = useState<string[]>([]);
+  const [trialQuantity, setTrialQuantity] = useState(1);
   const [showBooking, setShowBooking] = useState(false);
 
   // Delivery details form state
@@ -153,7 +154,7 @@ export default function TiffinService() {
     }
   }, [auth.currentUser, showBooking]);
 
-  const subtotal = getTiffinPrice(selectedPlan?.id || '', selectedTimings);
+  const subtotal = getTiffinPrice(selectedPlan?.id || '', selectedTimings, trialQuantity);
   const discountRate = 0;
   const discountAmount = 0;
   const totalAmount = subtotal;
@@ -185,9 +186,11 @@ export default function TiffinService() {
         items: [
           {
             id: selectedPlan?.id || 'veg',
-            name: `${selectedPlan?.name} Tiffin Subscription`,
-            price: totalAmount,
-            quantity: 1,
+            name: selectedPlan?.id === 'daily_trial' 
+              ? `Daily Tiffin Trial (${trialQuantity} Day(s))` 
+              : `${selectedPlan?.name} Tiffin Subscription`,
+            price: selectedPlan?.id === 'daily_trial' ? 100 : totalAmount,
+            quantity: selectedPlan?.id === 'daily_trial' ? trialQuantity : 1,
             size: selectedTimings.join('+'),
             total: totalAmount,
             preference: preferenceInput
@@ -198,7 +201,9 @@ export default function TiffinService() {
         deliveryCharge: 0,
         totalAmount: totalAmount,
         amount: totalAmount,
-        plan: `${selectedPlan?.name} Tiffin Subscription`,
+        plan: selectedPlan?.id === 'daily_trial' 
+          ? `Daily Tiffin Trial (${trialQuantity} Day(s))` 
+          : `${selectedPlan?.name} Tiffin Subscription`,
         status: 'Pending Payment',
         paymentStatus: 'Pending Payment',
         paymentMethod: 'ONLINE',
@@ -225,7 +230,9 @@ export default function TiffinService() {
         body: JSON.stringify({
           txnid: newOrderId,
           amount: totalAmount.toFixed(2),
-          productinfo: `${selectedPlan?.name} Tiffin Subscription`,
+          productinfo: selectedPlan?.id === 'daily_trial' 
+            ? `Daily Tiffin Trial (x${trialQuantity} Days)` 
+            : `${selectedPlan?.name} Tiffin Subscription`,
           firstname: fullName,
           email: emailInput || auth.currentUser?.email || "info@mithilacatering.com"
         })
@@ -249,7 +256,9 @@ export default function TiffinService() {
         key: payuKey,
         txnid: newOrderId,
         amount: totalAmount.toFixed(2),
-        productinfo: `${selectedPlan?.name} Tiffin Subscription`,
+        productinfo: selectedPlan?.id === 'daily_trial' 
+          ? `Daily Tiffin Trial (x${trialQuantity} Days)` 
+          : `${selectedPlan?.name} Tiffin Subscription`,
         firstname: fullName,
         email: emailInput || auth.currentUser?.email || "info@mithilacatering.com",
         phone: phone,
@@ -399,7 +408,7 @@ export default function TiffinService() {
                   <p className="text-gray-600 text-sm mb-6 flex-1">{plan.description}</p>
                   <div className="mb-8">
                     <span className="text-4xl font-black text-green-700">₹{plan.price}</span>
-                    <span className="text-gray-400 text-sm ml-2">/ month</span>
+                    <span className="text-gray-400 text-sm ml-2">{plan.id === 'daily_trial' ? '/ day' : '/ month'}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -408,6 +417,7 @@ export default function TiffinService() {
                         return;
                       }
                       setSelectedPlan(plan);
+                      setTrialQuantity(1);
                       setShowBooking(true);
                       setStep(1);
                     }}
@@ -1058,11 +1068,42 @@ export default function TiffinService() {
                           >
                             {plans.map(p => (
                               <option key={p.id} value={p.id} className="text-[#000000] font-bold">
-                                {p.name} (pricing starts at ₹{p.price})
+                                {p.name} ({p.id === 'daily_trial' ? `₹${p.price}/day` : `starting at ₹${p.price}/mo`})
                               </option>
                             ))}
                           </select>
                         </div>
+                        {selectedPlan?.id === 'daily_trial' && (
+                          <div className="bg-stone-50 border border-stone-200 rounded-[1.5rem] p-4 space-y-3 text-left">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="text-xs font-bold text-gray-900 block">Trial Meals / Days Count</span>
+                                <span className="text-[10px] text-gray-400 font-bold font-sans">Add multiple trial meals to your order cart.</span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl p-1 overflow-hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => setTrialQuantity(Math.max(1, trialQuantity - 1))}
+                                  className="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200 text-[#000000] font-black text-center flex items-center justify-center cursor-pointer transition-colors"
+                                >
+                                  -
+                                </button>
+                                <span className="text-sm font-black text-black min-w-[24px] text-center px-1 font-mono">{trialQuantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setTrialQuantity(trialQuantity + 1)}
+                                  className="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200 text-[#000000] font-black text-center flex items-center justify-center cursor-pointer transition-colors"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center text-xs border-t border-stone-200/60 pt-2 font-semibold">
+                              <span className="text-stone-500">Cart Math:</span>
+                              <span className="text-[#000000] font-extrabold">₹100 x {trialQuantity} Day(s) = <strong className="text-green-700 font-mono">₹{100 * trialQuantity}</strong></span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1086,8 +1127,16 @@ export default function TiffinService() {
                     <div className="bg-gray-50 rounded-2xl p-6 space-y-3.5 text-left text-sm border border-gray-100">
                       <div className="flex justify-between text-gray-600 pb-2 border-b border-gray-200/60">
                         <span>Subscription Plan:</span>
-                        <strong className="text-gray-900">{selectedPlan?.name} Plan</strong>
+                        <strong className="text-gray-900">
+                          {selectedPlan?.name} {selectedPlan?.id === 'daily_trial' ? '' : 'Plan'}
+                        </strong>
                       </div>
+                      {selectedPlan?.id === 'daily_trial' && (
+                        <div className="flex justify-between text-gray-600 pb-2 border-b border-gray-200/60">
+                          <span>Trial Quantity:</span>
+                          <strong className="text-orange-600 font-extrabold">{trialQuantity} Day(s) / Meal(s)</strong>
+                        </div>
+                      )}
                       <div className="flex justify-between text-gray-600 pb-2 border-b border-gray-200/60">
                         <span>Deliver Location:</span>
                         <strong className="text-gray-900">{location}</strong>
