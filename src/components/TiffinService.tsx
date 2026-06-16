@@ -43,7 +43,7 @@ const plans: TiffinPlan[] = [
     name: 'Daily Tiffin Trial',
     price: 100,
     description: 'Hot single meal trial of our premium pure homestyle cooking served hot. Just ₹100 per day. Select more than 1 meal/day to add to cart.',
-    logo: 'https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png',
+    logo: 'https://i.ibb.co/39yMD9B9/Whats-App-Image-2026-06-16-at-08-02-51.jpg',
     color: 'bg-purple-600',
   }
 ];

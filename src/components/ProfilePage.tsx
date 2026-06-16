@@ -374,11 +374,11 @@ export default function ProfilePage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 z-10 relative">
           <div className="flex items-center gap-5">
             {/* Logo in left side of Namaste */}
-            <div className="w-16 h-16 shrink-0 bg-white rounded-full p-1 border-2 border-red-200 shadow-md flex items-center justify-center overflow-hidden">
+            <div className="w-16 h-16 shrink-0 bg-white rounded-full p-0.5 border-2 border-red-200 shadow-md flex items-center justify-center overflow-hidden">
               <img 
-                src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
+                src="https://i.ibb.co/39yMD9B9/Whats-App-Image-2026-06-16-at-08-02-51.jpg" 
                 alt="Mithila Catering Brand Logo" 
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain rounded-full"
               />
             </div>
             <div>
