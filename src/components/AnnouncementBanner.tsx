@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { X, Sparkles, AlertTriangle, Megaphone, Calendar } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 interface Announcement {
   id: string;
@@ -29,12 +29,24 @@ export default function AnnouncementBanner() {
     }
   });
 
-  // Fetch announcements in real-time
+  // Fetch only active announcements from Firestore in real-time
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'announcements'), (snapshot) => {
+    console.log("[AnnouncementBanner] Initializing real-time Firestore listener for active announcements...");
+    
+    // Query where active == true explicitly
+    const q = query(
+      collection(db, 'announcements'), 
+      where('active', '==', true)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
       const list: Announcement[] = [];
+      console.log(`[AnnouncementBanner] Firestore returned ${snapshot.size} active announcements.`);
+      
       snapshot.forEach((doc) => {
         const data = doc.data();
+        console.log(`[AnnouncementBanner] Fetch success - Document ID: ${doc.id}, Title: "${data.title || 'Untitled'}", Active: ${data.active}, TickerStyle: ${data.enableMarquee ? 'Marquee' : 'Static Card'}`);
+        
         list.push({
           id: doc.id,
           announcementId: data.announcementId || doc.id,
@@ -51,18 +63,20 @@ export default function AnnouncementBanner() {
       });
       setAnnouncements(list);
     }, (error) => {
-      console.error("Error syncing announcements for customers:", error);
+      console.error("[AnnouncementBanner] Firestore subscription error:", error);
     });
 
-    return () => unsub();
+    return () => {
+      console.log("[AnnouncementBanner] Unsubscribing from announcements feed.");
+      unsub();
+    };
   }, []);
 
-  // Filter to compute active announcements
+  // Filter out locally dismissed or date-inactive announcements
   const activeAnnouncements = announcements.filter((ann) => {
-    if (!ann.active) return false;
     if (dismissedIds.includes(ann.id)) return false;
 
-    // Date validity check
+    // Compare date bounds
     const today = new Date().toISOString().split('T')[0];
     if (ann.startDate && today < ann.startDate) return false;
     if (ann.endDate && today > ann.endDate) return false;
@@ -70,7 +84,7 @@ export default function AnnouncementBanner() {
     return true;
   });
 
-  // Cycle index if multiple announcements exist
+  // Automatically cycle through multiple announcements if more than one exists
   useEffect(() => {
     if (activeAnnouncements.length <= 1) {
       setCurrentIndex(0);
@@ -92,7 +106,7 @@ export default function AnnouncementBanner() {
   const isUrgent = currentAnn.priority === 'Urgent';
   const isHigh = currentAnn.priority === 'High';
 
-  // Styles by Type
+  // Specific theme styles for the banner depending on announcement type
   let bgGradient = 'bg-gradient-to-r from-blue-600 to-indigo-650';
   let badgeColor = 'bg-blue-800 text-white border-blue-500';
   let icon = '📢';
@@ -111,7 +125,7 @@ export default function AnnouncementBanner() {
     icon = '🚨';
   }
 
-  // Text representation for banner ticker
+  // Text representation for scrolling marquee ticker
   const displayString = ` ${icon} ${currentAnn.title.toUpperCase()} : ${currentAnn.message} ✦ VISIT MITHILA CATERING & TIFFIN SERVICES ✦ CALL 8210350711 `;
 
   const handleDismissClick = () => {
@@ -119,6 +133,7 @@ export default function AnnouncementBanner() {
     setDismissedIds(updated);
     try {
       localStorage.setItem('dismissedAnnouncements', JSON.stringify(updated));
+      console.log(`[AnnouncementBanner] User dismissed announcement with ID ${currentAnn.id}`);
     } catch (err) {
       console.error(err);
     }
@@ -126,12 +141,12 @@ export default function AnnouncementBanner() {
 
   return (
     <div 
-      className={`fixed top-[71px] left-0 right-0 z-30 transition-all duration-300 shadow-md select-none ${bgGradient} ${
+      className={`w-full relative transition-all duration-300 border-t border-b border-black/10 shadow-md select-none ${bgGradient} ${
         isUrgent ? 'animate-pulse' : ''
       }`}
       id={`banner-${currentAnn.id}`}
     >
-      <div className="max-w-7xl mx-auto h-11 flex items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className={`max-w-7xl mx-auto ${currentAnn.enableMarquee ? 'h-11' : 'py-2.5 px-4'} flex items-center justify-between px-4 sm:px-6 lg:px-8`}>
         
         {/* Type pill left header label badge */}
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -149,7 +164,7 @@ export default function AnnouncementBanner() {
           )}
         </div>
 
-        {/* Dynamic scroll area */}
+        {/* Area for marquee scroll OR fixed card content */}
         <div className="flex-1 overflow-hidden mx-4 text-xs font-black tracking-wide text-white uppercase flex items-center">
           {currentAnn.enableMarquee ? (
             <marquee
@@ -161,10 +176,14 @@ export default function AnnouncementBanner() {
               {displayString}
             </marquee>
           ) : (
-            <div className="w-full text-center px-4 flex items-center justify-center gap-1.5 truncate">
-              <span>{icon}</span>
-              <span className="font-extrabold">{currentAnn.title.toUpperCase()}:</span>
-              <span className="opacity-95 font-semibold text-stone-100 truncate">{currentAnn.message}</span>
+            <div className="w-full text-center px-2 py-1 flex flex-col md:flex-row items-center justify-center gap-x-2 gap-y-1">
+              <div className="flex items-center gap-1.5">
+                <span>{icon}</span>
+                <span className="font-extrabold tracking-wider">{currentAnn.title.toUpperCase()}:</span>
+              </div>
+              <span className="opacity-95 font-bold normal-case text-stone-100 text-center leading-relaxed">
+                {currentAnn.message}
+              </span>
             </div>
           )}
         </div>

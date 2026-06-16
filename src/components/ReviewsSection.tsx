@@ -160,10 +160,16 @@ export default function ReviewsSection() {
           {/* Left Side: Submit Reviews Form (PART 4) */}
           <div className="lg:col-span-5 bg-white p-8 md:p-10 rounded-[2.5rem] border border-stone-200/60 shadow-xl space-y-6">
             <div>
-              <span className="text-xs font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-full uppercase tracking-widest border border-orange-100">
+              <span 
+                className="text-xs font-black bg-orange-50 px-3 py-1 rounded-full uppercase tracking-widest border border-orange-100"
+                style={{ color: '#000000' }}
+              >
                 Rate Our Service
               </span>
-              <h3 className="text-2xl font-black text-rose-950 tracking-tight mt-4">
+              <h3 
+                className="text-2xl font-black tracking-tight mt-4" 
+                style={{ color: '#000000' }}
+              >
                 Share Your Culinary Experience
               </h3>
               <p className="text-xs text-stone-400 font-bold uppercase mt-1">Your review will be instantly visible to others</p>

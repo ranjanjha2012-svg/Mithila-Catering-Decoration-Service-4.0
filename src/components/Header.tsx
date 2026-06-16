@@ -5,6 +5,7 @@ import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import AuthModal from './AuthModal';
+import AnnouncementBanner from './AnnouncementBanner';
 import { menuItems } from '../constants/menu';
 
 export default function Header() {
@@ -424,6 +425,7 @@ export default function Header() {
       </AnimatePresence>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AnnouncementBanner />
     </header>
   );
 }

@@ -2288,16 +2288,25 @@ export default function Dashboard() {
                         >
                           <div>
                             <div className="flex justify-between items-start gap-2 border-b border-stone-200/60 pb-3 mb-3">
-                              <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${typeTheme}`}>
+                              <span 
+                                className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${typeTheme}`}
+                                style={{ color: '#000000' }}
+                              >
                                 {ann.type}
                               </span>
                               <div className="flex items-center gap-1.5">
-                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md ${priorityTheme}`}>
+                                <span 
+                                  className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md ${priorityTheme}`}
+                                  style={{ color: '#000000' }}
+                                >
                                   {ann.priority}
                                 </span>
-                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md ${
-                                  ann.active ? 'bg-green-105 text-green-800 border border-green-200' : 'bg-stone-250 text-stone-500'
-                                }`}>
+                                <span 
+                                  className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md ${
+                                    ann.active ? 'bg-green-105 border border-green-200' : 'bg-stone-250 text-stone-500'
+                                  }`}
+                                  style={{ color: '#000000' }}
+                                >
                                   {ann.active ? 'Active' : 'Inactive'}
                                 </span>
                               </div>
@@ -2308,7 +2317,7 @@ export default function Dashboard() {
                           </div>
 
                           <div className="space-y-4 pt-3 border-t border-stone-200/50">
-                            <div className="flex justify-between text-[10px] text-stone-450 font-bold">
+                            <div className="flex justify-between text-[10px] font-bold" style={{ color: '#000000' }}>
                               <span>Ticker: {ann.enableMarquee ? 'Yes' : 'No'}</span>
                               <span className="truncate">Until: {ann.endDate || 'Always'}</span>
                             </div>
@@ -2321,9 +2330,10 @@ export default function Dashboard() {
                                 onClick={() => handleToggleAnnouncementActive(ann.id, ann.active)}
                                 className={`text-[10px] font-black py-2.5 rounded-xl transition cursor-pointer select-none border text-center ${
                                   ann.active 
-                                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' 
-                                    : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
+                                    ? 'bg-amber-50 hover:bg-amber-100 border-amber-200' 
+                                    : 'bg-green-50 hover:bg-green-100 border-green-200'
                                 }`}
+                                style={{ color: '#000000' }}
                               >
                                 {ann.active ? 'Mute' : 'Activate'}
                               </button>
@@ -2331,7 +2341,8 @@ export default function Dashboard() {
                               <button
                                 type="button"
                                 onClick={() => handleEditAnnouncement(ann)}
-                                className="text-[10px] bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 font-extrabold py-2.5 rounded-xl transition cursor-pointer text-center"
+                                className="text-[10px] bg-sky-50 border border-sky-200 font-extrabold py-2.5 rounded-xl transition cursor-pointer text-center"
+                                style={{ color: '#000000' }}
                               >
                                 Edit
                               </button>
@@ -2339,7 +2350,8 @@ export default function Dashboard() {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteAnnouncement(ann.id)}
-                                className="col-span-2 text-[10px] bg-red-50 text-red-650 hover:bg-red-100 border border-red-150 font-bold py-2 rounded-xl transition cursor-pointer text-center"
+                                className="col-span-2 text-[10px] bg-red-50 border border-red-150 font-bold py-2 rounded-xl transition cursor-pointer text-center"
+                                style={{ color: '#000000' }}
                               >
                                 Delete
                               </button>
