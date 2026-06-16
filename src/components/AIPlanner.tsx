@@ -86,9 +86,9 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
         <div className="flex items-center gap-3">
           <div className="relative">
             <img 
-              src="https://i.ibb.co/39yMD9B9/Whats-App-Image-2026-06-16-at-08-02-51.jpg" 
+              src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
               alt="Mithila Logo" 
-              className="h-6 w-6 md:h-8 md:w-8 object-contain bg-white rounded-full p-0.5"
+              className="h-6 w-6 md:h-8 md:w-8 object-contain bg-white rounded-full p-1"
             />
             <span className="absolute -bottom-1 -right-1 live-indicator border-2 border-green-900"></span>
           </div>

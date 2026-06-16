@@ -9,9 +9,9 @@ export default function Footer() {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <img 
-                src="https://i.ibb.co/39yMD9B9/Whats-App-Image-2026-06-16-at-08-02-51.jpg" 
+                src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
                 alt="Mithila Catering Logo" 
-                className="h-12 w-12 object-contain rounded-full"
+                className="h-12 w-12 object-contain"
               />
               <div>
                 <h2 className="text-xl font-bold">Mithila Catering &</h2>

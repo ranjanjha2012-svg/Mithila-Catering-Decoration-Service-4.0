@@ -55,9 +55,9 @@ export default function CurtainLoader() {
               className="z-10 bg-white p-6 rounded-full shadow-[0_0_50px_rgba(251,146,60,0.5)] border-4 border-orange-400"
             >
               <img 
-                src="https://i.ibb.co/39yMD9B9/Whats-App-Image-2026-06-16-at-08-02-51.jpg" 
+                src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
                 alt="Mithila Catering Logo" 
-                className="h-24 w-24 object-contain rounded-full"
+                className="h-24 w-24 object-contain"
               />
             </motion.div>
           </div>

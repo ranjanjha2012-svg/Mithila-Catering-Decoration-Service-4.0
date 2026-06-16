@@ -168,9 +168,9 @@ export default function Header() {
         <div className="flex items-center justify-between w-full lg:w-auto gap-3 shrink-0">
           <a href="/" className="flex items-center gap-2.5 sm:gap-3 shrink">
             <img 
-              src="https://i.ibb.co/39yMD9B9/Whats-App-Image-2026-06-16-at-08-02-51.jpg" 
+              src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
               alt="Mithila Catering Logo" 
-              className="h-9 w-9 sm:h-12 sm:w-12 object-contain shrink-0 rounded-full"
+              className="h-9 w-9 sm:h-12 sm:w-12 object-contain shrink-0"
             />
             <div className="shrink-0 text-left">
               <h1 className="text-xs sm:text-lg font-black text-red-800 leading-tight">Mithila Catering &</h1>

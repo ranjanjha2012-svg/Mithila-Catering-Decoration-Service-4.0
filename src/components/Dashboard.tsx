@@ -108,37 +108,17 @@ interface TiffinCardProps {
   onActivateTrigger?: (id: string) => void;
 }
 
-const getTiffinPlanName = (monthlyPrice: number, preference: 'Veg' | 'Non-Veg', mealTimings?: string): string => {
-  const isVeg = preference === 'Veg';
-  if (monthlyPrice === 100) return 'Daily Tiffin Trial';
-  if (isVeg) {
-    if (monthlyPrice === 2500) return 'Veg Breakfast Only';
-    if (monthlyPrice === 2700) {
-      if (mealTimings?.toLowerCase().includes('dinner')) return 'Veg Dinner Only';
-      return 'Veg Lunch Only';
-    }
-    if (monthlyPrice === 5100) return 'Veg Lunch + Dinner';
-    if (monthlyPrice === 6500) return 'Veg Full Day';
-    return `Veg Plan (₹${monthlyPrice}/mo)`;
-  } else {
-    if (monthlyPrice === 2700) return 'Non-Veg Breakfast';
-    if (monthlyPrice === 3100) {
-      if (mealTimings?.toLowerCase().includes('dinner')) return 'Non-Veg Dinner Only';
-      return 'Non-Veg Lunch Only';
-    }
-    if (monthlyPrice === 5600) return 'Non-Veg Lunch + Dinner';
-    if (monthlyPrice === 7500) return 'Non-Veg Full Day';
-    return `Non-Veg Plan (₹${monthlyPrice}/mo)`;
-  }
-};
-
 function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCardProps) {
+  const [localPrice, setLocalPrice] = useState(customer.monthlyPrice);
   const [localBalance, setLocalBalance] = useState(customer.balanceAmount);
+  const [localNextDate, setLocalNextDate] = useState(customer.nextDeliveryDate || '');
   const [localTodayStatus, setLocalTodayStatus] = useState(customer.todayDeliveryStatus || 'Not Started');
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
+    setLocalPrice(customer.monthlyPrice);
     setLocalBalance(customer.balanceAmount);
+    setLocalNextDate(customer.nextDeliveryDate || '');
     setLocalTodayStatus(customer.todayDeliveryStatus || 'Not Started');
   }, [customer]);
 
@@ -146,7 +126,9 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     setUpdating(true);
     try {
       await onUpdate(customer.id, {
+        monthlyPrice: Number(localPrice) || 0,
         balanceAmount: Number(localBalance) || 0,
+        nextDeliveryDate: localNextDate,
         todayDeliveryStatus: localTodayStatus as any
       });
     } finally {
@@ -164,7 +146,6 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     await onUpdate(customer.id, { balanceAmount: nextBalance });
   };
 
-  const resolvedPlan = customer.planName || getTiffinPlanName(customer.monthlyPrice, customer.preference, customer.mealTimings);
   const isRegistered = customer.status === 'Registered';
 
   if (isRegistered) {
@@ -190,9 +171,8 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
             <p>☎ <strong>Phone:</strong> {customer.phone}</p>
             {customer.email && <p className="truncate">✉ <strong>Email:</strong> {customer.email}</p>}
             <p>📍 <strong>Address:</strong> {customer.address}</p>
-            <p>🍱 <strong>Tiffin Plan:</strong> <span className="font-extrabold text-orange-600">{resolvedPlan}</span></p>
-            <p>💰 <strong>Booking Amount:</strong> ₹{customer.monthlyPrice}</p>
-            <p>⚖ <strong>Current Balance:</strong> {customer.balanceAmount}</p>
+            <p>💰 <strong>Monthly Price:</strong> ₹{customer.monthlyPrice}</p>
+            <p>⚖ <strong>Balance:</strong> {customer.balanceAmount}</p>
             <p>📅 <strong>Registration Date:</strong> {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}</p>
           </div>
         </div>
@@ -255,14 +235,13 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
         <div className="text-xs text-rose-105 space-y-2 mb-4 leading-relaxed font-bold">
           <p>☎ <strong className="text-white">Phone:</strong> {customer.phone}</p>
           <p className="line-clamp-2">📍 <strong className="text-white">Address:</strong> {customer.address}</p>
-          <p>🍱 <strong className="text-white">Selected Plan:</strong> <span className="text-yellow-250 font-black">{resolvedPlan}</span></p>
           <div className="flex justify-between items-center bg-black/15 rounded-xl p-2.5 my-3 border border-white/5">
             <div>
-              <span className="text-[10px] text-rose-200 uppercase block font-black">Booking Amount</span>
+              <span className="text-[9px] text-rose-200 uppercase block font-black">Plan price</span>
               <span className="text-white font-black text-sm">₹{customer.monthlyPrice}</span>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-rose-200 uppercase block font-black font-sans">Current Balance</span>
+              <span className="text-[9px] text-rose-200 uppercase block font-black font-sans">Current Balance</span>
               <span className="text-yellow-300 font-extrabold text-sm font-mono">{customer.balanceAmount}</span>
             </div>
           </div>
@@ -270,14 +249,14 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
 
         <div className="border-t border-white/10 pt-3.5 space-y-3">
           <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-black">
-            <div className="flex flex-col gap-0.5 col-span-2">
+            <div className="flex flex-col gap-0.5">
               <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Update Balance</label>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1">
                 <input
                   type="number"
                   value={localBalance}
                   onChange={(e) => setLocalBalance(Number(e.target.value))}
-                  className="w-full px-2 py-1.5 bg-white rounded-lg outline-none font-bold text-black text-xs"
+                  className="w-full px-1.5 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
                 />
                 <button
                   type="button"
@@ -285,43 +264,60 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
                     await onUpdate(customer.id, { balanceAmount: Number(localBalance) || 0 });
                     alert("Balance Amount updated successfully!");
                   }}
-                  className="bg-white text-[#C2185B] font-black text-xs uppercase px-3.5 rounded-lg hover:bg-rose-50 cursor-pointer"
+                  className="bg-white text-[#C2185B] font-black text-[9px] uppercase px-1.5 rounded-lg hover:bg-rose-50"
                 >
                   Set
                 </button>
               </div>
             </div>
+
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Plan Price</label>
+              <input
+                type="number"
+                value={localPrice}
+                onChange={(e) => setLocalPrice(Number(e.target.value))}
+                className="px-2 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
+              />
+            </div>
           </div>
 
-          <div className="flex flex-col gap-0.5 text-xs font-semibold text-black">
-            <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Daily Status</label>
-            <select
-              value={statClean}
-              onChange={(e) => setLocalTodayStatus(e.target.value)}
-              className="px-2 py-1.5 bg-white rounded-lg font-bold text-black cursor-pointer text-xs"
-            >
-              <option value="Not Started">Not Started</option>
-              <option value="Preparing">Preparing</option>
-              <option value="Out For Delivery">Out For Delivery</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
+          <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-black">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Daily Status</label>
+              <select
+                value={statClean}
+                onChange={(e) => setLocalTodayStatus(e.target.value)}
+                className="px-2 py-1.5 bg-white rounded-lg font-bold text-black cursor-pointer text-xs"
+              >
+                <option value="Not Started">Not Started</option>
+                <option value="Preparing">Preparing</option>
+                <option value="Out For Delivery">Out For Delivery</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Next Date</label>
+              <input
+                type="date"
+                value={localNextDate}
+                onChange={(e) => setLocalNextDate(e.target.value)}
+                className="px-2 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
+              />
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1 text-xs font-semibold">
+          <div className="flex flex-col gap-0.5 text-xs font-semibold">
             <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Overall Tiffin Status</label>
             <select
               value={customer.status}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className={`px-2 py-1.5 text-xs font-black rounded-lg cursor-pointer outline-none w-full border transition-colors ${
-                customer.status === 'Active' ? 'bg-emerald-600 border-emerald-700 text-white' :
-                customer.status === 'Paused' ? 'bg-amber-500 border-amber-600 text-white' :
-                'bg-red-600 border-red-700 text-white'
-              }`}
+              className="px-2 py-1.5 bg-white text-[#C2185B] rounded-lg font-bold cursor-pointer outline-none text-xs"
             >
-              <option value="Active" className="bg-emerald-600 text-white font-bold">Active</option>
-              <option value="Paused" className="bg-amber-500 text-white font-bold">Paused</option>
-              <option value="Cancelled" className="bg-red-600 text-white font-bold">Cancelled</option>
+              <option value="Active">Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Cancelled">Cancelled</option>
             </select>
           </div>
         </div>
@@ -991,11 +987,11 @@ export default function Dashboard() {
         <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
         
         <div className="flex items-center gap-4 z-10">
-          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-orange-600/30 overflow-hidden p-0.5 border border-stone-800">
+          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-orange-600/30 overflow-hidden p-1 border border-stone-800">
             <img 
-              src="https://i.ibb.co/39yMD9B9/Whats-App-Image-2026-06-16-at-08-02-51.jpg" 
+              src="https://i.ibb.co/Y4fS5FDr/file-000000003bec71faa9b37e16b055cb49.png" 
               alt="Mithila Catering Corporate Brand Logo" 
-              className="w-full h-full object-contain rounded-xl"
+              className="w-full h-full object-contain"
             />
           </div>
           <div>
