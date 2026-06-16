@@ -357,6 +357,22 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('orders');
 
+  // Announcements & Greetings System States
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    message: '',
+    type: 'Announcement', // 'Announcement' | 'Greeting' | 'Festival Greeting' | 'Important Notice'
+    priority: 'Normal', // 'Normal' | 'High' | 'Urgent'
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    enableMarquee: true,
+    active: true
+  });
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+
   // Firestore Database items
   const [orders, setOrders] = useState<FirestoreOrder[]>([]);
   const [jobs, setJobs] = useState<JobPost[]>([]);
@@ -416,6 +432,7 @@ export default function Dashboard() {
   const tiffinNoticesUnsubRef = React.useRef<(() => void) | null>(null);
   const eventEnquiriesUnsubRef = React.useRef<(() => void) | null>(null);
   const customerReviewsUnsubRef = React.useRef<(() => void) | null>(null);
+  const announcementsUnsubRef = React.useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -461,6 +478,9 @@ export default function Dashboard() {
       }
       if (customerReviewsUnsubRef.current) {
         customerReviewsUnsubRef.current();
+      }
+      if (announcementsUnsubRef.current) {
+        announcementsUnsubRef.current();
       }
     };
   }, []);
@@ -712,6 +732,36 @@ export default function Dashboard() {
       });
       customerReviewsUnsubRef.current = unsubCustomerReviews;
 
+      // 8. Real-time Announcements
+      if (announcementsUnsubRef.current) {
+        announcementsUnsubRef.current();
+      }
+      const unsubAnnouncements = onSnapshot(collection(db, 'announcements'), (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          list.push({
+            id: docSnap.id,
+            announcementId: data.announcementId || docSnap.id,
+            title: data.title || '',
+            message: data.message || '',
+            type: data.type || 'Announcement',
+            priority: data.priority || 'Normal',
+            createdAt: data.createdAt || '',
+            startDate: data.startDate || '',
+            endDate: data.endDate || '',
+            active: data.active !== undefined ? data.active : true,
+            createdBy: data.createdBy || '',
+            enableMarquee: data.enableMarquee !== undefined ? data.enableMarquee : true,
+          });
+        });
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setAnnouncements(list);
+      }, (error) => {
+        console.error("Real-time announcements sync failed:", error);
+      });
+      announcementsUnsubRef.current = unsubAnnouncements;
+
     } catch (error) {
       console.error("Error loading admin collections:", error);
     } finally {
@@ -746,6 +796,106 @@ export default function Dashboard() {
       } catch (err: any) {
         alert("Error deleting notice: " + err.message);
       }
+    }
+  };
+
+  // Global Announcements & Greetings System Handlers
+  const handleAnnouncementSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Authentication error: Admin user not found.");
+      return;
+    }
+
+    if (!announcementForm.title.trim() || !announcementForm.message.trim()) {
+      alert("Please fill in Title and Message fields.");
+      return;
+    }
+
+    setSavingAnnouncement(true);
+    try {
+      const payload = {
+        title: announcementForm.title.trim(),
+        message: announcementForm.message.trim(),
+        type: announcementForm.type,
+        priority: announcementForm.priority,
+        startDate: announcementForm.startDate,
+        endDate: announcementForm.endDate || '',
+        enableMarquee: Boolean(announcementForm.enableMarquee),
+        active: Boolean(announcementForm.active),
+        createdBy: currentUser.uid,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (editingAnnouncementId) {
+        // Update operation (edit announcement)
+        await updateDoc(doc(db, 'announcements', editingAnnouncementId), payload);
+        alert("Announcement updated successfully! Real-time changes active.");
+      } else {
+        // Create operation (publish announcement)
+        const newDocRef = doc(collection(db, 'announcements'));
+        await setDoc(newDocRef, {
+          announcementId: newDocRef.id,
+          createdAt: new Date().toISOString(),
+          ...payload
+        });
+        alert("Announcement published successfully! Displaying below the web header.");
+      }
+
+      // Reset form variables
+      setAnnouncementForm({
+        title: '',
+        message: '',
+        type: 'Announcement',
+        priority: 'Normal',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: '',
+        enableMarquee: true,
+        active: true
+      });
+      setEditingAnnouncementId(null);
+      setShowAnnouncementForm(false);
+    } catch (err: any) {
+      alert("Error publishing announcements: " + err.message);
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  };
+
+  const handleEditAnnouncement = (ann: any) => {
+    setAnnouncementForm({
+      title: ann.title || '',
+      message: ann.message || '',
+      type: ann.type || 'Announcement',
+      priority: ann.priority || 'Normal',
+      startDate: ann.startDate || new Date().toISOString().split('T')[0],
+      endDate: ann.endDate || '',
+      enableMarquee: ann.enableMarquee !== undefined ? ann.enableMarquee : true,
+      active: ann.active !== undefined ? ann.active : true
+    });
+    setEditingAnnouncementId(ann.id);
+    setShowAnnouncementForm(true);
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this announcement? It will instantly disappear from all customer pages.")) return;
+    try {
+      await deleteDoc(doc(db, 'announcements', id));
+      alert("Announcement deleted successfully and removed from all views.");
+    } catch (err: any) {
+      alert("Error deleting announcement: " + err.message);
+    }
+  };
+
+  const handleToggleAnnouncementActive = async (id: string, currentActiveStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'announcements', id), {
+        active: !currentActiveStatus,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err: any) {
+      alert("Error updating announcement status: " + err.message);
     }
   };
 
@@ -1095,6 +1245,20 @@ export default function Dashboard() {
                 {tiffinCustomers.length > 0 && (
                   <span className="ml-auto w-5 h-5 bg-rose-100 text-rose-800 rounded-full flex items-center justify-center text-[10px] font-black border border-rose-200">
                     {tiffinCustomers.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab('announcements')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-xs font-black transition-all ${activeTab === 'announcements' ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/10' : 'text-stone-700 hover:bg-stone-50'}`}
+                id="tab-btn-announcements"
+              >
+                <Tag size={16} />
+                <span>Announcements & Greetings</span>
+                {announcements.length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-[10px] font-black border border-emerald-250">
+                    {announcements.length}
                   </span>
                 )}
               </button>
@@ -2059,6 +2223,142 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
+
+              {/* ===================== GLOBAL ANNOUNCEMENTS & GREETINGS SYSTEM ===================== */}
+              {activeTab === 'announcements' && (
+                <div className="bg-white border border-stone-200/55 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-black text-rose-955 tracking-tight">Announcements & Greetings Console</h3>
+                      <p className="text-xs text-stone-400 font-bold uppercase mt-1">Manage running tickers, banner notices, seasonal greetings across the website</p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setEditingAnnouncementId(null);
+                        setAnnouncementForm({
+                          title: '',
+                          message: '',
+                          type: 'Announcement',
+                          priority: 'Normal',
+                          startDate: new Date().toISOString().split('T')[0],
+                          endDate: '',
+                          enableMarquee: true,
+                          active: true
+                        });
+                        setShowAnnouncementForm(true);
+                      }}
+                      className="px-5 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs rounded-xl shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer animate-none"
+                      id="btn-create-announcement"
+                    >
+                      <Plus size={16} />
+                      <span>Create Announcement</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {announcements.map((ann) => {
+                      const isUrgent = ann.priority === 'Urgent';
+                      const isHigh = ann.priority === 'High';
+                      
+                      // Theme classes based on TYPE
+                      let typeTheme = "bg-blue-50 border border-blue-200 text-blue-800";
+                      if (ann.type === 'Greeting') {
+                        typeTheme = "bg-emerald-50 border border-emerald-200 text-emerald-800";
+                      } else if (ann.type === 'Festival Greeting') {
+                        typeTheme = "bg-purple-50 border border-purple-200 text-purple-800";
+                      } else if (ann.type === 'Important Notice') {
+                        typeTheme = "bg-rose-50 border border-rose-200 text-rose-800";
+                      }
+
+                      // Badge styles for PRIORITY
+                      let priorityTheme = "bg-stone-100 text-stone-750";
+                      if (isUrgent) {
+                        priorityTheme = "bg-red-650 text-white animate-pulse font-black";
+                      } else if (isHigh) {
+                        priorityTheme = "bg-amber-100 text-amber-800 border border-amber-250 font-extrabold";
+                      }
+
+                      return (
+                        <div 
+                          key={ann.id} 
+                          className={`bg-stone-50 border rounded-3xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-all ${
+                            isUrgent ? 'border-red-400 ring-1 ring-red-300' : isHigh ? 'border-amber-300' : 'border-stone-200'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex justify-between items-start gap-2 border-b border-stone-200/60 pb-3 mb-3">
+                              <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${typeTheme}`}>
+                                {ann.type}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md ${priorityTheme}`}>
+                                  {ann.priority}
+                                </span>
+                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md ${
+                                  ann.active ? 'bg-green-105 text-green-800 border border-green-200' : 'bg-stone-250 text-stone-500'
+                                }`}>
+                                  {ann.active ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <h5 className="font-extrabold text-stone-900 text-sm mb-1 leading-snug">{ann.title}</h5>
+                            <p className="text-xs text-stone-600 leading-relaxed font-semibold mb-4 whitespace-pre-wrap">{ann.message}</p>
+                          </div>
+
+                          <div className="space-y-4 pt-3 border-t border-stone-200/50">
+                            <div className="flex justify-between text-[10px] text-stone-450 font-bold">
+                              <span>Ticker: {ann.enableMarquee ? 'Yes' : 'No'}</span>
+                              <span className="truncate">Until: {ann.endDate || 'Always'}</span>
+                            </div>
+                            
+                            <div className="border-b border-stone-200/35"></div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleAnnouncementActive(ann.id, ann.active)}
+                                className={`text-[10px] font-black py-2.5 rounded-xl transition cursor-pointer select-none border text-center ${
+                                  ann.active 
+                                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' 
+                                    : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
+                                }`}
+                              >
+                                {ann.active ? 'Mute' : 'Activate'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleEditAnnouncement(ann)}
+                                className="text-[10px] bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 font-extrabold py-2.5 rounded-xl transition cursor-pointer text-center"
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAnnouncement(ann.id)}
+                                className="col-span-2 text-[10px] bg-red-50 text-red-650 hover:bg-red-100 border border-red-150 font-bold py-2 rounded-xl transition cursor-pointer text-center"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {announcements.length === 0 && (
+                      <div className="col-span-full text-center py-16 bg-neutral-50 rounded-[2.5rem] border border-stone-200 border-dashed">
+                        <Tag className="mx-auto text-stone-300 mb-2" size={44} />
+                        <p className="text-stone-850 font-black text-sm uppercase tracking-tight">No announcements created yet.</p>
+                        <p className="text-xs text-stone-400 font-bold mt-1">Create announcements, festivals tickers, and notices to highlight them instantly above customers header.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -2184,6 +2484,193 @@ export default function Dashboard() {
                     <>Publish Opening <Send size={12} /></>
                   )}
                 </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ===================== ANNOUNCEMENT FORM MODAL ===================== */}
+      <AnimatePresence>
+        {showAnnouncementForm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAnnouncementForm(false)}
+              className="fixed inset-0 bg-neutral-950/70 backdrop-blur-md"
+            />
+
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-[2.5rem] p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto relative shadow-2xl z-[70] border border-orange-100 text-stone-900"
+            >
+              <button 
+                type="button"
+                onClick={() => setShowAnnouncementForm(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-neutral-50 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={20} className="text-stone-400" />
+              </button>
+
+              <div className="mb-6">
+                <span className="text-[10px] font-black uppercase text-orange-600 tracking-wider font-mono">Operational Ticker</span>
+                <h3 className="text-2xl font-black text-[#C2185B] mt-0.5">
+                  {editingAnnouncementId ? 'Edit Ticker / Notice' : 'Compose Live Announcement'}
+                </h3>
+                <p className="text-stone-400 text-xs mt-1 font-bold uppercase">Configure real-time broadcasts that overlay at the top of all user pages.</p>
+              </div>
+
+              <form onSubmit={handleAnnouncementSubmit} className="space-y-4">
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Announcement Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={announcementForm.title}
+                    onChange={(e) => setAnnouncementForm({...announcementForm, title: e.target.value})}
+                    placeholder="e.g. Durga Puja Special Feast Tickers"
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850"
+                  />
+                </div>
+
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Announcement Body Message *</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={announcementForm.message}
+                    onChange={(e) => setAnnouncementForm({...announcementForm, message: e.target.value})}
+                    placeholder="Provide full description of seasonal discount, important notes, hours update, or festival greeting..."
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-semibold text-stone-850 resize-none leading-relaxed"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Display Banner Segment (Type)</label>
+                    <select
+                      value={announcementForm.type}
+                      onChange={(e) => setAnnouncementForm({...announcementForm, type: e.target.value})}
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850 cursor-pointer"
+                    >
+                      <option value="Announcement">Announcement (Blue Theme)</option>
+                      <option value="Greeting">Greeting (Green Theme)</option>
+                      <option value="Festival Greeting">Festival Greeting (Purple Theme)</option>
+                      <option value="Important Notice">Important Notice (Red Theme)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Escalation Category (Priority)</label>
+                    <select
+                      value={announcementForm.priority}
+                      onChange={(e) => setAnnouncementForm({...announcementForm, priority: e.target.value})}
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850 cursor-pointer"
+                    >
+                      <option value="Normal">Normal (Standard Style)</option>
+                      <option value="High">High (Highlighted Yellow)</option>
+                      <option value="Urgent">Urgent (Flashing Red Banner)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Activation Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={announcementForm.startDate}
+                      onChange={(e) => setAnnouncementForm({...announcementForm, startDate: e.target.value})}
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Expiration Date (Optional)</label>
+                    <input
+                      type="date"
+                      value={announcementForm.endDate}
+                      onChange={(e) => setAnnouncementForm({...announcementForm, endDate: e.target.value})}
+                      className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Enable Scrolling Marquee Ticker?</label>
+                    <div className="flex gap-4 mt-1.5">
+                      <label className="flex items-center gap-2 text-xs font-extrabold cursor-pointer text-stone-800">
+                        <input
+                          type="radio"
+                          name="enableMarquee"
+                          checked={announcementForm.enableMarquee === true}
+                          onChange={() => setAnnouncementForm({...announcementForm, enableMarquee: true})}
+                          className="text-orange-600 focus:ring-orange-500"
+                        />
+                        <span>Yes</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-extrabold cursor-pointer text-stone-800">
+                        <input
+                          type="radio"
+                          name="enableMarquee"
+                          checked={announcementForm.enableMarquee === false}
+                          onChange={() => setAnnouncementForm({...announcementForm, enableMarquee: false})}
+                          className="text-orange-600 focus:ring-orange-500"
+                        />
+                        <span>No (Static Block)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] font-black text-stone-500 uppercase tracking-wider">Direct Publication state</label>
+                    <div className="flex gap-3 mt-1.5">
+                      <label className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer text-stone-800">
+                        <input
+                          type="radio"
+                          name="active"
+                          checked={announcementForm.active === true}
+                          onChange={() => setAnnouncementForm({...announcementForm, active: true})}
+                          className="text-[#C2185B] focus:ring-[#C2185B]"
+                        />
+                        <span>Publish</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs font-extrabold cursor-pointer text-stone-800">
+                        <input
+                          type="radio"
+                          name="active"
+                          checked={announcementForm.active === false}
+                          onChange={() => setAnnouncementForm({...announcementForm, active: false})}
+                          className="text-[#C2185B] focus:ring-[#C2185B]"
+                        />
+                        <span>Draft</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t border-stone-200/50 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAnnouncementForm(false)}
+                    className="w-1/2 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-extrabold text-xs rounded-xl transition cursor-pointer text-center uppercase"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingAnnouncement}
+                    className="w-1/2 py-3 bg-[#C2185B] hover:bg-[#a0134b] text-white font-black text-xs rounded-xl shadow-lg transition disabled:bg-rose-455 cursor-pointer text-center uppercase tracking-widest"
+                  >
+                    {savingAnnouncement ? "Saving Ticker..." : (editingAnnouncementId ? "Save Changes" : "Publish Announcement")}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>

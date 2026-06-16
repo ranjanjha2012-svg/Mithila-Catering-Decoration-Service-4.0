@@ -3,12 +3,14 @@ import Header from './Header';
 import Footer from './Footer';
 import WhatsAppButton from './WhatsAppButton';
 import AiSearchFloating from './AiSearchFloating';
+import AnnouncementBanner from './AnnouncementBanner';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen relative selection:bg-orange-100 selection:text-orange-900">
       <div className="banquet-bg-overlay"></div>
       <Header />
+      <AnnouncementBanner />
       <main>{children}</main>
       <Footer />
       <WhatsAppButton />

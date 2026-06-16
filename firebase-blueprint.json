@@ -116,6 +116,25 @@
         "userId": { "type": "string" }
       },
       "required": ["customerName", "rating", "reviewMessage", "submittedAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Broadcast announcements, notice boards, and greetings",
+      "type": "object",
+      "properties": {
+        "announcementId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["Announcement", "Greeting", "Festival Greeting", "Important Notice"] },
+        "priority": { "type": "string", "enum": ["Normal", "High", "Urgent"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdBy": { "type": "string" },
+        "enableMarquee": { "type": "boolean" }
+      },
+      "required": ["announcementId", "title", "message", "type", "priority", "createdAt", "startDate", "active", "createdBy", "enableMarquee"]
     }
   },
   "firestore": {
@@ -146,6 +165,10 @@
     "/customerReviews/{reviewId}": {
       "schema": "CustomerReview",
       "description": "Public customer feedback and satisfaction ratings"
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Dynamic top-level announcements and headers"
     }
   }
 }
