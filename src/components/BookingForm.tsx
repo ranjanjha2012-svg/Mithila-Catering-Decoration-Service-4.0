@@ -412,8 +412,8 @@ export default function BookingForm() {
                       <MapPin size={20} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-black text-stone-400 uppercase tracking-widest">Office Address</h4>
-                      <p className="text-stone-850 font-black text-sm sm:text-base mt-0.5">Delhi, India</p>
+                      <h4 className="text-xs font-black uppercase tracking-widest" style={{ color: '#000000' }}>Office Address</h4>
+                      <p className="font-black text-sm sm:text-base mt-0.5" style={{ color: '#000000' }}>Delhi, India</p>
                     </div>
                   </div>
 
@@ -468,8 +468,8 @@ export default function BookingForm() {
                       </svg>
                     </div>
                     <div>
-                      <h4 className="text-xs font-black text-stone-400 uppercase tracking-widest text-[#25D366]">WhatsApp Connection</h4>
-                      <p className="text-stone-850 font-black text-sm sm:text-base mt-0.5 group-hover:underline">
+                      <h4 className="text-xs font-black uppercase tracking-widest" style={{ color: '#000000' }}>WhatsApp Connection</h4>
+                      <p className="font-black text-sm sm:text-base mt-0.5 group-hover:underline" style={{ color: '#000000' }}>
                         +91 9650254164
                       </p>
                     </div>
@@ -481,9 +481,9 @@ export default function BookingForm() {
                       <Clock size={20} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-black text-stone-400 uppercase tracking-widest">Business Hours</h4>
-                      <p className="text-stone-850 font-black text-sm mt-0.5">07:00 AM to 10:30 PM (All Days)</p>
-                      <p className="text-[10px] font-black text-orange-600 uppercase">Open 7 days a week</p>
+                      <h4 className="text-xs font-black uppercase tracking-widest" style={{ color: '#000000' }}>Business Hours</h4>
+                      <p className="font-black text-sm mt-0.5" style={{ color: '#000000' }}>07:00 AM to 10:30 PM (All Days)</p>
+                      <p className="text-[10px] font-black uppercase" style={{ color: '#000000' }}>Open 7 days a week</p>
                     </div>
                   </div>
                 </div>
@@ -526,7 +526,7 @@ export default function BookingForm() {
                 Not sure about how much food to order, decoration patterns, or budget breakdown? Chat with our smart AI Event Assistant below to generate a comprehensive, instant proposal tailored for your big day.
               </p>
             </div>
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl h-[550px] relative z-10">
+            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl h-[550px] md:h-[650px] relative z-10 w-full">
               <AIPlanner isCompact={false} />
             </div>
           </motion.div>

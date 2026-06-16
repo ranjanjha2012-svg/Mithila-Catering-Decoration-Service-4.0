@@ -3,6 +3,7 @@ import { Star, MessageSquare, Send, User, ChevronRight, Sparkles } from 'lucide-
 import { collection, doc, setDoc, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { auth, db, OperationType, handleFirestoreError } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import AuthModal from './AuthModal';
 
 interface Review {
   id: string;
@@ -25,6 +26,7 @@ export default function ReviewsSection() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Auth Listener
   useEffect(() => {
@@ -172,7 +174,12 @@ export default function ReviewsSection() {
               >
                 Share Your Culinary Experience
               </h3>
-              <p className="text-xs text-stone-400 font-bold uppercase mt-1">Your review will be instantly visible to others</p>
+              <p 
+                className="text-xs font-bold uppercase mt-1"
+                style={{ color: '#000000' }}
+              >
+                Your review will be instantly visible to others
+              </p>
             </div>
 
             {success && (
@@ -188,56 +195,90 @@ export default function ReviewsSection() {
               </div>
             )}
 
-            <form onSubmit={handleReviewSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-stone-400 uppercase tracking-wider flex items-center gap-1">
-                  <User size={13} /> Your Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-stone-850 font-bold placeholder:text-stone-400 text-sm"
-                />
+            {!currentUser ? (
+              <div className="bg-stone-50 border border-stone-200 rounded-2xl p-6 text-center space-y-4">
+                <p 
+                  className="text-xs font-extrabold uppercase tracking-wide leading-relaxed"
+                  style={{ color: '#000000' }}
+                >
+                  Please register or sign in to submit a review.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="w-full bg-orange-100 border border-orange-300 font-extrabold py-3 px-4 rounded-xl hover:bg-orange-200 transition-all uppercase tracking-wider text-xs cursor-pointer"
+                  style={{ color: '#000000' }}
+                >
+                  Login / Register
+                </button>
               </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-stone-400 uppercase tracking-wider block">
-                  Select Rating
-                </label>
-                <div className="bg-stone-50 px-4 py-3.5 rounded-xl border border-stone-200 flex items-center justify-between">
-                  {renderStars(rating, true, setRating)}
-                  <span className="text-xs font-black text-amber-600 uppercase tracking-wider bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                    {rating} Star{rating > 1 ? 's' : ''}
-                  </span>
+            ) : (
+              <form onSubmit={handleReviewSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label 
+                    className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1"
+                    style={{ color: '#000000' }}
+                  >
+                    <User size={13} style={{ color: '#000000' }} /> Your Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-stone-850 font-bold placeholder:text-stone-400 text-sm"
+                  />
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-stone-400 uppercase tracking-wider flex items-center gap-1">
-                  <MessageSquare size={13} /> Review Message
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Tell others what you loved about our catering service..."
-                  value={reviewMessage}
-                  onChange={(e) => setReviewMessage(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-stone-850 font-bold placeholder:text-stone-400 text-sm"
-                />
-              </div>
+                <div className="space-y-2">
+                  <label 
+                    className="text-[11px] font-black uppercase tracking-wider block"
+                    style={{ color: '#000000' }}
+                  >
+                    Select Rating
+                  </label>
+                  <div className="bg-stone-50 px-4 py-3.5 rounded-xl border border-stone-200 flex items-center justify-between">
+                    {renderStars(rating, true, setRating)}
+                    <span 
+                      className="text-xs font-black uppercase tracking-wider bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200"
+                      style={{ color: '#000000' }}
+                    >
+                      {rating} Star{rating > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-orange-600 text-white font-extrabold py-4 px-6 rounded-2xl hover:bg-orange-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10 uppercase tracking-widest text-xs disabled:opacity-50"
-              >
-                {submitting ? 'Submitting...' : 'Submit Review'}
-                <Send size={14} />
-              </button>
-            </form>
+                <div className="space-y-1.5">
+                  <label 
+                    className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1"
+                    style={{ color: '#000000' }}
+                  >
+                    <MessageSquare size={13} style={{ color: '#000000' }} /> Review Message
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Tell others what you loved about our catering service..."
+                    value={reviewMessage}
+                    onChange={(e) => setReviewMessage(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-stone-850 font-bold placeholder:text-stone-400 text-sm"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-orange-50 hover:bg-orange-100 border border-orange-200 font-extrabold py-4 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-50 cursor-pointer"
+                  style={{ color: '#000000' }}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Review'}
+                  <Send size={14} style={{ color: '#000000' }} />
+                </button>
+              </form>
+            )}
+            
+            <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
           </div>
 
           {/* Right Side: Public Approved Reviews Feed (PART 6) */}

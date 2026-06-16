@@ -81,8 +81,8 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
   };
 
   const chatContent = (
-    <div className={`bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-3xl shadow-2xl border border-yellow-300 flex flex-col ${isCompact ? 'h-full' : 'h-[600px]'} overflow-hidden`}>
-      <div className="bg-[#064e3b] p-4 md:p-6 text-white flex items-center justify-between">
+    <div className="bg-gradient-to-b from-stone-50 to-stone-150 rounded-3xl shadow-2xl border border-stone-200/80 flex flex-col h-full w-full overflow-hidden">
+      <div className="bg-[#064e3b] p-4 md:p-6 text-white flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
             <img 
@@ -102,15 +102,17 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
         </div>
         <div className="flex gap-1 md:gap-2">
           <button 
+            type="button"
             onClick={saveChat}
-            className="p-1.5 md:p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-1.5 md:p-2 hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
             title="Save Chat"
           >
             <Download size={16} />
           </button>
           <button 
+            type="button"
             onClick={clearChat}
-            className="p-1.5 md:p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-1.5 md:p-2 hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
             title="Clear Chat"
           >
             <Trash2 size={16} />
@@ -118,30 +120,30 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-orange-50/30">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-stone-50 min-h-0">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] p-3 md:p-4 rounded-2xl ${
+            <div className={`max-w-[85%] p-3 md:p-4 rounded-2xl ${
               msg.role === 'user' 
                 ? 'bg-orange-600 text-white rounded-tr-none' 
                 : 'bg-[#8B008B] text-white shadow-sm border border-magenta-900/20 rounded-tl-none'
             }`}>
-              <p className="text-xs md:text-base leading-relaxed">{msg.text}</p>
+              <p className="text-xs md:text-base leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
             </div>
           </div>
         ))}
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-[#8B008B] p-3 md:p-4 rounded-2xl shadow-sm border border-magenta-900/20 rounded-tl-none flex items-center gap-1">
-              <div className="typing-dot"></div>
-              <div className="typing-dot"></div>
-              <div className="typing-dot"></div>
+              <div className="typing-dot bg-white"></div>
+              <div className="typing-dot bg-white"></div>
+              <div className="typing-dot bg-white"></div>
             </div>
           </div>
         )}
       </div>
 
-      <div className="p-4 md:p-6 border-t border-yellow-300 bg-yellow-500/10">
+      <div className="p-4 md:p-6 border-t border-stone-200 bg-white shrink-0">
         <div className="flex gap-2 md:gap-3">
           <input
             type="text"
@@ -149,12 +151,13 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Ask AI Planner..."
-            className="flex-1 border border-orange-200 rounded-2xl px-4 md:px-6 py-3 md:py-4 focus:outline-none focus:ring-2 focus:ring-orange-500 text-xs md:text-base shadow-inner text-black"
+            className="flex-1 border border-stone-300 rounded-2xl px-4 md:px-6 py-3 md:py-4 focus:outline-none focus:ring-2 focus:ring-green-800 text-xs md:text-base shadow-inner text-black font-semibold"
           />
           <button
+            type="button"
             onClick={handleSend}
             disabled={isLoading}
-            className="bg-[#064e3b] text-white px-4 md:px-6 rounded-2xl hover:bg-green-800 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg hover:shadow-green-200"
+            className="bg-[#064e3b] text-white px-4 md:px-6 rounded-2xl hover:bg-green-800 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg hover:shadow-green-200 cursor-pointer"
           >
             <Send size={18} />
           </button>
@@ -166,15 +169,16 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
   if (isCompact) return chatContent;
 
   return (
-    <section id="ai-planner" className="py-20 bg-black/40 backdrop-blur-md min-h-screen">
-      <div className="container mx-auto px-4 max-w-2xl">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Mithila AI Planner</h2>
-          <p className="text-orange-100/80">Chat with our AI to plan your perfect menu and event details.</p>
+    <section id="ai-planner" className="py-12 md:py-20 bg-stone-900 min-h-screen">
+      <div className="container mx-auto px-4 max-w-7xl">
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight">Mithila AI Planner</h2>
+          <p className="text-stone-300 font-bold text-xs md:text-sm mt-3">Chat with our AI to plan your perfect menu and event details.</p>
         </div>
         
-
-        {chatContent}
+        <div className="w-full h-[550px] md:h-[650px] bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-200">
+          {chatContent}
+        </div>
       </div>
     </section>
   );

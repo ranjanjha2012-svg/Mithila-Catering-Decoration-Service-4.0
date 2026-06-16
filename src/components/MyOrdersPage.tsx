@@ -790,7 +790,7 @@ export default function MyOrdersPage() {
                           </div>
 
                           <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100 flex justify-between items-center">
-                            <span className="text-stone-400 font-bold">Current Service Status</span>
+                            <span className="text-stone-400 font-bold">Today Service Status</span>
                             <span className={`text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full border ${
                               currentDeliveryStatus === 'Delivered'
                                 ? 'bg-green-600 text-white border-green-700 font-extrabold'
@@ -803,6 +803,19 @@ export default function MyOrdersPage() {
                                 : 'bg-stone-100 text-stone-600 border-stone-200'
                             }`}>
                               {currentDeliveryStatus}
+                            </span>
+                          </div>
+
+                          <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100 flex justify-between items-center">
+                            <span className="text-stone-400 font-bold font-sans">Today's Date</span>
+                            <span className="font-mono text-stone-950 font-extrabold text-xs">
+                              {sub.todayDate || (()=>{
+                                const d = new Date();
+                                const day = String(d.getDate()).padStart(2, '0');
+                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                const year = d.getFullYear();
+                                return `${day}/${month}/${year}`;
+                              })()}
                             </span>
                           </div>
                         </div>
@@ -1395,7 +1408,7 @@ export default function MyOrdersPage() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center transition-all">
-                        <span className="text-xs font-black uppercase text-[#000000] tracking-wider font-sans">Today's Meal Delivery Status</span>
+                        <span className="text-xs font-black uppercase text-[#000000] tracking-wider font-sans">Today Service Status</span>
                         {(() => {
                           const todayClean = (trackerResult.todayDeliveryStatus || 'Not Started').replace(/\s+text-black$/gi, '');
                           return (
@@ -1414,6 +1427,18 @@ export default function MyOrdersPage() {
                             </span>
                           );
                         })()}
+                      </div>
+                      <div className="flex justify-between items-center transition-all pt-1">
+                        <span className="text-xs font-black uppercase text-[#000000] tracking-wider font-sans">Today's Date</span>
+                        <span className="font-mono text-stone-950 font-black text-xs">
+                          {trackerResult.todayDate || (() => {
+                            const d = new Date();
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const year = d.getFullYear();
+                            return `${day}/${month}/${year}`;
+                          })()}
+                        </span>
                       </div>
                       <p className="text-[10px] text-stone-400 font-bold leading-relaxed pt-1.5 font-sans">
                         ℹ️ Standard tiffin dispatches activate in real-time. Any changes made by the kitchen operator will reflect above instantly.

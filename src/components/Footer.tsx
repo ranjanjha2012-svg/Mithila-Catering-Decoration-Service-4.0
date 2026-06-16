@@ -93,7 +93,7 @@ export default function Footer() {
           <div className="flex flex-col gap-1.5 items-center text-center">
             <p>© 2026 Mithila Catering & Decoration Service. All rights reserved.</p>
             <div className="flex flex-wrap justify-center items-center gap-x-2.5 gap-y-1 text-white/95">
-              <span className="font-semibold text-white">Last Updated 14 June 2026</span>
+              <span className="font-semibold text-white">Last Updated 16 June 2026</span>
               <span className="opacity-45">|</span>
               <span className="font-bold text-amber-400">FSSAI Lic No- 23322010000405</span>
             </div>

@@ -91,7 +91,7 @@ export interface TiffinCustomer {
   preference: 'Veg' | 'Non-Veg';
   monthlyPrice: number;
   balanceAmount: number;
-  status: 'Registered' | 'Active' | 'Preparing' | 'Out For Delivery' | 'Delivered' | 'Paused' | 'Cancelled';
+  status: 'Registered' | 'Active' | 'Preparing' | 'Out For Delivery' | 'Delivered' | 'Paused' | 'Cancelled' | 'Completed';
   createdAt: string;
   userId?: string;
   orderId?: string;
@@ -99,6 +99,8 @@ export interface TiffinCustomer {
   planName?: string;
   nextDeliveryDate?: string;
   todayDeliveryStatus?: string;
+  todayDate?: string;
+  completionDate?: string;
 }
 
 interface TiffinCardProps {
@@ -161,14 +163,24 @@ export const getTiffinBookingAmount = (customer: TiffinCustomer): number => {
   return isVeg ? 6500 : 7500;
 };
 
+const getTodayFormattedDate = () => {
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCardProps) {
   const [localBalance, setLocalBalance] = useState(customer.balanceAmount);
   const [localTodayStatus, setLocalTodayStatus] = useState(customer.todayDeliveryStatus || 'Not Started');
+  const [localTodayDate, setLocalTodayDate] = useState(customer.todayDate || '');
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     setLocalBalance(customer.balanceAmount);
     setLocalTodayStatus(customer.todayDeliveryStatus || 'Not Started');
+    setLocalTodayDate(customer.todayDate || '');
   }, [customer]);
 
   const handleUpdateClick = async () => {
@@ -176,7 +188,8 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     try {
       await onUpdate(customer.id, {
         balanceAmount: Number(localBalance) || 0,
-        todayDeliveryStatus: localTodayStatus as any
+        todayDeliveryStatus: localTodayStatus as any,
+        todayDate: localTodayDate
       });
     } finally {
       setUpdating(false);
@@ -184,7 +197,11 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
   };
 
   const handleStatusChange = async (nextStatus: string) => {
-    await onUpdate(customer.id, { status: nextStatus as any });
+    const updateFields: any = { status: nextStatus };
+    if (nextStatus === 'Completed') {
+      updateFields.completionDate = getTodayFormattedDate();
+    }
+    await onUpdate(customer.id, updateFields);
   };
 
   const isRegistered = customer.status === 'Registered';
@@ -230,7 +247,7 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     );
   }
 
-  // Active Customer Card: Overall status background (Active = Green, Paused = Orange, Cancelled = Red)
+  // Active Customer Card: Overall status background (Active = Green, Paused = Orange, Cancelled = Red, Completed = Dark Green)
   const statClean = (localTodayStatus || 'Not Started').replace(/\s+text-black$/gi, '');
   
   let bgClass = "bg-green-600 border-green-700 text-white";
@@ -238,6 +255,8 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     bgClass = "bg-orange-500 border-orange-600 text-white";
   } else if (customer.status === 'Cancelled') {
     bgClass = "bg-red-600 border-red-700 text-white";
+  } else if (customer.status === 'Completed') {
+    bgClass = "bg-[#044c34] border-[#023c28] text-white";
   }
 
   return (
@@ -284,6 +303,10 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
               <span className="text-yellow-300 font-extrabold text-sm font-mono">{customer.balanceAmount}</span>
             </div>
           </div>
+          <div className="flex justify-between items-center bg-black/10 rounded-xl p-2.5 my-2 border border-white/5 text-[11px]">
+            <span className="text-rose-100 font-bold">Today's Date:</span>
+            <span className="text-white font-black font-mono">{customer.todayDate || getTodayFormattedDate()}</span>
+          </div>
         </div>
 
         <div className="border-t border-white/10 pt-3.5 space-y-3">
@@ -310,7 +333,7 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
           </div>
 
           <div className="flex flex-col gap-0.5 text-xs font-semibold text-black">
-            <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Daily Status</label>
+            <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Today Service Status</label>
             <select
               value={statClean}
               onChange={(e) => setLocalTodayStatus(e.target.value)}
@@ -324,6 +347,29 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
             </select>
           </div>
 
+          <div className="flex flex-col gap-0.5 text-xs font-semibold text-black">
+            <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Today's Date (Manual Override)</label>
+            <div className="flex gap-1">
+              <input
+                type="text"
+                placeholder={getTodayFormattedDate()}
+                value={localTodayDate}
+                onChange={(e) => setLocalTodayDate(e.target.value)}
+                className="w-full px-1.5 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  await onUpdate(customer.id, { todayDate: localTodayDate });
+                  alert("Today's Date updated/overridden successfully!");
+                }}
+                className="bg-white text-[#C2185B] font-black text-[9px] uppercase px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
+              >
+                Set
+              </button>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-0.5 text-xs font-semibold">
             <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Overall Tiffin Status</label>
             <select
@@ -334,6 +380,7 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
               <option value="Active">Active</option>
               <option value="Paused">Paused</option>
               <option value="Cancelled">Cancelled</option>
+              <option value="Completed">Completed</option>
             </select>
           </div>
         </div>
@@ -382,7 +429,7 @@ export default function Dashboard() {
   // Tiffin Service active management states
   const [tiffinCustomers, setTiffinCustomers] = useState<TiffinCustomer[]>([]);
   const [tiffinOrders, setTiffinOrders] = useState<any[]>([]);
-  const [tiffinSubTab, setTiffinSubTab] = useState<'registered' | 'active' | 'orders' | 'paused_cancelled' | 'notices' | 'register'>('registered');
+  const [tiffinSubTab, setTiffinSubTab] = useState<'registered' | 'active' | 'orders' | 'paused_cancelled' | 'completed' | 'notices' | 'register'>('registered');
   const [ordersSubTab, setOrdersSubTab] = useState<'active' | 'finalised'>('active');
   const [notices, setNotices] = useState<any[]>([]);
   const [noticeForm, setNoticeForm] = useState({ title: '', content: '' });
@@ -1762,6 +1809,14 @@ export default function Dashboard() {
                       Paused/Cancelled Tiffin Service ({tiffinCustomers.filter(c => c.status === 'Paused' || c.status === 'Cancelled').length})
                     </button>
                     <button
+                      onClick={() => setTiffinSubTab('completed')}
+                      className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+                        tiffinSubTab === 'completed' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
+                      }`}
+                    >
+                      Completed Tiffins ({tiffinCustomers.filter(c => c.status === 'Completed').length})
+                    </button>
+                    <button
                       onClick={() => setTiffinSubTab('orders')}
                       className={`pb-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
                         tiffinSubTab === 'orders' ? 'border-[#C2185B] text-[#C2185B]' : 'border-transparent text-stone-500 hover:text-stone-850'
@@ -1997,6 +2052,83 @@ export default function Dashboard() {
                         <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
                           <Users size={32} className="mx-auto text-stone-400 mb-2" />
                           <p className="text-xs font-semibold text-stone-500">No customers currently in Paused or Cancelled status.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {tiffinSubTab === 'completed' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                      {tiffinCustomers
+                        .filter(c => c.status === 'Completed')
+                        .map((cust) => {
+                          return (
+                            <div key={cust.id} className="bg-[#044c34] border border-[#023c28] rounded-3xl p-5 flex flex-col justify-between shadow-xl text-white hover:shadow-2xl transition-all relative overflow-hidden animate-fade-in">
+                              <div className="absolute right-0 top-0 w-24 h-24 bg-white/5 rounded-full -mr-6 -mt-6 pointer-events-none" />
+                              <div>
+                                <div className="flex justify-between items-start gap-2 border-b border-white/20 pb-3 mb-3">
+                                  <div>
+                                    <h5 className="font-extrabold text-white text-sm">{cust.name}</h5>
+                                    <span className="font-mono text-[10px] font-bold text-rose-100 bg-black/20 border border-white/10 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                                      Ref ID: {cust.referenceId}
+                                    </span>
+                                  </div>
+                                  <span className="text-[8px] px-2.5 py-1 font-black rounded uppercase text-white bg-emerald-700">
+                                    COMPLETED
+                                  </span>
+                                </div>
+
+                                <div className="text-xs text-rose-105 space-y-2 mb-4 leading-relaxed font-bold">
+                                  <p>☎ <strong className="text-white">Phone:</strong> {cust.phone}</p>
+                                  {cust.email && <p className="truncate">✉ <strong className="text-white">Email:</strong> {cust.email}</p>}
+                                  <p className="line-clamp-2">📍 <strong className="text-white">Address:</strong> {cust.address}</p>
+                                  <p>💎 <strong className="text-white">Plan Name:</strong> {cust.planName || 'N/A'}</p>
+                                  <p>📅 <strong className="text-white">Completion Date:</strong> {cust.completionDate || getTodayFormattedDate()}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-2 mt-4">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (window.confirm(`Are you sure you want to move tiffin service for ${cust.name} back to Active?`)) {
+                                      try {
+                                        await handleUpdateTiffinCustomer(cust.id, { status: 'Active' });
+                                        alert(`Re-activated ${cust.name} successfully.`);
+                                      } catch (err: any) {
+                                        alert("Error reactivating: " + err.message);
+                                      }
+                                    }
+                                  }}
+                                  className="w-full py-2.5 bg-white text-emerald-800 font-extrabold text-[10px] uppercase rounded-xl hover:bg-emerald-50 tracking-wider shadow-sm transition-colors cursor-pointer"
+                                  style={{ color: '#044c34' }}
+                                >
+                                  Make Active Again
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (confirm(`Are you sure you want to delete this completed record for ${cust.name}?`)) {
+                                      try {
+                                        await deleteDoc(doc(db, 'tiffinCustomers', cust.id));
+                                        alert("Record deleted successfully!");
+                                      } catch (err: any) {
+                                        alert("Deletion failed: " + err.message);
+                                      }
+                                    }
+                                  }}
+                                  className="w-full py-2 bg-red-650 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase rounded-xl tracking-wider shadow-sm transition-colors cursor-pointer"
+                                >
+                                  Delete Record
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {tiffinCustomers.filter(c => c.status === 'Completed').length === 0 && (
+                        <div className="col-span-3 text-center py-12 bg-stone-50 rounded-2xl border border-stone-200">
+                          <CheckCircle size={32} className="mx-auto text-stone-400 mb-2" />
+                          <p className="text-xs font-semibold text-stone-500">No completed tiffin subscribers found found.</p>
                         </div>
                       )}
                     </div>
