@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { menuItems } from '../constants/menu';
-import EventCountdown from './EventCountdown';
+
 
 export default function Hero() {
   const [user, setUser] = useState<User | null>(null);
@@ -107,9 +107,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-center">
-          <EventCountdown />
-        </div>
+
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-20">
           {stats.map((stat, i) => (

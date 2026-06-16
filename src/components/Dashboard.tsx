@@ -108,17 +108,66 @@ interface TiffinCardProps {
   onActivateTrigger?: (id: string) => void;
 }
 
+export const getTiffinBookingAmount = (customer: TiffinCustomer): number => {
+  const planName = (customer.planName || '').toLowerCase();
+  const isVeg = customer.preference === 'Veg' || !planName.includes('non');
+
+  if (planName.includes('trial') || planName.includes('daily')) {
+    const match = planName.match(/(?:x|\()(\d+)/);
+    if (match) {
+      return 100 * parseInt(match[1]);
+    }
+    if (customer.monthlyPrice > 0 && customer.monthlyPrice % 100 === 0) {
+      return customer.monthlyPrice;
+    }
+    return 100;
+  }
+
+  const hasBreakfast = planName.includes('breakfast');
+  const hasLunch = planName.includes('lunch');
+  const hasDinner = planName.includes('dinner');
+  const isFullDay = planName.includes('full day') || (hasBreakfast && hasLunch && hasDinner);
+  const isLunchAndDinner = (hasLunch && hasDinner) || planName.includes('lunch + dinner');
+
+  if (isVeg) {
+    if (isFullDay) return 6500;
+    if (isLunchAndDinner) return 5100;
+    if (hasBreakfast) return 2500;
+    if (hasLunch || hasDinner) return 2700;
+  } else {
+    // Non-Veg
+    if (isFullDay) return 7500;
+    if (isLunchAndDinner) return 5600;
+    if (hasBreakfast) return 2700;
+    if (hasLunch || hasDinner) return 3100;
+  }
+
+  // Fallback map if the plan name has exact keywords:
+  if (planName.includes('breakfast') && planName.includes('only')) {
+    return isVeg ? 2500 : 2700;
+  }
+  if (planName.includes('lunch') && planName.includes('only') && !isLunchAndDinner) {
+    return isVeg ? 2700 : 3100;
+  }
+  if (planName.includes('dinner') && planName.includes('only') && !isLunchAndDinner) {
+    return isVeg ? 2700 : 3100;
+  }
+
+  // General fallback
+  if (customer.monthlyPrice && customer.monthlyPrice > 10) {
+    return customer.monthlyPrice;
+  }
+
+  return isVeg ? 6500 : 7500;
+};
+
 function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCardProps) {
-  const [localPrice, setLocalPrice] = useState(customer.monthlyPrice);
   const [localBalance, setLocalBalance] = useState(customer.balanceAmount);
-  const [localNextDate, setLocalNextDate] = useState(customer.nextDeliveryDate || '');
   const [localTodayStatus, setLocalTodayStatus] = useState(customer.todayDeliveryStatus || 'Not Started');
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    setLocalPrice(customer.monthlyPrice);
     setLocalBalance(customer.balanceAmount);
-    setLocalNextDate(customer.nextDeliveryDate || '');
     setLocalTodayStatus(customer.todayDeliveryStatus || 'Not Started');
   }, [customer]);
 
@@ -126,9 +175,7 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     setUpdating(true);
     try {
       await onUpdate(customer.id, {
-        monthlyPrice: Number(localPrice) || 0,
         balanceAmount: Number(localBalance) || 0,
-        nextDeliveryDate: localNextDate,
         todayDeliveryStatus: localTodayStatus as any
       });
     } finally {
@@ -138,12 +185,6 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
 
   const handleStatusChange = async (nextStatus: string) => {
     await onUpdate(customer.id, { status: nextStatus as any });
-  };
-
-  const handleAdjustBalance = async (offset: number) => {
-    const nextBalance = Math.max(0, Number(localBalance) + offset);
-    setLocalBalance(nextBalance);
-    await onUpdate(customer.id, { balanceAmount: nextBalance });
   };
 
   const isRegistered = customer.status === 'Registered';
@@ -171,7 +212,8 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
             <p>☎ <strong>Phone:</strong> {customer.phone}</p>
             {customer.email && <p className="truncate">✉ <strong>Email:</strong> {customer.email}</p>}
             <p>📍 <strong>Address:</strong> {customer.address}</p>
-            <p>💰 <strong>Monthly Price:</strong> ₹{customer.monthlyPrice}</p>
+            <p>💎 <strong>Plan Name:</strong> {customer.planName || 'N/A'}</p>
+            <p>💰 <strong>Booking Amount:</strong> ₹{getTiffinBookingAmount(customer)}</p>
             <p>⚖ <strong>Balance:</strong> {customer.balanceAmount}</p>
             <p>📅 <strong>Registration Date:</strong> {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}</p>
           </div>
@@ -188,18 +230,14 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
     );
   }
 
-  // Active Customer Card: Background and indicators dynamically styled according to today's status colors
+  // Active Customer Card: Overall status background (Active = Green, Paused = Orange, Cancelled = Red)
   const statClean = (localTodayStatus || 'Not Started').replace(/\s+text-black$/gi, '');
   
-  let bgClass = "bg-[#C2185B] border-stone-205 text-white";
-  if (statClean === 'Delivered') {
-    bgClass = "bg-green-600 border-green-700 text-white";
-  } else if (statClean === 'Cancelled') {
+  let bgClass = "bg-green-600 border-green-700 text-white";
+  if (customer.status === 'Paused') {
+    bgClass = "bg-orange-500 border-orange-600 text-white";
+  } else if (customer.status === 'Cancelled') {
     bgClass = "bg-red-600 border-red-700 text-white";
-  } else if (statClean === 'Preparing') {
-    bgClass = "bg-amber-500 border-amber-600 text-white";
-  } else if (statClean === 'Out For Delivery') {
-    bgClass = "bg-blue-600 border-blue-700 text-white";
   }
 
   return (
@@ -235,10 +273,11 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
         <div className="text-xs text-rose-105 space-y-2 mb-4 leading-relaxed font-bold">
           <p>☎ <strong className="text-white">Phone:</strong> {customer.phone}</p>
           <p className="line-clamp-2">📍 <strong className="text-white">Address:</strong> {customer.address}</p>
+          <p>💎 <strong className="text-white">Plan Name:</strong> {customer.planName || 'N/A'}</p>
           <div className="flex justify-between items-center bg-black/15 rounded-xl p-2.5 my-3 border border-white/5">
             <div>
-              <span className="text-[9px] text-rose-200 uppercase block font-black">Plan price</span>
-              <span className="text-white font-black text-sm">₹{customer.monthlyPrice}</span>
+              <span className="text-[9px] text-rose-200 uppercase block font-black">Booking Amount</span>
+              <span className="text-white font-black text-sm">₹{getTiffinBookingAmount(customer)}</span>
             </div>
             <div className="text-right">
               <span className="text-[9px] text-rose-200 uppercase block font-black font-sans">Current Balance</span>
@@ -248,64 +287,41 @@ function TiffinCustomerCard({ customer, onUpdate, onActivateTrigger }: TiffinCar
         </div>
 
         <div className="border-t border-white/10 pt-3.5 space-y-3">
-          <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-black">
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Update Balance</label>
-              <div className="flex gap-1">
-                <input
-                  type="number"
-                  value={localBalance}
-                  onChange={(e) => setLocalBalance(Number(e.target.value))}
-                  className="w-full px-1.5 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await onUpdate(customer.id, { balanceAmount: Number(localBalance) || 0 });
-                    alert("Balance Amount updated successfully!");
-                  }}
-                  className="bg-white text-[#C2185B] font-black text-[9px] uppercase px-1.5 rounded-lg hover:bg-rose-50"
-                >
-                  Set
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Plan Price</label>
+          <div className="flex flex-col gap-0.5 text-xs font-semibold text-black">
+            <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Update Balance</label>
+            <div className="flex gap-1">
               <input
                 type="number"
-                value={localPrice}
-                onChange={(e) => setLocalPrice(Number(e.target.value))}
-                className="px-2 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
+                value={localBalance}
+                onChange={(e) => setLocalBalance(Number(e.target.value))}
+                className="w-full px-1.5 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
               />
+              <button
+                type="button"
+                onClick={async () => {
+                  await onUpdate(customer.id, { balanceAmount: Number(localBalance) || 0 });
+                  alert("Balance Amount updated successfully!");
+                }}
+                className="bg-white text-[#C2185B] font-black text-[9px] uppercase px-2 rounded-lg hover:bg-rose-50 cursor-pointer"
+              >
+                Set
+              </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-black">
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Daily Status</label>
-              <select
-                value={statClean}
-                onChange={(e) => setLocalTodayStatus(e.target.value)}
-                className="px-2 py-1.5 bg-white rounded-lg font-bold text-black cursor-pointer text-xs"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="Preparing">Preparing</option>
-                <option value="Out For Delivery">Out For Delivery</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Next Date</label>
-              <input
-                type="date"
-                value={localNextDate}
-                onChange={(e) => setLocalNextDate(e.target.value)}
-                className="px-2 py-1 bg-white rounded-lg outline-none font-bold text-black text-xs"
-              />
-            </div>
+          <div className="flex flex-col gap-0.5 text-xs font-semibold text-black">
+            <label className="text-[9px] font-black text-rose-200 uppercase tracking-wide">Daily Status</label>
+            <select
+              value={statClean}
+              onChange={(e) => setLocalTodayStatus(e.target.value)}
+              className="px-2 py-1.5 bg-white rounded-lg font-bold text-black cursor-pointer text-xs"
+            >
+              <option value="Not Started">Not Started</option>
+              <option value="Preparing">Preparing</option>
+              <option value="Out For Delivery">Out For Delivery</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
           </div>
 
           <div className="flex flex-col gap-0.5 text-xs font-semibold">
@@ -1739,35 +1755,42 @@ export default function Dashboard() {
                         .filter(c => c.status === 'Paused' || c.status === 'Cancelled')
                         .map((cust) => {
                           const isCancelled = cust.status === 'Cancelled';
-                          const cardClass = isCancelled 
-                            ? "bg-red-600 border border-red-700 rounded-3xl p-5 flex flex-col justify-between shadow-xl text-white animate-fade-in" 
-                            : "bg-stone-50 border border-stone-200 rounded-3xl p-5 flex flex-col justify-between shadow-sm text-black animate-fade-in";
+                          const isPaused = cust.status === 'Paused';
+                          const isDarkCard = isCancelled || isPaused;
+                          
+                          let cardClass = "bg-stone-50 border border-stone-200 rounded-3xl p-5 flex flex-col justify-between shadow-sm text-black animate-fade-in";
+                          if (isCancelled) {
+                            cardClass = "bg-red-600 border border-red-700 rounded-3xl p-5 flex flex-col justify-between shadow-xl text-white animate-fade-in";
+                          } else if (isPaused) {
+                            cardClass = "bg-orange-500 border border-orange-600 rounded-3xl p-5 flex flex-col justify-between shadow-xl text-white animate-fade-in";
+                          }
                           
                           return (
                             <div key={cust.id} className={cardClass}>
                               <div>
-                                <div className={`flex justify-between items-start gap-2 border-b pb-3 mb-3 ${isCancelled ? 'border-white/20' : 'border-stone-150'}`}>
+                                <div className={`flex justify-between items-start gap-2 border-b pb-3 mb-3 ${isDarkCard ? 'border-white/20' : 'border-stone-150'}`}>
                                   <div>
-                                    <h5 className={`font-extrabold text-[#000000] text-sm ${isCancelled ? 'text-white' : 'text-black'}`}>{cust.name}</h5>
+                                    <h5 className={`font-extrabold text-[#000000] text-sm ${isDarkCard ? 'text-white' : 'text-black'}`}>{cust.name}</h5>
                                     <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 inline-block ${
-                                      isCancelled ? 'text-red-100 bg-black/20 border border-white/10' : 'text-stone-600 bg-stone-100 border border-stone-200'
+                                      isDarkCard ? 'text-rose-100 bg-black/20 border border-white/10' : 'text-stone-600 bg-stone-100 border border-stone-200'
                                     }`}>
                                       Ref ID: {cust.referenceId}
                                     </span>
                                   </div>
                                   <span className={`text-[8px] px-2 py-1 font-black rounded uppercase text-white ${
-                                    cust.status === 'Paused' ? 'bg-amber-500' : 'bg-red-800'
+                                    cust.status === 'Paused' ? 'bg-orange-700' : 'bg-red-800'
                                   }`}>
                                     {cust.status}
                                   </span>
                                 </div>
-
-                                <div className={`text-xs space-y-2 mb-4 leading-relaxed font-semibold ${isCancelled ? 'text-red-105' : 'text-stone-850'}`}>
-                                  <p>☎ <strong className={isCancelled ? 'text-white' : 'text-black'}>Phone:</strong> {cust.phone}</p>
-                                  {cust.email && <p className="truncate">✉ <strong className={isCancelled ? 'text-white' : 'text-black'}>Email:</strong> {cust.email}</p>}
-                                  <p>📍 <strong className={isCancelled ? 'text-white' : 'text-black'}>Address:</strong> {cust.address}</p>
-                                  <p>💰 <strong className={isCancelled ? 'text-white' : 'text-black'}>Plan Price:</strong> ₹{cust.monthlyPrice}</p>
-                                  <p>⚖ <strong className={isCancelled ? 'text-white' : 'text-black'}>Balance:</strong> {cust.balanceAmount}</p>
+ 
+                                <div className={`text-xs space-y-2 mb-4 leading-relaxed font-semibold ${isDarkCard ? 'text-orange-50' : 'text-stone-850'}`}>
+                                  <p>☎ <strong className={isDarkCard ? 'text-white' : 'text-black'}>Phone:</strong> {cust.phone}</p>
+                                  {cust.email && <p className="truncate">✉ <strong className={isDarkCard ? 'text-white' : 'text-black'}>Email:</strong> {cust.email}</p>}
+                                  <p>📍 <strong className={isDarkCard ? 'text-white' : 'text-black'}>Address:</strong> {cust.address}</p>
+                                  <p>💎 <strong className={isDarkCard ? 'text-white' : 'text-black'}>Plan Name:</strong> {cust.planName || 'N/A'}</p>
+                                  <p>💰 <strong className={isDarkCard ? 'text-white' : 'text-black'}>Booking Amount:</strong> ₹{getTiffinBookingAmount(cust)}</p>
+                                  <p>⚖ <strong className={isDarkCard ? 'text-white' : 'text-black'}>Current Balance:</strong> {cust.balanceAmount}</p>
                                 </div>
                               </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, Loader2, Trash2, Download, ArrowRight } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
-import EventCountdown from './EventCountdown';
+
 
 interface Message {
   role: 'user' | 'model';
@@ -173,10 +173,7 @@ export default function AIPlanner({ isCompact = false, hideBackToHome = false }:
           <p className="text-orange-100/80">Chat with our AI to plan your perfect menu and event details.</p>
         </div>
         
-        <div className="mb-10">
-          <EventCountdown />
-        </div>
-        
+
         {chatContent}
       </div>
     </section>
