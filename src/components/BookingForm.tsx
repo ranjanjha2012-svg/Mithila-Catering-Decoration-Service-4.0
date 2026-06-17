@@ -527,7 +527,7 @@ export default function BookingForm() {
               </p>
             </div>
             <div className="bg-white rounded-3xl overflow-hidden shadow-2xl h-[550px] md:h-[650px] relative z-10 w-full">
-              <AIPlanner isCompact={false} />
+              <AIPlanner isCompact={true} />
             </div>
           </motion.div>
 

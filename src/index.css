@@ -121,3 +121,21 @@
 .bg-mithila-gradient {
   background: linear-gradient(135deg, rgba(255, 247, 237, 0.8) 0%, rgba(255, 237, 213, 0.8) 100%);
 }
+
+/* Review Form inputs */
+.review-input-field {
+  color: #000000 !important;
+  caret-color: #000000 !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid #D1D5DB !important;
+}
+.review-input-field::placeholder {
+  color: #555555 !important;
+  opacity: 1 !important;
+}
+.review-input-field:focus {
+  border-color: #2563EB !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+

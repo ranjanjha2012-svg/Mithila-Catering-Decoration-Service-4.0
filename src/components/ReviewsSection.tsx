@@ -227,7 +227,13 @@ export default function ReviewsSection() {
                     placeholder="Enter your name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-stone-850 font-bold placeholder:text-stone-400 text-sm"
+                    className="w-full px-4 py-3 rounded-xl outline-none transition-all font-bold text-sm review-input-field"
+                    style={{
+                      color: '#000000',
+                      caretColor: '#000000',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #D1D5DB'
+                    }}
                   />
                 </div>
 
@@ -262,7 +268,13 @@ export default function ReviewsSection() {
                     placeholder="Tell others what you loved about our catering service..."
                     value={reviewMessage}
                     onChange={(e) => setReviewMessage(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all text-stone-850 font-bold placeholder:text-stone-400 text-sm"
+                    className="w-full px-4 py-3 rounded-xl outline-none transition-all font-bold text-sm review-input-field"
+                    style={{
+                      color: '#000000',
+                      caretColor: '#000000',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #D1D5DB'
+                    }}
                   />
                 </div>
 
