@@ -2398,7 +2398,7 @@ export default function Dashboard() {
                       if (ann.type === 'Greeting') {
                         typeTheme = "bg-emerald-50 border border-emerald-200 text-emerald-800";
                       } else if (ann.type === 'Festival Greeting') {
-                        typeTheme = "bg-purple-50 border border-purple-200 text-purple-800";
+                        typeTheme = "bg-emerald-950/20 border border-emerald-800/30 text-emerald-900";
                       } else if (ann.type === 'Important Notice') {
                         typeTheme = "bg-rose-50 border border-rose-200 text-rose-800";
                       }
@@ -2702,8 +2702,8 @@ export default function Dashboard() {
                       className="w-full px-4 py-3 bg-stone-50 border border-stone-150 rounded-xl focus:ring-1 focus:ring-[#C2185B] outline-none text-xs font-bold text-stone-850 cursor-pointer"
                     >
                       <option value="Announcement">Announcement (Blue Theme)</option>
-                      <option value="Greeting">Greeting (Green Theme)</option>
-                      <option value="Festival Greeting">Festival Greeting (Purple Theme)</option>
+                      <option value="Greeting">Greeting (Dark Green Theme)</option>
+                      <option value="Festival Greeting">Festival Greeting (Dark Green Theme)</option>
                       <option value="Important Notice">Important Notice (Red Theme)</option>
                     </select>
                   </div>

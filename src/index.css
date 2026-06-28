@@ -123,17 +123,27 @@
 }
 
 /* Review Form inputs */
-.review-input-field {
+.review-input-field,
+#reviews input,
+#reviews textarea,
+#reviews select {
   color: #000000 !important;
   caret-color: #000000 !important;
+  background: #FFFFFF !important;
   background-color: #FFFFFF !important;
   border: 1px solid #D1D5DB !important;
 }
-.review-input-field::placeholder {
+.review-input-field::placeholder,
+#reviews input::placeholder,
+#reviews textarea::placeholder,
+#reviews select::placeholder {
   color: #555555 !important;
   opacity: 1 !important;
 }
-.review-input-field:focus {
+.review-input-field:focus,
+#reviews input:focus,
+#reviews textarea:focus,
+#reviews select:focus {
   border-color: #2563EB !important;
   outline: none !important;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;

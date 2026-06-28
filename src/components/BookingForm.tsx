@@ -526,7 +526,7 @@ export default function BookingForm() {
                 Not sure about how much food to order, decoration patterns, or budget breakdown? Chat with our smart AI Event Assistant below to generate a comprehensive, instant proposal tailored for your big day.
               </p>
             </div>
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl h-[550px] md:h-[650px] relative z-10 w-full">
+            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl h-[480px] sm:h-[550px] md:h-[650px] relative z-10 w-full">
               <AIPlanner isCompact={true} />
             </div>
           </motion.div>

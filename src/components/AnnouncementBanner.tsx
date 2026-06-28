@@ -112,12 +112,12 @@ export default function AnnouncementBanner() {
   let icon = '📢';
 
   if (currentAnn.type === 'Greeting') {
-    bgGradient = 'bg-gradient-to-r from-emerald-600 to-teal-650';
-    badgeColor = 'bg-emerald-800 text-white border-emerald-500';
+    bgGradient = 'bg-[#023c28] text-white';
+    badgeColor = 'bg-[#012a1c] text-white border-emerald-500';
     icon = '👋';
   } else if (currentAnn.type === 'Festival Greeting') {
-    bgGradient = 'bg-gradient-to-r from-purple-650 to-pink-650';
-    badgeColor = 'bg-purple-800 text-white border-purple-500';
+    bgGradient = 'bg-[#023c28] text-white';
+    badgeColor = 'bg-[#012a1c] text-white border-emerald-500';
     icon = '🎉';
   } else if (currentAnn.type === 'Important Notice') {
     bgGradient = 'bg-gradient-to-r from-rose-600 to-red-700';
